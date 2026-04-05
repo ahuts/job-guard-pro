@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import GhostScoreCard from "./GhostScoreCard";
 import AuthDialog from "./AuthDialog";
+import { JobScanner } from "./JobScanner";
 import { Shield } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,9 +44,11 @@ const HeroSection = () => {
                 <Button variant="hero" size="lg" className="text-base px-8 py-6" onClick={handleCTA}>
                   {user ? "Start Scanning" : "Get 3 Free Scans"}
                 </Button>
-                <Button variant="heroOutline" size="lg" className="text-base px-8 py-6">
-                  See How It Works
-                </Button>
+              </div>
+
+              {/* Job Scanner Component */}
+              <div className="mt-8">
+                <JobScanner />
               </div>
 
               <div className="flex items-center gap-2 justify-center lg:justify-start text-sm text-muted-foreground">

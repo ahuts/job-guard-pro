@@ -1,0 +1,13 @@
+{
+  "name": "ghostjob-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "playwright": "^1.57.0",
+    "@vercel/node": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
