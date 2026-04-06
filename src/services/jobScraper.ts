@@ -19,7 +19,7 @@ export interface AnalysisResult {
   ghostScore: {
     score: number;
     rating: 'low' | 'medium' | 'high' | 'critical';
-    signals: { name: string; weight: number; triggered: boolean; description: string; }[];
+    signals: { name: string; weight: number; triggered: boolean; description: string }[];
     summary: string;
   };
 }
@@ -41,29 +41,20 @@ export async function scrapeJob(url: string): Promise<ScrapedJob> {
   return data.data;
 }
 
-// Analyze job and calculate ghost score
+// Analyze job from URL
 export async function analyzeJob(url: string): Promise<AnalysisResult> {
   const job = await scrapeJob(url);
-
-  const signals: JobSignals = {
-    postedDays: parsePostedDays(job.postedAt),
-    hasSalary: !!job.salary,
-    descriptionLength: job.description.split(/\s+/).length,
-    hasRepostIndicator: false,
-    companyName: job.company,
-    hasRecentLayoffs: null,
-    roleOnCareersPage: null,
-    daysSinceApplied: null,
-    receivedResponse: null,
-  };
-
-  const ghostScore = calculateGhostScore(signals);
-
-  return { job, signals, ghostScore };
+  return buildAnalysis(job);
 }
 
-// Analyze from manually pasted text (no scraping needed)
-export function analyzeFromText(input: { title: string; company: string; description: string; salary?: string; postedAt?: string }): AnalysisResult {
+// Analyze from manually pasted text
+export function analyzeFromText(input: {
+  title: string;
+  company: string;
+  description: string;
+  salary?: string;
+  postedAt?: string;
+}): AnalysisResult {
   const job: ScrapedJob = {
     title: input.title,
     company: input.company,
@@ -75,7 +66,10 @@ export function analyzeFromText(input: { title: string; company: string; descrip
     employmentType: null,
     experienceLevel: null,
   };
+  return buildAnalysis(job);
+}
 
+function buildAnalysis(job: ScrapedJob): AnalysisResult {
   const signals: JobSignals = {
     postedDays: parsePostedDays(job.postedAt),
     hasSalary: !!job.salary,
@@ -90,12 +84,11 @@ export function analyzeFromText(input: { title: string; company: string; descrip
 
   const ghostScore = calculateGhostScore(signals);
   return { job, signals, ghostScore };
+}
 
-// Helper to parse "2 days ago" or ISO date to number of days
 function parsePostedDays(postedAt: string | null): number | null {
   if (!postedAt) return null;
-  
-  // Try ISO date format first (from JSON-LD)
+
   const date = new Date(postedAt);
   if (!isNaN(date.getTime())) {
     const days = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -111,6 +104,6 @@ function parsePostedDays(postedAt: string | null): number | null {
   if (monthMatch) return parseInt(monthMatch[1], 10) * 30;
   if (text.includes('just now') || text.includes('today')) return 0;
   if (text.includes('yesterday')) return 1;
-  
+
   return null;
 }
