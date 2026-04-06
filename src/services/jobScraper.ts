@@ -62,6 +62,35 @@ export async function analyzeJob(url: string): Promise<AnalysisResult> {
   return { job, signals, ghostScore };
 }
 
+// Analyze from manually pasted text (no scraping needed)
+export function analyzeFromText(input: { title: string; company: string; description: string; salary?: string; postedAt?: string }): AnalysisResult {
+  const job: ScrapedJob = {
+    title: input.title,
+    company: input.company,
+    location: '',
+    description: input.description,
+    postedAt: input.postedAt || null,
+    salary: input.salary || null,
+    applicants: null,
+    employmentType: null,
+    experienceLevel: null,
+  };
+
+  const signals: JobSignals = {
+    postedDays: parsePostedDays(job.postedAt),
+    hasSalary: !!job.salary,
+    descriptionLength: job.description.split(/\s+/).length,
+    hasRepostIndicator: false,
+    companyName: job.company,
+    hasRecentLayoffs: null,
+    roleOnCareersPage: null,
+    daysSinceApplied: null,
+    receivedResponse: null,
+  };
+
+  const ghostScore = calculateGhostScore(signals);
+  return { job, signals, ghostScore };
+
 // Helper to parse "2 days ago" or ISO date to number of days
 function parsePostedDays(postedAt: string | null): number | null {
   if (!postedAt) return null;
