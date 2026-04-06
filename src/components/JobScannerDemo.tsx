@@ -38,33 +38,9 @@ export function JobScannerDemo() {
     setLoading(true);
 
     try {
-      // Use mock scraper for development
-      const job = await mockScrapeJob(url);
-      
-      // Calculate ghost score
-      const { calculateGhostScore } = await import('@/lib/ghostScorer');
-      const postedDays = parsePostedDays(job.postedAt);
-      
-      const signals = {
-        postedDays,
-        hasSalary: !!job.salary,
-        descriptionLength: job.description.split(/\s+/).length,
-        hasRepostIndicator: false,
-        companyName: job.company,
-        hasRecentLayoffs: null,
-        roleOnCareersPage: null,
-        daysSinceApplied: null,
-        receivedResponse: null,
-      };
+      const analysis = await analyzeJob(url);
 
-      const ghostScore = calculateGhostScore(signals);
-
-      setResult({
-        job,
-        signals,
-        ghostScore,
-      });
-
+      setResult(analysis);
       setScansRemaining(prev => prev - 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze job');
