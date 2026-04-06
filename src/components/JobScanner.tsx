@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Search, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import { analyzeJob, mockScrapeJob } from '@/services/jobScraper';
+import { analyzeJob } from '@/services/jobScraper';
 import { GhostScoreDisplay } from './GhostScoreDisplay';
 import type { AnalysisResult } from '@/services/jobScraper';
 
