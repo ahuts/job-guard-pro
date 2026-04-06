@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const html = await response.text();
+    
 
     // Extract job data from HTML using regex patterns for LinkedIn's public job pages
     const title = extractMeta(html, 'og:title') || extractTag(html, 'h1') || '';
