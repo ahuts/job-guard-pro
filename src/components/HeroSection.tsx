@@ -1,19 +1,54 @@
 import { Button } from "@/components/ui/button";
 import GhostScoreCard from "./GhostScoreCard";
 import AuthDialog from "./AuthDialog";
-import { JobScanner } from "./JobScanner";
 import { Shield } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { JobInputForm } from "./JobInputForm";
+import { GhostScoreDisplay } from "./GhostScoreDisplay";
+import { EmailCaptureModal } from "./EmailCaptureModal";
+import type { GhostScoreResult } from "@/lib/ghostScorer";
+
+interface JobFormData {
+  url: string;
+  title: string;
+  company: string;
+  postedDate: string;
+  hasSalary: "yes" | "no" | "unknown";
+  description: string;
+}
 
 const HeroSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const { user } = useAuth();
+  const [showResults, setShowResults] = useState(false);
+  const [ghostScoreResult, setGhostScoreResult] = useState<GhostScoreResult | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [submittedJobData, setSubmittedJobData] = useState<JobFormData | null>(null);
 
   const handleCTA = () => {
     if (!user) {
       setAuthOpen(true);
     }
+  };
+
+  const handleFormSubmit = (formData: JobFormData, scoreResult: GhostScoreResult) => {
+    setSubmittedJobData(formData);
+    setGhostScoreResult(scoreResult);
+    setShowResults(true);
+    
+    // Open email modal after a brief delay to let user see results
+    setTimeout(() => {
+      if (!user) {
+        setEmailModalOpen(true);
+      }
+    }, 2000);
+  };
+
+  const handleReset = () => {
+    setShowResults(false);
+    setGhostScoreResult(null);
+    setSubmittedJobData(null);
   };
 
   return (
@@ -24,7 +59,7 @@ const HeroSection = () => {
         </div>
 
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             <div className="space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/10 text-danger text-sm font-medium">
                 <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
@@ -37,7 +72,7 @@ const HeroSection = () => {
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
-                Paste any job URL and instantly see if it's worth your time. Stop applying to positions that were never meant to be filled.
+                Enter any job details and instantly see if it's worth your time. Stop applying to positions that were never meant to be filled.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
@@ -46,9 +81,46 @@ const HeroSection = () => {
                 </Button>
               </div>
 
-              {/* Job Scanner Component */}
+              {/* Job Input Form Component */}
               <div className="mt-8">
-                <JobScanner />
+                {!showResults ? (
+                  <JobInputForm onSubmit={handleFormSubmit} />
+                ) : (
+                  ghostScoreResult && submittedJobData && (
+                    <div className="space-y-4">
+                      <GhostScoreDisplay 
+                        result={{
+                          job: {
+                            title: submittedJobData.title,
+                            company: submittedJobData.company,
+                            location: "Unknown",
+                            description: submittedJobData.description,
+                            postedAt: submittedJobData.postedDate === "just-now" ? "Just now" : 
+                                      submittedJobData.postedDate === "yesterday" ? "Yesterday" :
+                                      submittedJobData.postedDate === "3-days" ? "3 days ago" :
+                                      submittedJobData.postedDate === "1-week" ? "1 week ago" :
+                                      submittedJobData.postedDate === "2-weeks" ? "2 weeks ago" :
+                                      submittedJobData.postedDate === "1-month" ? "1 month ago" :
+                                      submittedJobData.postedDate === "2-months" ? "2+ months ago" : "Unknown",
+                            employmentType: null,
+                            experienceLevel: null,
+                            applicants: null,
+                            salary: submittedJobData.hasSalary === "yes" ? "Salary disclosed" : null,
+                          },
+                          ghostScore: ghostScoreResult,
+                        }} 
+                        onSave={() => setEmailModalOpen(true)}
+                      />
+                      <Button 
+                        onClick={handleReset} 
+                        variant="outline" 
+                        className="w-full"
+                      >
+                        Check Another Job
+                      </Button>
+                    </div>
+                  )
+                )}
               </div>
 
               <div className="flex items-center gap-2 justify-center lg:justify-start text-sm text-muted-foreground">
@@ -57,7 +129,7 @@ const HeroSection = () => {
               </div>
             </div>
 
-            <div className="flex justify-center lg:justify-end">
+            <div className="flex justify-center lg:justify-end lg:sticky lg:top-24">
               <GhostScoreCard />
             </div>
           </div>
@@ -65,6 +137,11 @@ const HeroSection = () => {
       </section>
 
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      <EmailCaptureModal 
+        open={emailModalOpen} 
+        onOpenChange={setEmailModalOpen}
+        ghostScore={ghostScoreResult}
+      />
     </>
   );
 };
