@@ -27,8 +27,16 @@ Deno.serve(async (req) => {
 
     console.log('Scraping URL:', url);
 
-    // Fetch the LinkedIn page HTML
-    const response = await fetch(url, {
+    // Extract job ID from URL
+    const jobIdMatch = url.match(/\/view\/(\d+)/);
+    const jobId = jobIdMatch ? jobIdMatch[1] : null;
+
+    // Try LinkedIn's public guest job posting page
+    const fetchUrl = jobId 
+      ? `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`
+      : url;
+
+    const response = await fetch(fetchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
