@@ -31,23 +31,50 @@ Deno.serve(async (req) => {
     const jobIdMatch = url.match(/\/view\/(\d+)/);
     const jobId = jobIdMatch ? jobIdMatch[1] : null;
 
-    // Try LinkedIn's public guest job posting page
-    const fetchUrl = jobId 
-      ? `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`
-      : url;
+    // Try multiple LinkedIn endpoints
+    const urls = jobId 
+      ? [
+          `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`,
+          `https://www.linkedin.com/jobs/view/${jobId}/`,
+          url,
+        ]
+      : [url];
 
-    const response = await fetch(fetchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    });
+    let html = '';
+    let fetchSuccess = false;
 
-    if (!response.ok) {
-      console.error('Failed to fetch URL, status:', response.status);
+    for (const fetchUrl of urls) {
+      console.log('Trying:', fetchUrl);
+      try {
+        const response = await fetch(fetchUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+          },
+          redirect: 'follow',
+        });
+
+        console.log('Status:', response.status, 'for', fetchUrl);
+
+        if (response.ok) {
+          html = await response.text();
+          console.log('Got HTML, length:', html.length);
+          fetchSuccess = true;
+          break;
+        } else {
+          const body = await response.text();
+          console.log('Failed body preview:', body.substring(0, 200));
+        }
+      } catch (e) {
+        console.error('Fetch error for', fetchUrl, ':', e);
+      }
+    }
+
+    if (!fetchSuccess) {
       return new Response(
-        JSON.stringify({ success: false, error: `Failed to fetch page (status ${response.status}). The listing may require login.` }),
+        JSON.stringify({ success: false, error: 'Could not fetch job listing. It may have been removed or requires login.' }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
