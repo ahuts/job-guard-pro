@@ -14,7 +14,148 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      job_applications: {
+        Row: {
+          applied_date: string | null
+          created_at: string
+          id: string
+          job_id: string
+          outcome: string
+          response_date: string | null
+          response_received: boolean
+          updated_at: string
+        }
+        Insert: {
+          applied_date?: string | null
+          created_at?: string
+          id?: string
+          job_id: string
+          outcome?: string
+          response_date?: string | null
+          response_received?: boolean
+          updated_at?: string
+        }
+        Update: {
+          applied_date?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          outcome?: string
+          response_date?: string | null
+          response_received?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "scanned_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          stripe_customer_id: string | null
+          subscription_status: string
+          subscription_tier: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          subscription_tier?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          subscription_tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scanned_jobs: {
+        Row: {
+          application_status: string
+          company_location: string | null
+          company_name: string
+          created_at: string
+          description: string | null
+          follow_up_date: string | null
+          ghost_score: number | null
+          has_salary: boolean | null
+          id: string
+          job_title: string
+          job_url: string | null
+          notes: string | null
+          posted_date: string | null
+          rating: string | null
+          signals: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_status?: string
+          company_location?: string | null
+          company_name: string
+          created_at?: string
+          description?: string | null
+          follow_up_date?: string | null
+          ghost_score?: number | null
+          has_salary?: boolean | null
+          id?: string
+          job_title: string
+          job_url?: string | null
+          notes?: string | null
+          posted_date?: string | null
+          rating?: string | null
+          signals?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_status?: string
+          company_location?: string | null
+          company_name?: string
+          created_at?: string
+          description?: string | null
+          follow_up_date?: string | null
+          ghost_score?: number | null
+          has_salary?: boolean | null
+          id?: string
+          job_title?: string
+          job_url?: string | null
+          notes?: string | null
+          posted_date?: string | null
+          rating?: string | null
+          signals?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scanned_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
