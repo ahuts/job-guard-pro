@@ -49,19 +49,6 @@ export function JobScanner() {
     }
   };
 
-  const parsePostedDays = (postedAt: string | null): number | null => {
-    if (!postedAt) return null;
-    const text = postedAt.toLowerCase();
-    const dayMatch = text.match(/(\d+)\s+day/);
-    if (dayMatch) return parseInt(dayMatch[1], 10);
-    const weekMatch = text.match(/(\d+)\s+week/);
-    if (weekMatch) return parseInt(weekMatch[1], 10) * 7;
-    const monthMatch = text.match(/(\d+)\s+month/);
-    if (monthMatch) return parseInt(monthMatch[1], 10) * 30;
-    if (text.includes('just now') || text.includes('today')) return 0;
-    if (text.includes('yesterday')) return 1;
-    return null;
-  };
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
