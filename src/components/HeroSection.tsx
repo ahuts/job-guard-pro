@@ -107,8 +107,19 @@ const HeroSection = () => {
                             applicants: null,
                             salary: submittedJobData.hasSalary === "yes" ? "Salary disclosed" : null,
                           },
+                          signals: {
+                            postedDays: null,
+                            hasSalary: submittedJobData.hasSalary === "yes",
+                            descriptionLength: submittedJobData.description.split(/\s+/).length,
+                            hasRepostIndicator: false,
+                            companyName: submittedJobData.company,
+                            hasRecentLayoffs: null,
+                            roleOnCareersPage: null,
+                            daysSinceApplied: null,
+                            receivedResponse: null,
+                          },
                           ghostScore: ghostScoreResult,
-                        }} 
+                        }}
                         onSave={() => setEmailModalOpen(true)}
                       />
                       <Button 
