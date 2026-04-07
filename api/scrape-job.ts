@@ -58,6 +58,8 @@ export default async function handler(
   const jobId = linkedInMatch[1];
 
   try {
+    console.log(`Fetching job ID: ${jobId}`);
+    
     const apiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
     
     const apiResponse = await fetch(apiUrl, {
@@ -68,6 +70,9 @@ export default async function handler(
         'Referer': 'https://www.linkedin.com/',
       },
     });
+    
+    console.log(`LinkedIn response status: ${apiResponse.status}`);
+    console.log(`Content-Type: ${apiResponse.headers.get('content-type')}`);
 
     if (apiResponse.ok) {
       const contentType = apiResponse.headers.get('content-type');
@@ -153,6 +158,7 @@ export default async function handler(
 
   } catch (error) {
     console.error('Scraping error:', error);
+    console.error('Error details:', error instanceof Error ? error.stack : 'No stack');
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
