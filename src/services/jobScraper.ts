@@ -24,7 +24,7 @@ export interface AnalysisResult {
   };
 }
 
-// Scrape job from LinkedIn URL via Vercel API
+// Scrape job from LinkedIn URL via Next.js API
 export async function scrapeJob(url: string): Promise<ScrapedJob> {
   const response = await fetch('/api/scrape-job', {
     method: 'POST',
@@ -37,7 +37,7 @@ export async function scrapeJob(url: string): Promise<ScrapedJob> {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.error || 'Failed to scrape job');
+    throw new Error(data?.error || `Failed to scrape job: ${response.status}`);
   }
 
   if (!data?.success) {
