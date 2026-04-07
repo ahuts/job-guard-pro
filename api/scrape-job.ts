@@ -69,10 +69,7 @@ export default async function handler(
     
     // Parse HTML using regex patterns
     
-    // DEBUG: Log first 500 chars to see HTML structure
-    console.log('HTML start:', html.substring(0, 500));
-    
-    // Title - Extract from <title> tag
+    // Title - Search entire HTML for title tag (not just start)
     let title = 'Unknown Title';
     const titleTagMatch = html.match(/\u003ctitle\u003e([\s\S]*?)\u003c\/title\u003e/i);
     if (titleTagMatch) {
@@ -82,26 +79,27 @@ export default async function handler(
       // LinkedIn format: "Job Title | Company | LinkedIn"
       const parts = fullTitle.split('|').map(p => p.trim());
       if (parts.length >= 2) {
-        title = parts[0]; // First part is job title
+        title = parts[0];
       } else {
         title = fullTitle;
       }
     } else {
-      console.log('No title tag found');
+      console.log('No title tag found in HTML');
     }
     
-    // If still unknown, try JSON-LD schema
+    // If still unknown, try JSON-LD schema or visible h1
     if (title === 'Unknown Title') {
-      const jsonLdMatch = html.match(/\u003cscript type="application\/ld\+json"\u003e([\s\S]*?)\u003c\/script\u003e/);
-      if (jsonLdMatch) {
-        try {
-          const jsonData = JSON.parse(jsonLdMatch[1]);
-          if (jsonData.title) {
-            title = jsonData.title;
-            console.log(`Title from JSON-LD: ${title}`);
-          }
-        } catch (e) {
-          // JSON parse failed
+      // Try h1 in the content
+      const h1Match = html.match(/\u003ch1[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i);
+      if (h1Match) {
+        title = h1Match[1].trim();
+        console.log(`Title from h1: ${title}`);
+      } else {
+        // Try LinkedIn's top-card title class
+        const cardTitleMatch = html.match(/class="[^"]*top-card-layout__title[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
+        if (cardTitleMatch) {
+          title = cardTitleMatch[1].trim();
+          console.log(`Title from card: ${title}`);
         }
       }
     }
