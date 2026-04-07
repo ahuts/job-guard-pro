@@ -24,14 +24,20 @@ export interface AnalysisResult {
   };
 }
 
-// Scrape job from LinkedIn URL via edge function
+// Scrape job from LinkedIn URL via Vercel API
 export async function scrapeJob(url: string): Promise<ScrapedJob> {
-  const { data, error } = await supabase.functions.invoke('scrape-job', {
-    body: { url },
+  const response = await fetch('/api/scrape-job', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url }),
   });
 
-  if (error) {
-    throw new Error(error.message || 'Failed to scrape job');
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.error || 'Failed to scrape job');
   }
 
   if (!data?.success) {
