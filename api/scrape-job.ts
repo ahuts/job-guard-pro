@@ -60,33 +60,45 @@ export default async function handler(
   const jobId = linkedInMatch[1];
 
   try {
-    // Try LinkedIn Guest API
+    // Try LinkedIn Guest API with full browser headers
     const apiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
     
     const apiResponse = await fetch(apiUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.linkedin.com/',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Cache-Control': 'max-age=0',
       },
     });
 
     if (apiResponse.ok) {
-      const apiData: LinkedInGuestApiResponse = await apiResponse.json();
+      const contentType = apiResponse.headers.get('content-type');
       
-      if (apiData.jobPosting) {
-        const jobData: JobData = {
-          title: apiData.jobPosting.title || 'Unknown Title',
-          company: apiData.company?.name || apiData.jobPosting.companyName || 'Unknown Company',
-          location: apiData.jobPosting.location || 'Unknown Location',
-          description: apiData.jobPosting.description?.text || '',
-          postedAt: apiData.jobPosting.originalListedAt || apiData.jobPosting.listedAt || null,
-          salary: null,
-          applicants: null,
-          employmentType: apiData.jobPosting.employmentType || null,
-          experienceLevel: apiData.jobPosting.experienceLevel || null,
-          url: url,
-        };
+      // Check if response is actually JSON
+      if (contentType && contentType.includes('application/json')) {
+        const apiData: LinkedInGuestApiResponse = await apiResponse.json();
+        
+        if (apiData.jobPosting) {
+          const jobData: JobData = {
+            title: apiData.jobPosting.title || 'Unknown Title',
+            company: apiData.company?.name || apiData.jobPosting.companyName || 'Unknown Company',
+            location: apiData.jobPosting.location || 'Unknown Location',
+            description: apiData.jobPosting.description?.text || '',
+            postedAt: apiData.jobPosting.originalListedAt || apiData.jobPosting.listedAt || null,
+            salary: null,
+            applicants: null,
+            employmentType: apiData.jobPosting.employmentType || null,
+            experienceLevel: apiData.jobPosting.experienceLevel || null,
+            url: url,
+          };
 
         // Calculate days since posted
         if (jobData.postedAt) {
