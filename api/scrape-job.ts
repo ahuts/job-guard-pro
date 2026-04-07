@@ -69,28 +69,35 @@ export default async function handler(
     
     // Parse HTML using regex patterns (LinkedIn job posting HTML structure)
     
+    // DEBUG: Log first 2000 chars of HTML to see structure
+    console.log('HTML sample:', html.substring(0, 2000));
+    
     // Title - try multiple patterns
     let title = 'Unknown Title';
     const titlePatterns = [
-      /<h1[^>]*class="[^"]*top-card-layout__title[^"]*"[^>]*>([^<]+)<\/h1>/i,
-      /<h1[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/h1>/i,
-      /<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i,
-      /<title>([^<]+)<\/title>/i,
-      /<h1[^>]*>([^<]+)<\/h1>/i,
+      /<h1[^\u003e]*class="[^"]*top-card-layout__title[^"]*"[^\u003e]*>([^\u003c]+)<\/h1>/i,
+      /<h1[^\u003e]*class="[^"]*title[^"]*"[^\u003e]*>([^\u003c]+)<\/h1>/i,
+      /<meta[^\u003e]*property="og:title"[^\u003e]*content="([^"]+)"/i,
+      /<title\u003e([^\u003c]+)\u003c\/title\u003e/i,
+      /<h1[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i,
       /"jobTitle":"([^"]+)"/i,
+      /\u003cspan[^\u003e]*class="[^"]*job-title[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i,
     ];
     
     for (const pattern of titlePatterns) {
       const match = html.match(pattern);
-      if (match && match[1].trim()) {
+      if (match && match[1] && match[1].trim()) {
         title = match[1].trim();
+        console.log(`Title found with pattern: ${pattern}`);
         // Clean up title (remove "LinkedIn" or "Jobs" suffix if present)
         title = title.replace(/\s*\|\s*LinkedIn$/i, '');
         title = title.replace(/\s*\|\s*Jobs$/i, '');
-        title = title.replace(/\s*\|\s*Paylocity$/i, ''); // Remove company from title
+        title = title.replace(/\s*\|\s*Paylocity$/i, '');
         break;
       }
     }
+    
+    console.log(`Final title: ${title}`);
     
     // Company - look for company name patterns
     const companyMatch = html.match(/<a[^>]*href="[^"]*\/company\/[^"]*"[^>]*>([^<]+)<\/a>/i) ||
@@ -138,8 +145,12 @@ export default async function handler(
     if (title === 'Unknown Title' && company === 'Unknown Company') {
       return res.status(422).json({
         success: false,
-        error: 'Could not extract job details from LinkedIn HTML. The page structure may have changed.',
-        debug: html.substring(0, 500), // First 500 chars for debugging
+        error: 'Could not extract job details from LinkedIn HTML.',
+        debug: {
+          htmlSample: html.substring(0, 1000),
+          titleMatch: html.match(/<title>([^<]+)<\/title>/i)?.[1] || 'no match',
+          h1Match: html.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1] || 'no match',
+        }
       });
     }
 
