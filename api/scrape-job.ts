@@ -1,5 +1,6 @@
 // Vercel Serverless Function: Scrape LinkedIn job posting
 // Endpoint: POST /api/scrape-job
+// LinkedIn returns HTML - we parse it with regex
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
@@ -14,24 +15,6 @@ interface JobData {
   employmentType: string | null;
   experienceLevel: string | null;
   url: string;
-}
-
-interface LinkedInGuestApiResponse {
-  jobPosting?: {
-    title?: string;
-    description?: {
-      text?: string;
-    };
-    employmentType?: string;
-    experienceLevel?: string;
-    location?: string;
-    originalListedAt?: string;
-    listedAt?: string;
-    companyName?: string;
-  };
-  company?: {
-    name?: string;
-  };
 }
 
 export default async function handler(
@@ -64,96 +47,101 @@ export default async function handler(
     
     const apiResponse = await fetch(apiUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
         'Referer': 'https://www.linkedin.com/',
       },
     });
     
     console.log(`LinkedIn response status: ${apiResponse.status}`);
-    console.log(`Content-Type: ${apiResponse.headers.get('content-type')}`);
 
-    if (apiResponse.ok) {
-      const contentType = apiResponse.headers.get('content-type');
-      const responseText = await apiResponse.text();
-      
-      // Try to parse as JSON first
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          const apiData: LinkedInGuestApiResponse = JSON.parse(responseText);
-          
-          if (apiData.jobPosting) {
-            // ... existing job data extraction code ...
-            const jobData: JobData = {
-              title: apiData.jobPosting.title || 'Unknown Title',
-              company: apiData.company?.name || apiData.jobPosting.companyName || 'Unknown Company',
-              location: apiData.jobPosting.location || 'Unknown Location',
-              description: apiData.jobPosting.description?.text || '',
-              postedAt: apiData.jobPosting.originalListedAt || apiData.jobPosting.listedAt || null,
-              salary: null,
-              applicants: null,
-              employmentType: apiData.jobPosting.employmentType || null,
-              experienceLevel: apiData.jobPosting.experienceLevel || null,
-              url: url,
-            };
-
-            // Format posted date
-            if (jobData.postedAt) {
-              const postedDate = new Date(jobData.postedAt);
-              const now = new Date();
-              const diffTime = Math.abs(now.getTime() - postedDate.getTime());
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              
-              if (diffDays === 0) jobData.postedAt = 'Today';
-              else if (diffDays === 1) jobData.postedAt = 'Yesterday';
-              else if (diffDays < 7) jobData.postedAt = `${diffDays} days ago`;
-              else if (diffDays < 30) jobData.postedAt = `${Math.floor(diffDays / 7)} weeks ago`;
-              else jobData.postedAt = `${Math.floor(diffDays / 30)} months ago`;
-            }
-
-            return res.status(200).json({
-              success: true,
-              data: jobData,
-              source: 'linkedin_guest_api',
-            });
-          }
-        } catch (e) {
-          // JSON parse failed, continue to HTML extraction
-        }
-      }
-      
-      // If JSON failed, try extracting from HTML (LinkedIn sometimes returns HTML)
-      const titleMatch = responseText.match(/<h1[^>]*>([^<]+)<\/h1>/);
-      const companyMatch = responseText.match(/"companyName":"([^"]+)"/);
-      const locationMatch = responseText.match(/"location":"([^"]+)"/);
-      const descMatch = responseText.match(/"description":\{"text":"([^"]+)"/);
-      
-      if (titleMatch || companyMatch) {
-        const jobData: JobData = {
-          title: titleMatch?.[1]?.trim() || companyMatch?.[1] || 'Unknown Title',
-          company: companyMatch?.[1] || 'Unknown Company',
-          location: locationMatch?.[1] || 'Unknown Location',
-          description: descMatch?.[1]?.replace(/\\n/g, '\n') || '',
-          postedAt: null,
-          salary: null,
-          applicants: null,
-          employmentType: null,
-          experienceLevel: null,
-          url: url,
-        };
-        
-        return res.status(200).json({
-          success: true,
-          data: jobData,
-          source: 'linkedin_html_extraction',
-        });
-      }
+    if (!apiResponse.ok) {
+      return res.status(422).json({
+        success: false,
+        error: `LinkedIn returned status ${apiResponse.status}`,
+      });
     }
 
-    return res.status(422).json({
-      success: false,
-      error: 'Could not fetch job details from LinkedIn.',
+    const html = await apiResponse.text();
+    console.log(`Response length: ${html.length} chars`);
+    
+    // Parse HTML using regex patterns (LinkedIn job posting HTML structure)
+    
+    // Title - look for h1 or meta tags
+    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i) || 
+                      html.match(/<meta property="og:title" content="([^"]+)"/i);
+    const title = titleMatch ? titleMatch[1].trim() : 'Unknown Title';
+    
+    // Company - look for company name patterns
+    const companyMatch = html.match(/<a[^>]*href="[^"]*\/company\/[^"]*"[^>]*>([^<]+)<\/a>/i) ||
+                        html.match(/"companyName":"([^"]+)"/i) ||
+                        html.match(/<span[^>]*class="[^"]*company[^"]*"[^>]*>([^<]+)<\/span>/i);
+    const company = companyMatch ? companyMatch[1].trim() : 'Unknown Company';
+    
+    // Location
+    const locationMatch = html.match(/<span[^>]*class="[^"]*location[^"]*"[^>]*>([^<]+)<\/span>/i) ||
+                         html.match(/"location":"([^"]+)"/i) ||
+                         html.match(/>([^<]+)\s*,\s*([^<]+)<\/span>/i);
+    const location = locationMatch ? locationMatch[1].trim() : 'Unknown Location';
+    
+    // Description - look for description div
+    const descMatch = html.match(/<div[^>]*class="[^"]*show-more-less-html[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+                     html.match(/<div[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    let description = '';
+    if (descMatch) {
+      // Strip HTML tags
+      description = descMatch[1]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+    
+    // Posted date
+    const postedMatch = html.match(/(\d+)\s*(day|week|month|hour)s?\s*ago/i) ||
+                       html.match(/(Yesterday|Just now|Today)/i);
+    const postedAt = postedMatch ? postedMatch[0] : null;
+    
+    // Employment type / Seniority
+    const empTypeMatch = html.match(/(Full-time|Part-time|Contract|Internship)/i);
+    const employmentType = empTypeMatch ? empTypeMatch[1] : null;
+    
+    const expLevelMatch = html.match(/(Entry level|Associate|Mid-Senior level|Director|Executive)/i);
+    const experienceLevel = expLevelMatch ? expLevelMatch[1] : null;
+    
+    // Applicants
+    const applicantsMatch = html.match(/(\d+)\s*applicants/i);
+    const applicants = applicantsMatch ? applicantsMatch[1] : null;
+
+    console.log(`Parsed - Title: ${title}, Company: ${company}`);
+
+    // Check if we got meaningful data
+    if (title === 'Unknown Title' && company === 'Unknown Company') {
+      return res.status(422).json({
+        success: false,
+        error: 'Could not extract job details from LinkedIn HTML. The page structure may have changed.',
+        debug: html.substring(0, 500), // First 500 chars for debugging
+      });
+    }
+
+    const jobData: JobData = {
+      title,
+      company,
+      location,
+      description,
+      postedAt,
+      salary: null,
+      applicants,
+      employmentType,
+      experienceLevel,
+      url,
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: jobData,
+      source: 'linkedin_html_parsed',
     });
 
   } catch (error) {
