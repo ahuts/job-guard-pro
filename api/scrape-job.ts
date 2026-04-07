@@ -67,58 +67,76 @@ export default async function handler(
     const html = await apiResponse.text();
     console.log(`Response length: ${html.length} chars`);
     
-    // Parse HTML using regex patterns (LinkedIn job posting HTML structure)
+    // Parse HTML using regex patterns
     
-    // DEBUG: Log first 2000 chars of HTML to see structure
-    console.log('HTML sample:', html.substring(0, 2000));
-    
-    // Title - try multiple patterns
+    // Title - Extract from <title> tag (most reliable)
+    // LinkedIn <title> format: "Job Title | Company | LinkedIn" or "Job Title | LinkedIn"
     let title = 'Unknown Title';
-    const titlePatterns = [
-      /<h1[^\u003e]*class="[^"]*top-card-layout__title[^"]*"[^\u003e]*>([^\u003c]+)<\/h1>/i,
-      /<h1[^\u003e]*class="[^"]*title[^"]*"[^\u003e]*>([^\u003c]+)<\/h1>/i,
-      /<meta[^\u003e]*property="og:title"[^\u003e]*content="([^"]+)"/i,
-      /<title\u003e([^\u003c]+)\u003c\/title\u003e/i,
-      /<h1[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i,
-      /"jobTitle":"([^"]+)"/i,
-      /\u003cspan[^\u003e]*class="[^"]*job-title[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i,
-    ];
+    const titleTagMatch = html.match(/\u003ctitle\u003e([\s\S]*?)\u003c\/title\u003e/i);
+    if (titleTagMatch) {
+      const fullTitle = titleTagMatch[1].trim();
+      console.log(`Raw title tag: ${fullTitle}`);
+      
+      // Split by " | " and take the first part
+      const parts = fullTitle.split(/\s*\|\s*/);
+      if (parts.length >= 2 && parts[parts.length - 1].toLowerCase().includes('linkedin')) {
+        // "Job Title | Company | LinkedIn" - take first part
+        title = parts[0].trim();
+      } else if (parts.length >= 1) {
+        title = parts[0].trim();
+      }
+    }
     
-    for (const pattern of titlePatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].trim()) {
-        title = match[1].trim();
-        console.log(`Title found with pattern: ${pattern}`);
-        // Clean up title (remove "LinkedIn" or "Jobs" suffix if present)
-        title = title.replace(/\s*\|\s*LinkedIn$/i, '');
-        title = title.replace(/\s*\|\s*Jobs$/i, '');
-        title = title.replace(/\s*\|\s*Paylocity$/i, '');
-        break;
+    // If title tag didn't work, try other patterns
+    if (title === 'Unknown Title') {
+      const altPatterns = [
+        /\u003ch1[^\u003e]*class="[^"]*top-card-layout__title[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i,
+        /\u003ch1[^\u003e]*class="[^"]*title[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i,
+        /\u003cmeta[^\u003e]*property="og:title"[^\u003e]*content="([^"]+)"/i,
+        /"jobTitle":"([^"]+)"/i,
+      ];
+      
+      for (const pattern of altPatterns) {
+        const match = html.match(pattern);
+        if (match && match[1] && match[1].trim()) {
+          title = match[1].trim();
+          break;
+        }
       }
     }
     
     console.log(`Final title: ${title}`);
     
     // Company - look for company name patterns
-    const companyMatch = html.match(/<a[^>]*href="[^"]*\/company\/[^"]*"[^>]*>([^<]+)<\/a>/i) ||
+    const companyMatch = html.match(/\u003ca[^\u003e]*href="[^"]*\/company\/[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/a\u003e/i) ||
                         html.match(/"companyName":"([^"]+)"/i) ||
-                        html.match(/<span[^>]*class="[^"]*company[^"]*"[^>]*>([^<]+)<\/span>/i);
+                        html.match(/\u003cspan[^\u003e]*class="[^"]*company[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i);
     const company = companyMatch ? companyMatch[1].trim() : 'Unknown Company';
     
-    // Location
-    const locationMatch = html.match(/<span[^>]*class="[^"]*location[^"]*"[^>]*>([^<]+)<\/span>/i) ||
-                         html.match(/"location":"([^"]+)"/i) ||
-                         html.match(/>([^<]+)\s*,\s*([^<]+)<\/span>/i);
-    const location = locationMatch ? locationMatch[1].trim() : 'Unknown Location';
+    // Location - try multiple patterns
+    let location = 'Unknown Location';
+    const locationPatterns = [
+      /\u003cspan[^\u003e]*class="[^"]*location[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i,
+      /"location":"([^"]+)"/i,
+      /\u003cspan[^\u003e]*class="[^"]*top-card-layout__metadata-item[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i,
+    ];
+    
+    for (const pattern of locationPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1] && match[1].trim()) {
+        location = match[1].trim();
+        break;
+      }
+    }
     
     // Description - look for description div
-    const descMatch = html.match(/<div[^>]*class="[^"]*show-more-less-html[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
-                     html.match(/<div[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const descMatch = html.match(/\u003cdiv[^\u003e]*class="[^"]*show-more-less-html[^"]*"[^\u003e]*\u003e([\s\S]*?)\u003c\/div\u003e/i) ||
+                     html.match(/\u003cdiv[^\u003e]*class="[^"]*description[^"]*"[^\u003e]*\u003e([\s\S]*?)\u003c\/div\u003e/i);
     let description = '';
     if (descMatch) {
       // Strip HTML tags
       description = descMatch[1]
-        .replace(/<[^>]+>/g, ' ')
+        .replace(/\u003c[^\u003e]+\u003e/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
     }
@@ -139,20 +157,7 @@ export default async function handler(
     const applicantsMatch = html.match(/(\d+)\s*applicants/i);
     const applicants = applicantsMatch ? applicantsMatch[1] : null;
 
-    console.log(`Parsed - Title: ${title}, Company: ${company}`);
-
-    // Check if we got meaningful data
-    if (title === 'Unknown Title' && company === 'Unknown Company') {
-      return res.status(422).json({
-        success: false,
-        error: 'Could not extract job details from LinkedIn HTML.',
-        debug: {
-          htmlSample: html.substring(0, 1000),
-          titleMatch: html.match(/<title>([^<]+)<\/title>/i)?.[1] || 'no match',
-          h1Match: html.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1] || 'no match',
-        }
-      });
-    }
+    console.log(`Parsed - Title: ${title}, Company: ${company}, Location: ${location}`);
 
     const jobData: JobData = {
       title,
