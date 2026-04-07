@@ -119,7 +119,7 @@ export default async function handler(
       }
       
       // If JSON failed, try extracting from HTML (LinkedIn sometimes returns HTML)
-      const titleMatch = responseText.match(<h1[^\u003e]*\u003e([^\u003c]+)<\/h1>/);
+      const titleMatch = responseText.match(/<h1[^>]*>([^<]+)<\/h1>/);
       const companyMatch = responseText.match(/"companyName":"([^"]+)"/);
       const locationMatch = responseText.match(/"location":"([^"]+)"/);
       const descMatch = responseText.match(/"description":\{"text":"([^"]+)"/);
