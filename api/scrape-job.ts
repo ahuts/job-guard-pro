@@ -69,10 +69,28 @@ export default async function handler(
     
     // Parse HTML using regex patterns (LinkedIn job posting HTML structure)
     
-    // Title - look for h1 or meta tags
-    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i) || 
-                      html.match(/<meta property="og:title" content="([^"]+)"/i);
-    const title = titleMatch ? titleMatch[1].trim() : 'Unknown Title';
+    // Title - try multiple patterns
+    let title = 'Unknown Title';
+    const titlePatterns = [
+      /<h1[^>]*class="[^"]*top-card-layout__title[^"]*"[^>]*>([^<]+)<\/h1>/i,
+      /<h1[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/h1>/i,
+      /<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i,
+      /<title>([^<]+)<\/title>/i,
+      /<h1[^>]*>([^<]+)<\/h1>/i,
+      /"jobTitle":"([^"]+)"/i,
+    ];
+    
+    for (const pattern of titlePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim()) {
+        title = match[1].trim();
+        // Clean up title (remove "LinkedIn" or "Jobs" suffix if present)
+        title = title.replace(/\s*\|\s*LinkedIn$/i, '');
+        title = title.replace(/\s*\|\s*Jobs$/i, '');
+        title = title.replace(/\s*\|\s*Paylocity$/i, ''); // Remove company from title
+        break;
+      }
+    }
     
     // Company - look for company name patterns
     const companyMatch = html.match(/<a[^>]*href="[^"]*\/company\/[^"]*"[^>]*>([^<]+)<\/a>/i) ||
