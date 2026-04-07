@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
-import { JobHistoryTable } from "@/components/dashboard/JobHistoryTable";
+import JobHistoryTable from "@/components/dashboard/JobHistoryTable";
 import { JobDetailView } from "@/components/dashboard/JobDetailView";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Search } from "lucide-react";
