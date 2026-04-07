@@ -55,7 +55,7 @@ export function JobDetailView({ job, onBack, onUpdate, onDelete }: JobDetailView
   );
 
   const handleStatusChange = (status: string) => {
-    onUpdate({ ...job, application_status: status });
+    onUpdate({ ...job, application_status: status as Job["application_status"] });
   };
 
   const handleNotesBlur = () => {

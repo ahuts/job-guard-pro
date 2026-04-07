@@ -1,14 +1,49 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
-import { JobHistoryTable } from "@/components/dashboard/JobHistoryTable";
+import JobHistoryTable from "@/components/dashboard/JobHistoryTable";
 import { JobDetailView } from "@/components/dashboard/JobDetailView";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Job } from "@/types";
+import type { JobScan } from "@/types/dashboard";
+import { getScoreCategory } from "@/types/dashboard";
 
-// Mock data for development - replace with Supabase query
+// Helper to convert Job to JobScan for the table
+function jobToJobScan(job: Job): JobScan {
+  const statusMap: Record<string, JobScan["status"]> = {
+    saved: "Saved",
+    applied: "Applied",
+    interviewing: "Interviewing",
+    offer: "Offer",
+    rejected: "Rejected",
+    ghosted: "Saved",
+  };
+  return {
+    id: job.id,
+    userId: job.user_id,
+    company: job.company_name,
+    title: job.job_title,
+    description: job.description,
+    url: job.job_url,
+    ghostScore: job.ghost_score,
+    ghostScoreCategory: getScoreCategory(job.ghost_score),
+    signals: (job.signals || []).map((s, i) => ({
+      id: String(i),
+      type: "warning" as const,
+      message: s,
+      confidence: 0.5,
+    })),
+    status: statusMap[job.application_status] || "Saved",
+    notes: job.notes,
+    followUpDate: job.follow_up_date ?? undefined,
+    createdAt: job.created_at,
+    updatedAt: job.updated_at,
+  };
+}
+
+// Mock data for development
 const mockJobs: Job[] = [
   {
     id: "1",
@@ -76,17 +111,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Replace with actual Supabase query
-    // const fetchJobs = async () => {
-    //   const { data, error } = await supabase
-    //     .from('scanned_jobs')
-    //     .select('*')
-    //     .eq('user_id', user.id)
-    //     .order('created_at', { ascending: false });
-    //   if (data) setJobs(data);
-    // };
-    
-    // Simulate loading
     setTimeout(() => setLoading(false), 500);
   }, []);
 
@@ -100,6 +124,11 @@ export default function Dashboard() {
   const handleJobDelete = (jobId: string) => {
     setJobs(jobs.filter((job) => job.id !== jobId));
     setSelectedJob(null);
+  };
+
+  const handleJobScanClick = (scan: JobScan) => {
+    const job = jobs.find((j) => j.id === scan.id);
+    if (job) setSelectedJob(job);
   };
 
   if (loading) {
@@ -125,12 +154,12 @@ export default function Dashboard() {
     );
   }
 
+  const jobScans = jobs.map(jobToJobScan);
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">
@@ -138,23 +167,18 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/")}
-            >
+            <Button variant="outline" onClick={() => navigate("/")}>
               <Search className="mr-2 h-4 w-4" />
               Scan New Job
             </Button>
           </div>
         </div>
 
-        {/* Stats */}
         <DashboardStats jobs={jobs} />
 
-        {/* Jobs Table */}
         {jobs.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed rounded-lg"
-          >
-            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4"
-            >
+          <div className="text-center py-12 border-2 border-dashed rounded-lg">
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
               <PlusCircle className="h-6 w-6 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-medium mb-2">No jobs scanned yet</h3>
@@ -168,8 +192,8 @@ export default function Dashboard() {
           </div>
         ) : (
           <JobHistoryTable
-            jobs={jobs}
-            onJobSelect={setSelectedJob}
+            jobs={jobScans}
+            onJobClick={handleJobScanClick}
           />
         )}
       </div>
