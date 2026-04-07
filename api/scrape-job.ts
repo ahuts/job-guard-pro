@@ -69,21 +69,40 @@ export default async function handler(
     
     // Parse HTML using regex patterns
     
-    // Title - Extract from <title> tag (most reliable)
-    // LinkedIn <title> format: "Job Title | Company | LinkedIn" or "Job Title | LinkedIn"
+    // DEBUG: Log first 500 chars to see HTML structure
+    console.log('HTML start:', html.substring(0, 500));
+    
+    // Title - Extract from <title> tag
     let title = 'Unknown Title';
     const titleTagMatch = html.match(/\u003ctitle\u003e([\s\S]*?)\u003c\/title\u003e/i);
     if (titleTagMatch) {
       const fullTitle = titleTagMatch[1].trim();
-      console.log(`Raw title tag: ${fullTitle}`);
+      console.log(`Title tag found: "${fullTitle}"`);
       
-      // Split by " | " and take the first part
-      const parts = fullTitle.split(/\s*\|\s*/);
-      if (parts.length >= 2 && parts[parts.length - 1].toLowerCase().includes('linkedin')) {
-        // "Job Title | Company | LinkedIn" - take first part
-        title = parts[0].trim();
-      } else if (parts.length >= 1) {
-        title = parts[0].trim();
+      // LinkedIn format: "Job Title | Company | LinkedIn"
+      const parts = fullTitle.split('|').map(p => p.trim());
+      if (parts.length >= 2) {
+        title = parts[0]; // First part is job title
+      } else {
+        title = fullTitle;
+      }
+    } else {
+      console.log('No title tag found');
+    }
+    
+    // If still unknown, try JSON-LD schema
+    if (title === 'Unknown Title') {
+      const jsonLdMatch = html.match(/\u003cscript type="application\/ld\+json"\u003e([\s\S]*?)\u003c\/script\u003e/);
+      if (jsonLdMatch) {
+        try {
+          const jsonData = JSON.parse(jsonLdMatch[1]);
+          if (jsonData.title) {
+            title = jsonData.title;
+            console.log(`Title from JSON-LD: ${title}`);
+          }
+        } catch (e) {
+          // JSON parse failed
+        }
       }
     }
     
@@ -115,19 +134,44 @@ export default async function handler(
     
     // Location - try multiple patterns
     let location = 'Unknown Location';
-    const locationPatterns = [
+    
+    // Try to find location in various formats
+    const locPatterns = [
       /\u003cspan[^\u003e]*class="[^"]*location[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i,
       /"location":"([^"]+)"/i,
-      /\u003cspan[^\u003e]*class="[^"]*top-card-layout__metadata-item[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i,
+      /"jobLocation":\s*{[^}]*"name":\s*"([^"]+)"/i,
+      /\u003cspan[^\u003e]*class="[^"]*top-card-layout__metadata-item[^"]*"[^\u003e]*\u003e([^\u003c]+?)\u003c\/span\u003e/g,
     ];
     
-    for (const pattern of locationPatterns) {
+    for (const pattern of locPatterns) {
       const match = html.match(pattern);
       if (match && match[1] && match[1].trim()) {
         location = match[1].trim();
         break;
       }
     }
+    
+    // Try JSON-LD for location
+    if (location === 'Unknown Location') {
+      const jsonLdMatch = html.match(/\u003cscript type="application\/ld\+json"\u003e([\s\S]*?)\u003c\/script\u003e/);
+      if (jsonLdMatch) {
+        try {
+          const jsonData = JSON.parse(jsonLdMatch[1]);
+          if (jsonData.jobLocation?.address?.addressLocality) {
+            location = jsonData.jobLocation.address.addressLocality;
+            if (jsonData.jobLocation.address.addressRegion) {
+              location += `, ${jsonData.jobLocation.address.addressRegion}`;
+            }
+          } else if (jsonData.jobLocation?.name) {
+            location = jsonData.jobLocation.name;
+          }
+        } catch (e) {
+          // JSON parse failed
+        }
+      }
+    }
+    
+    console.log(`Final location: ${location}`);
     
     // Description - look for description div
     const descMatch = html.match(/\u003cdiv[^\u003e]*class="[^"]*show-more-less-html[^"]*"[^\u003e]*\u003e([\s\S]*?)\u003c\/div\u003e/i) ||
