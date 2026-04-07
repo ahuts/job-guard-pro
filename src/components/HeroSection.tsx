@@ -4,51 +4,20 @@ import AuthDialog from "./AuthDialog";
 import { Shield } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { JobInputForm } from "./JobInputForm";
-import { GhostScoreDisplay } from "./GhostScoreDisplay";
+import { JobScanner } from "./JobScanner";
 import { EmailCaptureModal } from "./EmailCaptureModal";
-import type { GhostScoreResult } from "@/lib/ghostScorer";
-
-interface JobFormData {
-  url: string;
-  title: string;
-  company: string;
-  postedDate: string;
-  hasSalary: "yes" | "no" | "unknown";
-  description: string;
-}
 
 const HeroSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const { user } = useAuth();
-  const [showResults, setShowResults] = useState(false);
-  const [ghostScoreResult, setGhostScoreResult] = useState<GhostScoreResult | null>(null);
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [submittedJobData, setSubmittedJobData] = useState<JobFormData | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
 
   const handleCTA = () => {
     if (!user) {
       setAuthOpen(true);
+    } else {
+      setShowScanner(true);
     }
-  };
-
-  const handleFormSubmit = (formData: JobFormData, scoreResult: GhostScoreResult) => {
-    setSubmittedJobData(formData);
-    setGhostScoreResult(scoreResult);
-    setShowResults(true);
-    
-    // Open email modal after a brief delay to let user see results
-    setTimeout(() => {
-      if (!user) {
-        setEmailModalOpen(true);
-      }
-    }, 2000);
-  };
-
-  const handleReset = () => {
-    setShowResults(false);
-    setGhostScoreResult(null);
-    setSubmittedJobData(null);
   };
 
   return (
@@ -81,56 +50,18 @@ const HeroSection = () => {
                 </Button>
               </div>
 
-              {/* Job Input Form Component */}
               <div className="mt-8">
-                {!showResults ? (
-                  <JobInputForm onSubmit={handleFormSubmit} />
+                {!showScanner ? (
+                  <Button 
+                    onClick={() => setShowScanner(true)}
+                    variant="outline" 
+                    size="lg"
+                    className="w-full"
+                  >
+                    Scan a Job URL
+                  </Button>
                 ) : (
-                  ghostScoreResult && submittedJobData && (
-                    <div className="space-y-4">
-                      <GhostScoreDisplay 
-                        result={{
-                          job: {
-                            title: submittedJobData.title,
-                            company: submittedJobData.company,
-                            location: "Unknown",
-                            description: submittedJobData.description,
-                            postedAt: submittedJobData.postedDate === "just-now" ? "Just now" : 
-                                      submittedJobData.postedDate === "yesterday" ? "Yesterday" :
-                                      submittedJobData.postedDate === "3-days" ? "3 days ago" :
-                                      submittedJobData.postedDate === "1-week" ? "1 week ago" :
-                                      submittedJobData.postedDate === "2-weeks" ? "2 weeks ago" :
-                                      submittedJobData.postedDate === "1-month" ? "1 month ago" :
-                                      submittedJobData.postedDate === "2-months" ? "2+ months ago" : "Unknown",
-                            employmentType: null,
-                            experienceLevel: null,
-                            applicants: null,
-                            salary: submittedJobData.hasSalary === "yes" ? "Salary disclosed" : null,
-                          },
-                          signals: {
-                            postedDays: null,
-                            hasSalary: submittedJobData.hasSalary === "yes",
-                            descriptionLength: submittedJobData.description.split(/\s+/).length,
-                            hasRepostIndicator: false,
-                            companyName: submittedJobData.company,
-                            hasRecentLayoffs: null,
-                            roleOnCareersPage: null,
-                            daysSinceApplied: null,
-                            receivedResponse: null,
-                          },
-                          ghostScore: ghostScoreResult,
-                        }}
-                        onSave={() => setEmailModalOpen(true)}
-                      />
-                      <Button 
-                        onClick={handleReset} 
-                        variant="outline" 
-                        className="w-full"
-                      >
-                        Check Another Job
-                      </Button>
-                    </div>
-                  )
+                  <JobScanner />
                 )}
               </div>
 
@@ -148,11 +79,6 @@ const HeroSection = () => {
       </section>
 
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
-      <EmailCaptureModal 
-        open={emailModalOpen} 
-        onOpenChange={setEmailModalOpen}
-        ghostScore={ghostScoreResult}
-      />
     </>
   );
 };
