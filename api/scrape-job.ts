@@ -1,7 +1,7 @@
-// Next.js API Route: Scrape LinkedIn job posting using Guest API
+// Vercel Serverless Function: Scrape LinkedIn job posting
 // Endpoint: POST /api/scrape-job
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface JobData {
   title: string;
@@ -35,8 +35,8 @@ interface LinkedInGuestApiResponse {
 }
 
 export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+  req: VercelRequest,
+  res: VercelResponse
 ) {
   // Only allow POST
   if (req.method !== 'POST') {
@@ -60,7 +60,7 @@ export default async function handler(
   const jobId = linkedInMatch[1];
 
   try {
-    // METHOD 1: Try LinkedIn Guest API first (fast, no browser needed)
+    // Try LinkedIn Guest API
     const apiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
     
     const apiResponse = await fetch(apiUrl, {
@@ -116,10 +116,10 @@ export default async function handler(
       }
     }
 
-    // If we get here, the guest API failed
+    // If guest API failed
     return res.status(422).json({
       success: false,
-      error: 'Could not fetch job details from LinkedIn. The job may no longer be available or LinkedIn may be blocking the request.',
+      error: 'Could not fetch job details from LinkedIn.',
     });
 
   } catch (error) {
