@@ -18,10 +18,10 @@ interface AuthDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type AuthView = "main" | "login" | "signup";
+type AuthView = "main" | "login" | "signup" | "forgot";
 
 const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const { toast } = useToast();
   const [view, setView] = useState<AuthView>("main");
   const [email, setEmail] = useState("");
@@ -95,12 +95,14 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               {view === "main" && "Get Started with GhostJob"}
               {view === "login" && "Welcome Back"}
               {view === "signup" && "Create Your Account"}
+              {view === "forgot" && "Reset Password"}
             </DialogTitle>
           </div>
           <DialogDescription>
             {view === "main" && "Sign in to get your 3 free ghost job scans. No credit card required."}
             {view === "login" && "Sign in to your GhostJob account."}
             {view === "signup" && "Create an account to start scanning ghost jobs."}
+            {view === "forgot" && "Enter your email and we'll send you a reset link."}
           </DialogDescription>
         </DialogHeader>
 
@@ -182,9 +184,51 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               {loading ? "Signing in…" : "Sign In"}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
+              <button type="button" onClick={() => { setView("forgot"); resetForm(); }} className="underline hover:text-foreground">
+                Forgot password?
+              </button>
+            </p>
+            <p className="text-xs text-center text-muted-foreground">
               Don't have an account?{" "}
               <button type="button" onClick={() => { setView("signup"); resetForm(); }} className="underline hover:text-foreground">
                 Sign up
+              </button>
+            </p>
+          </form>
+        )}
+
+        {view === "forgot" && (
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            const { error } = await resetPassword(email);
+            setLoading(false);
+            if (error) {
+              toast({ title: "Reset failed", description: error, variant: "destructive" });
+            } else {
+              toast({ title: "Check your email", description: "We sent you a password reset link." });
+              resetForm();
+              setView("main");
+            }
+          }} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full py-6 text-base" disabled={loading}>
+              {loading ? "Sending…" : "Send Reset Link"}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Remember your password?{" "}
+              <button type="button" onClick={() => { setView("login"); resetForm(); }} className="underline hover:text-foreground">
+                Sign in
               </button>
             </p>
           </form>
