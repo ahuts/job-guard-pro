@@ -125,29 +125,41 @@ export default async function handler(
       }
     }
     
-    // Last resort: Look for "Sr." or "Director" or common title words in TEXT content (not URLs)
+    // Last resort: Try to find title in card structure or data attributes
     if (title === 'Unknown Title') {
-      // Look for title patterns in visible text, exclude URLs
-      const textContentMatch = html.match(/\u003e(Director|Manager|Engineer|Analyst|Specialist|VP|President)[^\u003c]{0,100}\u003c/i);
-      if (textContentMatch) {
-        // Get more context - look backwards and forwards from the match
-        const matchIndex = html.indexOf(textContentMatch[0]);
-        const contextStart = Math.max(0, matchIndex - 50);
-        const contextEnd = Math.min(html.length, matchIndex + 150);
-        const context = html.substring(contextStart, contextEnd);
-        
-        // Extract text between > and < that looks like a title
-        const titleInContext = context.match(/\u003e([^\u003c\u003e]{5,80}?(?:Director|Manager|Engineer|Analyst|Specialist)[^\u003c\u003e]{0,50}?)\u003c/);
-        if (titleInContext) {
-          title = titleInContext[1].trim();
-          console.log(`Title from text content: ${title}`);
+      // Look for h1, h2, h3 in the card
+      const headingMatch = html.match(/\u003ch[123][^\u003e]*\u003e([^\u003c]{10,100}?)\u003c\/h[123]\u003e/i);
+      if (headingMatch) {
+        const possibleTitle = headingMatch[1].trim();
+        // Validate it looks like a job title (contains common words)
+        if (/director|manager|engineer|analyst|specialist|lead/i.test(possibleTitle)) {
+          title = possibleTitle;
+          console.log(`Title from heading: ${title}`);
         }
       }
     }
     
-    // Clean up title if it still has URL junk
-    if (title.includes('?trk=') || title.includes('-at-') || title.includes('paylocity')) {
-      title = 'Unknown Title';
+    // Try data attributes
+    if (title === 'Unknown Title') {
+      const dataTitleMatch = html.match(/data-job-title="([^"]+)"/i) || 
+                            html.match(/aria-label="([^"]+Job[^"]*)"/i);
+      if (dataTitleMatch) {
+        title = dataTitleMatch[1].trim();
+        console.log(`Title from data attribute: ${title}`);
+      }
+    }
+    
+    // SUPER last resort: Extract from URL or link text containing job keywords
+    if (title === 'Unknown Title') {
+      // Look for link text with job title pattern
+      const linkTextMatch = html.match(/\u003ca[^\u003e]*href="[^"]*jobs[^"]*"[^\u003e]*\u003e([^\u003c]{10,80}?)\u003c\/a\u003e/i);
+      if (linkTextMatch) {
+        const linkText = linkTextMatch[1].trim();
+        if (/director|manager|engineer|analyst/i.test(linkText) && !linkText.includes('?') && !linkText.includes('http')) {
+          title = linkText;
+          console.log(`Title from link text: ${title}`);
+        }
+      }
     }
     
     // If still unknown, try visible content patterns
