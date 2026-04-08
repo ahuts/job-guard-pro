@@ -109,10 +109,7 @@ export default async function handler(
         /\u003cp[^\u003e]*class="[^"]*_9a287b82[^"]*"[^\u003e]*\u003e([^\u003c]+)/i,
         /\u003ch1[^\u003e]*class="[^"]*top-card-layout[^"]*"[^\u003e]*\u003e([^\u003c]+)/i,
         /\u003cspan[^\u003e]*class="[^"]*job-title[^"]*"[^\u003e]*\u003e([^\u003c]+)/i,
-        /"title":"([^"]+Director[^"]*)"/i,
-        /"title":"([^"]+Manager[^"]*)"/i,
-        /"title":"([^"]+Engineer[^"]*)"/i,
-        /"title":"([^"]+[^"]{10,50})"/i, // Any title 10-50 chars
+        /"title":"([^"]*(?:Director|Manager|Engineer|Analyst|Specialist|Coordinator|Assistant|Associate|Representative|Technician|Developer|Designer|Consultant|Supervisor|Lead)[^"]*)"/i,
       ];
       
       for (const pattern of jobTitlePatterns) {
@@ -127,12 +124,14 @@ export default async function handler(
     
     // Last resort: Try to find title in card structure or data attributes
     if (title === 'Unknown Title') {
-      // Look for h1, h2, h3 in the card
+      // Look for h1, h2, h3 in the card with ANY reasonable text
       const headingMatch = html.match(/\u003ch[123][^\u003e]*\u003e([^\u003c]{10,100}?)\u003c\/h[123]\u003e/i);
       if (headingMatch) {
         const possibleTitle = headingMatch[1].trim();
-        // Validate it looks like a job title (contains common words)
-        if (/director|manager|engineer|analyst|specialist|lead/i.test(possibleTitle)) {
+        // Accept if it looks like a job title (reasonable length, not URL junk)
+        if (possibleTitle.length > 10 && possibleTitle.length < 100 && 
+            !possibleTitle.includes('?trk=') && 
+            !possibleTitle.includes('http')) {
           title = possibleTitle;
           console.log(`Title from heading: ${title}`);
         }
