@@ -276,14 +276,20 @@ export default async function handler(
     
     // Look for LinkedIn's specific location class pattern
     if (location === 'Unknown Location') {
-      const linkedInLocMatch = html.match(/class="[^"]*tvm__text[^"]*"[^\u003e]*\u003e[^\u003c]*([^\u003c]{3,50}[^\u003c]*)\u003c\/span\u003e/i);
+      // Pattern for: <span class="tvm__text..."><!---->Lenexa, KS<!----></span>
+      const linkedInLocMatch = html.match(/class="[^"]*tvm__text[^"]*"[^\u003e]*\u003e(?:\u003c!--.*?--\u003e)?([^\u003c,]+,\s*[A-Z]{2})(?:\u003c!--.*?--\u003e)?\u003c\/span\u003e/i);
       if (linkedInLocMatch) {
-        const possibleLoc = linkedInLocMatch[1].trim();
-        // Validate it looks like a location (contains comma or common location words)
-        if (possibleLoc.includes(',') || /remote|hybrid|united states|canada/i.test(possibleLoc)) {
-          location = possibleLoc;
-          console.log(`Location from LinkedIn pattern: ${location}`);
-        }
+        location = linkedInLocMatch[1].trim();
+        console.log(`Location from LinkedIn pattern: ${location}`);
+      }
+    }
+    
+    // Try another pattern - any span with city, state format
+    if (location === 'Unknown Location') {
+      const cityStateSpanMatch = html.match(/\u003cspan[^\u003e]*\u003e(?:\u003c!--.*?--\u003e)?([A-Z][a-z]+(?:\s[A-Z][a-z]+)?,\s*[A-Z]{2})\u003c/i);
+      if (cityStateSpanMatch) {
+        location = cityStateSpanMatch[1].trim();
+        console.log(`Location from span: ${location}`);
       }
     }
     
