@@ -1,0 +1,24 @@
+# GhostJob Extension
+
+## Build artifacts
+*.zip
+dist/
+build/
+
+## Chrome Web Store keys
+*.pem
+key.pem
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+## Node (if we add build tools later)
+node_modules/
+package-lock.json
