@@ -125,13 +125,29 @@ export default async function handler(
       }
     }
     
-    // Last resort: Look for "Sr." or "Director" or common title words
+    // Last resort: Look for "Sr." or "Director" or common title words in TEXT content (not URLs)
     if (title === 'Unknown Title') {
-      const seniorityMatch = html.match(/(Sr\.?\s+)?(Director|Manager|Engineer|Analyst|Specialist|Lead|VP|President)[^\u003c]*/i);
-      if (seniorityMatch) {
-        title = seniorityMatch[0].trim();
-        console.log(`Title from seniority match: ${title}`);
+      // Look for title patterns in visible text, exclude URLs
+      const textContentMatch = html.match(/\u003e(Director|Manager|Engineer|Analyst|Specialist|VP|President)[^\u003c]{0,100}\u003c/i);
+      if (textContentMatch) {
+        // Get more context - look backwards and forwards from the match
+        const matchIndex = html.indexOf(textContentMatch[0]);
+        const contextStart = Math.max(0, matchIndex - 50);
+        const contextEnd = Math.min(html.length, matchIndex + 150);
+        const context = html.substring(contextStart, contextEnd);
+        
+        // Extract text between > and < that looks like a title
+        const titleInContext = context.match(/\u003e([^\u003c\u003e]{5,80}?(?:Director|Manager|Engineer|Analyst|Specialist)[^\u003c\u003e]{0,50}?)\u003c/);
+        if (titleInContext) {
+          title = titleInContext[1].trim();
+          console.log(`Title from text content: ${title}`);
+        }
       }
+    }
+    
+    // Clean up title if it still has URL junk
+    if (title.includes('?trk=') || title.includes('-at-') || title.includes('paylocity')) {
+      title = 'Unknown Title';
     }
     
     // If still unknown, try visible content patterns
