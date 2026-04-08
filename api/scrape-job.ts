@@ -93,25 +93,45 @@ export default async function handler(
     
     // Parse HTML using regex patterns
     
-    // Title - Search entire HTML for title tag
+    // Title - Extract from visible content in the card
     let title = 'Unknown Title';
-    const titleTagMatch = html.match(/\u003ctitle\u003e([\s\S]*?)\u003c\/title\u003e/i);
-    if (titleTagMatch) {
-      const fullTitle = titleTagMatch[1].trim();
-      console.log(`Title tag found: "${fullTitle}"`);
+    
+    // Try the specific class pattern from browser inspection
+    const cardTitleMatch = html.match(/class="[^"]*_9a287b82[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
+    if (cardTitleMatch) {
+      title = cardTitleMatch[1].trim();
+      console.log(`Title from card class: ${title}`);
+    }
+    
+    // Try any element with job title keywords
+    if (title === 'Unknown Title') {
+      const jobTitlePatterns = [
+        /\u003cp[^\u003e]*class="[^"]*_9a287b82[^"]*"[^\u003e]*\u003e([^\u003c]+)/i,
+        /\u003ch1[^\u003e]*class="[^"]*top-card-layout[^"]*"[^\u003e]*\u003e([^\u003c]+)/i,
+        /\u003cspan[^\u003e]*class="[^"]*job-title[^"]*"[^\u003e]*\u003e([^\u003c]+)/i,
+        /"title":"([^"]+Director[^"]*)"/i,
+        /"title":"([^"]+Manager[^"]*)"/i,
+        /"title":"([^"]+Engineer[^"]*)"/i,
+        /"title":"([^"]+[^"]{10,50})"/i, // Any title 10-50 chars
+      ];
       
-      // LinkedIn format: "Job Title | Company | LinkedIn - URL"
-      // Extract just the job title (first part before "|")
-      const titleParts = fullTitle.split('|');
-      if (titleParts.length >= 2) {
-        title = titleParts[0].trim();
-      } else {
-        // If no "|", try splitting by " - "
-        const dashParts = fullTitle.split(' - ');
-        title = dashParts[0].trim();
+      for (const pattern of jobTitlePatterns) {
+        const match = html.match(pattern);
+        if (match && match[1] && match[1].trim().length > 5) {
+          title = match[1].trim();
+          console.log(`Title from pattern: ${title}`);
+          break;
+        }
       }
-    } else {
-      console.log('No title tag found in HTML');
+    }
+    
+    // Last resort: Look for "Sr." or "Director" or common title words
+    if (title === 'Unknown Title') {
+      const seniorityMatch = html.match(/(Sr\.?\s+)?(Director|Manager|Engineer|Analyst|Specialist|Lead|VP|President)[^\u003c]*/i);
+      if (seniorityMatch) {
+        title = seniorityMatch[0].trim();
+        console.log(`Title from seniority match: ${title}`);
+      }
     }
     
     // If still unknown, try visible content patterns
