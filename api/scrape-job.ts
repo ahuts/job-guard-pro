@@ -274,6 +274,19 @@ export default async function handler(
       }
     }
     
+    // Look for LinkedIn's specific location class pattern
+    if (location === 'Unknown Location') {
+      const linkedInLocMatch = html.match(/class="[^"]*tvm__text[^"]*"[^\u003e]*\u003e[^\u003c]*([^\u003c]{3,50}[^\u003c]*)\u003c\/span\u003e/i);
+      if (linkedInLocMatch) {
+        const possibleLoc = linkedInLocMatch[1].trim();
+        // Validate it looks like a location (contains comma or common location words)
+        if (possibleLoc.includes(',') || /remote|hybrid|united states|canada/i.test(possibleLoc)) {
+          location = possibleLoc;
+          console.log(`Location from LinkedIn pattern: ${location}`);
+        }
+      }
+    }
+    
     // Look for any span or div containing location-like text
     if (location === 'Unknown Location') {
       const locElementMatch = html.match(/\u003c(?:span|div|p)[^\u003e]*\u003e([^\u003c]{5,50}(?:United States|USA?|Canada|UK|Remote|Hybrid|\d{5}|[A-Z]{2})[^\u003c]*)\u003c\/\u003c(?:span|div|p)\u003e/i);
