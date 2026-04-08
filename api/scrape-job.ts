@@ -208,18 +208,19 @@ export default async function handler(
     // Location - try multiple patterns
     let location = 'Unknown Location';
     
-    // Try to find location in various formats
+    // Try location in various HTML patterns
     const locPatterns = [
       /\u003cspan[^\u003e]*class="[^"]*location[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i,
       /"location":"([^"]+)"/i,
       /"jobLocation":\s*{[^}]*"name":\s*"([^"]+)"/i,
-      /\u003cspan[^\u003e]*class="[^"]*top-card-layout__metadata-item[^"]*"[^\u003e]*\u003e([^\u003c]+?)\u003c\/span\u003e/g,
+      /\u003cspan[^\u003e]*class="[^"]*top-card-layout__metadata-item[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/g,
     ];
     
     for (const pattern of locPatterns) {
       const match = html.match(pattern);
       if (match && match[1] && match[1].trim()) {
         location = match[1].trim();
+        console.log(`Location from pattern: ${location}`);
         break;
       }
     }
@@ -241,6 +242,26 @@ export default async function handler(
         } catch (e) {
           // JSON parse failed
         }
+      }
+    }
+    
+    // Try headings or other elements for location
+    if (location === 'Unknown Location') {
+      const locHeadingMatch = html.match(/\u003c[hH][34][^\u003e]*\u003e([^\u003c]*Remote[^\u003c]*)\u003c\/h[34]\u003e/i) ||
+                             html.match(/\u003c[hH][34][^\u003e]*\u003e([^\u003c]*Hybrid[^\u003c]*)\u003c\/h[34]\u003e/i) ||
+                             html.match(/\u003c[hH][34][^\u003e]*\u003e([^\u003c]*On-site[^\u003c]*)\u003c\/h[34]\u003e/i);
+      if (locHeadingMatch) {
+        location = locHeadingMatch[1].trim();
+        console.log(`Location from heading: ${location}`);
+      }
+    }
+    
+    // Look for "Remote" or city names in text
+    if (location === 'Unknown Location') {
+      const remoteMatch = html.match(/\u003e(Remote|Hybrid|On-site)\u003c/i);
+      if (remoteMatch) {
+        location = remoteMatch[1].trim();
+        console.log(`Location from text: ${location}`);
       }
     }
     
