@@ -19,14 +19,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isLinkedIn = tab.url?.includes('linkedin.com/jobs/view/');
     
     if (isLinkedIn) {
-      scanBtn.disabled = false;
-      pageStatus.innerHTML = '<strong>LinkedIn job detected! </strong>Click "Scan Current Job" to analyze.';
+      // Try to ping content script - retry a few times
+      let contentScriptReady = false;
+      let attempts = 0;
+      const maxAttempts = 5;
       
-      // Pre-fetch to check if content script is responding
-      try {
-        await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
-      } catch (e) {
-        // Content script not loaded yet, that's ok
+      while (!contentScriptReady && attempts < maxAttempts) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+          contentScriptReady = true;
+          console.log('[Popup] Content script ready after', attempts + 1, 'attempts');
+        } catch (e) {
+          attempts++;
+          if (attempts < maxAttempts) {
+            console.log('[Popup] Waiting for content script, attempt', attempts);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+      
+      if (contentScriptReady) {
+        scanBtn.disabled = false;
+        pageStatus.innerHTML = '<strong>LinkedIn job detected! </strong>Click "Check for Ghost Job" on the page for full details, or scan here.';
+      } else {
+        scanBtn.disabled = true;
+        pageStatus.innerHTML = '<strong>Content script not loaded.</strong> Refresh the LinkedIn page and try again.';
       }
     } else {
       scanBtn.disabled = true;
