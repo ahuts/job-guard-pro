@@ -309,8 +309,32 @@
     if (request.action === 'ping') {
       sendResponse({ success: true });
     } else if (request.action === 'scanFromPopup') {
-      handleScanClick();
-      sendResponse({ success: true, message: 'Scan started from popup' });
+      // Do the full scan and return results
+      (async () => {
+        try {
+          const jobData = extractJobData();
+          console.log('[GhostJob] Popup scan - extracted:', jobData);
+          
+          // Send to background for API call
+          const response = await chrome.runtime.sendMessage({
+            action: 'scanJob',
+            jobData: jobData
+          });
+          
+          if (response.success) {
+            showGhostScore(response.data);
+            sendResponse({ success: true, data: response.data });
+          } else {
+            showError(response.error || 'Scan failed');
+            sendResponse({ success: false, error: response.error });
+          }
+        } catch (error) {
+          console.error('[GhostJob] Popup scan error:', error);
+          showError(error.message || 'Scan failed');
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
+      return true; // Keep channel open for async
     }
     return true;
   });
