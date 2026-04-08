@@ -67,6 +67,30 @@ export default async function handler(
     const html = await apiResponse.text();
     console.log(`Response length: ${html.length} chars`);
     
+    // DEBUG: Check for title in various ways
+    console.log('Looking for title tag...');
+    console.log('Has <title>:', html.includes('<title>'));
+    console.log('Has <TITLE>:', html.includes('<TITLE>'));
+    console.log('Has Title:', html.includes('Title'));
+    
+    // Try multiple regex approaches
+    const titleRegex1 = html.match(/\u003ctitle\u003e([\s\S]*?)\u003c\/title\u003e/i);
+    const titleRegex2 = html.match(/\u003cTITLE\u003e([\s\S]*?)\u003c\/TITLE\u003e/i);
+    const titleRegex3 = html.match(/title\u003e([^\u003c]+)/i);
+    
+    console.log('Regex1 result:', titleRegex1 ? titleRegex1[1].substring(0, 100) : 'null');
+    console.log('Regex2 result:', titleRegex2 ? titleRegex2[1].substring(0, 100) : 'null');
+    console.log('Regex3 result:', titleRegex3 ? titleRegex3[1].substring(0, 100) : 'null');
+    
+    // Sample of HTML around where title should be
+    const titleIndex = html.toLowerCase().indexOf('<title>');
+    if (titleIndex > -1) {
+      console.log('HTML around title:', html.substring(titleIndex, titleIndex + 200));
+    } else {
+      console.log('No <title> found in HTML at all');
+      console.log('HTML start:', html.substring(0, 500));
+    }
+    
     // Parse HTML using regex patterns
     
     // Title - Search entire HTML for title tag
