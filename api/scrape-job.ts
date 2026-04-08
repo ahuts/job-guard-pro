@@ -206,6 +206,7 @@ export default async function handler(
     
     // Location - try multiple patterns
     let location = 'Unknown Location';
+    console.log('Starting location extraction...');
     
     // Try location in various HTML patterns
     const locPatterns = [
@@ -215,11 +216,12 @@ export default async function handler(
       /\u003cspan[^\u003e]*class="[^"]*top-card-layout__metadata-item[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/g,
     ];
     
-    for (const pattern of locPatterns) {
-      const match = html.match(pattern);
+    for (let i = 0; i < locPatterns.length; i++) {
+      const match = html.match(locPatterns[i]);
+      console.log(`Location pattern ${i + 1} result:`, match ? match[1].substring(0, 50) : 'null');
       if (match && match[1] && match[1].trim()) {
         location = match[1].trim();
-        console.log(`Location from pattern: ${location}`);
+        console.log(`Location from pattern ${i + 1}: ${location}`);
         break;
       }
     }
@@ -276,8 +278,10 @@ export default async function handler(
     
     // Look for LinkedIn's specific location class pattern
     if (location === 'Unknown Location') {
+      console.log('Trying LinkedIn tvm__text pattern...');
       // Pattern for: <span class="tvm__text..."><!---->Lenexa, KS<!----></span>
       const linkedInLocMatch = html.match(/class="[^"]*tvm__text[^"]*"[^\u003e]*\u003e(?:\u003c!--.*?--\u003e)?([^\u003c,]+,\s*[A-Z]{2})(?:\u003c!--.*?--\u003e)?\u003c\/span\u003e/i);
+      console.log('tvm__text pattern result:', linkedInLocMatch ? linkedInLocMatch[1] : 'null');
       if (linkedInLocMatch) {
         location = linkedInLocMatch[1].trim();
         console.log(`Location from LinkedIn pattern: ${location}`);
@@ -286,7 +290,9 @@ export default async function handler(
     
     // Try another pattern - any span with city, state format
     if (location === 'Unknown Location') {
+      console.log('Trying city/state span pattern...');
       const cityStateSpanMatch = html.match(/\u003cspan[^\u003e]*\u003e(?:\u003c!--.*?--\u003e)?([A-Z][a-z]+(?:\s[A-Z][a-z]+)?,\s*[A-Z]{2})\u003c/i);
+      console.log('City/state span result:', cityStateSpanMatch ? cityStateSpanMatch[1] : 'null');
       if (cityStateSpanMatch) {
         location = cityStateSpanMatch[1].trim();
         console.log(`Location from span: ${location}`);
