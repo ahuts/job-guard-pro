@@ -69,37 +69,40 @@ export default async function handler(
     
     // Parse HTML using regex patterns
     
-    // Title - Search entire HTML for title tag (not just start)
+    // Title - Search entire HTML for title tag
     let title = 'Unknown Title';
     const titleTagMatch = html.match(/\u003ctitle\u003e([\s\S]*?)\u003c\/title\u003e/i);
     if (titleTagMatch) {
       const fullTitle = titleTagMatch[1].trim();
       console.log(`Title tag found: "${fullTitle}"`);
       
-      // LinkedIn format: "Job Title | Company | LinkedIn"
-      const parts = fullTitle.split('|').map(p => p.trim());
-      if (parts.length >= 2) {
-        title = parts[0];
+      // LinkedIn format: "Job Title | Company | LinkedIn - URL"
+      // Extract just the job title (first part before "|")
+      const titleParts = fullTitle.split('|');
+      if (titleParts.length >= 2) {
+        title = titleParts[0].trim();
       } else {
-        title = fullTitle;
+        // If no "|", try splitting by " - "
+        const dashParts = fullTitle.split(' - ');
+        title = dashParts[0].trim();
       }
     } else {
       console.log('No title tag found in HTML');
     }
     
-    // If still unknown, try JSON-LD schema or visible h1
+    // If still unknown, try visible content patterns
     if (title === 'Unknown Title') {
-      // Try h1 in the content
-      const h1Match = html.match(/\u003ch1[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i);
-      if (h1Match) {
-        title = h1Match[1].trim();
-        console.log(`Title from h1: ${title}`);
+      // Try the specific class pattern you found
+      const visibleTitleMatch = html.match(/class="[^"]*_9a287b82[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
+      if (visibleTitleMatch) {
+        title = visibleTitleMatch[1].trim();
+        console.log(`Title from visible content: ${title}`);
       } else {
-        // Try LinkedIn's top-card title class
-        const cardTitleMatch = html.match(/class="[^"]*top-card-layout__title[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
-        if (cardTitleMatch) {
-          title = cardTitleMatch[1].trim();
-          console.log(`Title from card: ${title}`);
+        // Try h1
+        const h1Match = html.match(/\u003ch1[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i);
+        if (h1Match) {
+          title = h1Match[1].trim();
+          console.log(`Title from h1: ${title}`);
         }
       }
     }
