@@ -264,6 +264,24 @@ export default async function handler(
       }
     }
     
+    // Look for City, State pattern (e.g., "Chicago, IL" or "New York, NY")
+    if (location === 'Unknown Location') {
+      const cityStateMatch = html.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?),?\s*[A-Z]{2}\s+\d{5}/);
+      if (cityStateMatch) {
+        location = cityStateMatch[0].trim();
+        console.log(`Location from city/state: ${location}`);
+      }
+    }
+    
+    // Look for common US cities
+    if (location === 'Unknown Location') {
+      const cityMatch = html.match(/\u003e(Chicago|New York|San Francisco|Los Angeles|Austin|Seattle|Boston|Denver|Miami|Atlanta|Dallas|Houston|Phoenix|Philadelphia|Portland|San Diego|San Jose|Nashville|Detroit|Minneapolis|Raleigh|Charlotte|Indianapolis|Columbus|Kansas City|St\. Louis|Cleveland|Cincinnati|Pittsburgh|Baltimore|Washington|Virginia Beach|Richmond|Milwaukee|Madison|Salt Lake City|Boise|Spokane|Albuquerque|Oklahoma City|New Orleans|Memphis|Louisville|Birmingham|Jacksonville|Tampa|Orlando)\u003c/i);
+      if (cityMatch) {
+        location = cityMatch[1].trim();
+        console.log(`Location from city name: ${location}`);
+      }
+    }
+    
     console.log(`Final location: ${location}`);
     
     // Description - look for description div
