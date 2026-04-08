@@ -264,6 +264,25 @@ export default async function handler(
       }
     }
     
+    // Try broader search for location indicators in the HTML
+    if (location === 'Unknown Location') {
+      // Look for "Location" or "location" in class names followed by content
+      const locClassMatch = html.match(/class="[^"]*(?:location|Location)[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
+      if (locClassMatch) {
+        location = locClassMatch[1].trim();
+        console.log(`Location from class: ${location}`);
+      }
+    }
+    
+    // Look for any span or div containing location-like text
+    if (location === 'Unknown Location') {
+      const locElementMatch = html.match(/\u003c(?:span|div|p)[^\u003e]*\u003e([^\u003c]{5,50}(?:United States|USA?|Canada|UK|Remote|Hybrid|\d{5}|[A-Z]{2})[^\u003c]*)\u003c\/\u003c(?:span|div|p)\u003e/i);
+      if (locElementMatch) {
+        location = locElementMatch[1].trim();
+        console.log(`Location from element: ${location}`);
+      }
+    }
+    
     // Look for City, State pattern (e.g., "Chicago, IL" or "New York, NY")
     if (location === 'Unknown Location') {
       const cityStateMatch = html.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?),?\s*[A-Z]{2}\s+\d{5}/);
