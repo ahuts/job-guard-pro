@@ -171,7 +171,7 @@
     return data;
   }
 
-  // Show Ghost Score result
+  // Show Ghost Score result with detailed signals
   function showGhostScore(result) {
     // Remove existing result
     const existing = document.getElementById('ghostjob-result');
@@ -185,6 +185,49 @@
     const color = isGhost ? '#ef4444' : score > 40 ? '#f59e0b' : '#22c55e';
     const label = isGhost ? '⚠️ Likely Ghost Job' : score > 40 ? '⚡ Proceed with Caution' : '✅ Looks Legitimate';
 
+    // Build signals HTML
+    let signalsHtml = '';
+    if (result.signals && result.signals.length > 0) {
+      signalsHtml = `
+        <div style="margin-top: 20px; border-top: 1px solid ${color}30; padding-top: 16px;">
+          <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 12px;">
+            📊 Signals Detected (${result.signals.length})
+          </div>
+          ${result.signals.map(signal => `
+            <div style="
+              margin-bottom: 16px;
+              padding: 12px;
+              border-radius: 8px;
+              background: ${signal.type === 'red' ? '#fef2f2' : signal.type === 'green' ? '#f0fdf4' : '#fefce8'};
+              border-left: 3px solid ${signal.type === 'red' ? '#ef4444' : signal.type === 'green' ? '#22c55e' : '#eab308'};
+            ">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 18px;">${signal.icon}</span>
+                <span style="font-weight: 600; color: #333;">${signal.title}</span>
+                <span style="
+                  margin-left: auto;
+                  padding: 2px 8px;
+                  border-radius: 4px;
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  background: ${signal.type === 'red' ? '#fecaca' : signal.type === 'green' ? '#bbf7d0' : '#fde047'};
+                  color: ${signal.type === 'red' ? '#dc2626' : signal.type === 'green' ? '#16a34a' : '#a16207'};
+                ">${signal.type}</span>
+              </div>
+              <div style="font-size: 13px; color: #555; margin-bottom: 6px; padding-left: 26px;">${signal.description}</div>
+              <div style="font-size: 12px; color: #666; padding-left: 26px; margin-bottom: 6px;">
+                <strong>Impact:</strong> ${signal.impact}
+              </div>
+              <div style="font-size: 12px; color: #2563eb; padding-left: 26px;">
+                <strong>💡 Tip:</strong> ${signal.advice}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     resultDiv.style.cssText = `
       margin-top: 16px;
       padding: 16px;
@@ -192,6 +235,8 @@
       background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%);
       border: 1px solid ${color}40;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-height: 600px;
+      overflow-y: auto;
     `;
 
     resultDiv.innerHTML = `
@@ -213,14 +258,123 @@
           <div style="font-size: 13px; color: #666; margin-top: 4px;">Ghost Score: ${score}/100</div>
         </div>
       </div>
-      <div style="font-size: 13px; color: #444; line-height: 1.5;">
-        ${result.analysis || 'Analysis based on posting patterns, company signals, and description quality.'}
+      
+      ${result.summary ? `
+        <div style="font-size: 14px; color: #444; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.5); border-radius: 8px;">
+          <strong>Summary:</strong> ${result.summary}
+        </div>
+      ` : ''}
+      
+      ${signalsHtml}
+      
+      ${result.recommendation ? `
+        <div style="margin-top: 16px; padding: 12px; background: ${color}10; border-radius: 8px; border-left: 3px solid ${color};">
+          <div style="font-size: 13px; color: #444;">
+            <strong>🎯 Recommendation:</strong> ${result.recommendation}
+          </div>
+        </div>
+      ` : ''}
+      
+      <div style="margin-top: 16px; display: flex; gap: 8px;">
+        <button id="ghostjob-save-btn" style="
+          flex: 1;
+          padding: 10px 16px;
+          background: #667eea;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s;
+        ">💾 Save to Dashboard</button>
+        <button id="ghostjob-refresh-btn" style="
+          padding: 10px 16px;
+          background: #f3f4f6;
+          color: #374151;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        ">🔄 Rescan</button>
       </div>
+      <div id="ghostjob-save-status" style="margin-top: 8px; font-size: 12px; text-align: center;"></div>
     `;
 
     const button = document.getElementById('ghostjob-scan-btn');
     if (button) {
       button.parentNode.insertBefore(resultDiv, button.nextSibling);
+    }
+
+    // Add save button handler
+    const saveBtn = document.getElementById('ghostjob-save-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => handleSaveJob(result));
+    }
+
+    // Add refresh button handler
+    const refreshBtn = document.getElementById('ghostjob-refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', handleScanClick);
+    }
+  }
+
+  // Handle save job to dashboard
+  async function handleSaveJob(result) {
+    const saveBtn = document.getElementById('ghostjob-save-btn');
+    const statusDiv = document.getElementById('ghostjob-save-status');
+    
+    if (!saveBtn || !statusDiv) return;
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = '💾 Saving...';
+    statusDiv.textContent = '';
+    statusDiv.style.color = '#666';
+
+    try {
+      const jobData = extractJobData();
+      const dataToSave = {
+        ...jobData,
+        ghostScore: result.ghostScore,
+        signals: result.signals,
+        summary: result.summary,
+        scannedAt: new Date().toISOString()
+      };
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'saveJob',
+        jobData: dataToSave
+      });
+
+      if (response.success) {
+        saveBtn.textContent = '✅ Saved!';
+        saveBtn.style.background = '#22c55e';
+        statusDiv.textContent = `Job saved to dashboard (${response.data.totalSaved} total)`;
+        statusDiv.style.color = '#22c55e';
+        
+        setTimeout(() => {
+          saveBtn.textContent = '💾 Save to Dashboard';
+          saveBtn.style.background = '#667eea';
+          saveBtn.disabled = false;
+          statusDiv.textContent = '';
+        }, 3000);
+      } else {
+        throw new Error(response.error || 'Save failed');
+      }
+    } catch (error) {
+      console.error('[GhostJob] Save error:', error);
+      saveBtn.textContent = '❌ Save Failed';
+      saveBtn.style.background = '#ef4444';
+      statusDiv.textContent = error.message || 'Could not save job. Try again.';
+      statusDiv.style.color = '#ef4444';
+      
+      setTimeout(() => {
+        saveBtn.textContent = '💾 Save to Dashboard';
+        saveBtn.style.background = '#667eea';
+        saveBtn.disabled = false;
+        statusDiv.textContent = '';
+      }, 3000);
     }
   }
 

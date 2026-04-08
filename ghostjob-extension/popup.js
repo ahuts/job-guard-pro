@@ -84,7 +84,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     scoreCircle.style.background = color;
     scoreCircle.textContent = score;
     scoreLabel.textContent = label;
-    scoreValue.textContent = `Based on ${data.signals?.length || 'multiple'} signals`;
+    
+    // Show signal count and summary
+    let detailText = `Based on ${data.signals?.length || 'multiple'} signals`;
+    if (data.summary) {
+      detailText += ` • ${data.summary}`;
+    }
+    scoreValue.textContent = detailText;
 
     resultCard.classList.add('show');
   }
