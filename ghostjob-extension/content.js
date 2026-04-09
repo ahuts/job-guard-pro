@@ -414,12 +414,23 @@
     const existing = document.getElementById('ghostjob-scan-btn');
     if (existing) existing.remove();
 
-    // Find injection point
+    // Find injection point - expanded selector list
     const injectionSelectors = [
-      '.top-card-layout__card',
+      // LinkedIn job detail containers (various layouts)
+      '.job-details-jobs-unified-top-card__container',
       '.job-details-jobs-unified-top-card__content',
       '.jobs-unified-top-card__content',
-      '[data-testid="job-details"]'
+      '.job-details-jobs-unified-top-card',
+      '.jobs-details-top-card',
+      '[class*="jobs-unified-top-card"]',
+      '[class*="job-details"]',
+      // Generic fallbacks
+      '.jobs-search-results-list',
+      '.scaffold-layout__main',
+      'main[role="main"]',
+      'main',
+      // Last resort - body (will need positioning)
+      'body'
     ];
 
     let injected = false;
@@ -427,6 +438,12 @@
       const container = document.querySelector(selector);
       if (container) {
         const button = createGhostButton();
+        
+        // If injecting into body, use fixed positioning
+        if (selector === 'body') {
+          button.style.cssText += 'position: fixed; bottom: 20px; right: 20px; z-index: 9999;';
+        }
+        
         container.appendChild(button);
         console.log('[GhostJob] Button injected into:', selector);
         injected = true;
@@ -435,8 +452,8 @@
     }
 
     if (!injected) {
-      console.log('[GhostJob] Could not find injection point, retrying in 2s...');
-      setTimeout(injectButton, 2000);
+      console.log('[GhostJob] Could not find injection point, will retry on next navigation...');
+      // Don't spam retry - LinkedIn is SPA, will re-inject on navigation
     }
   }
 
