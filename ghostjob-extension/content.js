@@ -222,15 +222,34 @@
     return data;
   }
 
-  // Show Ghost Score result with detailed signals
+  // Show Ghost Score result with detailed signals - as floating modal
   function showGhostScore(result) {
-    // Remove existing result
-    const existing = document.getElementById('ghostjob-result');
+    // Remove existing modal
+    const existing = document.getElementById('ghostjob-modal-overlay');
     if (existing) existing.remove();
 
-    const resultDiv = document.createElement('div');
-    resultDiv.id = 'ghostjob-result';
+    // Create overlay backdrop
+    const overlay = document.createElement('div');
+    overlay.id = 'ghostjob-modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    `;
     
+    // Close on backdrop click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
     const score = result.ghostScore || result.score || 50;
     const isGhost = score > 70;
     const color = isGhost ? '#ef4444' : score > 40 ? '#f59e0b' : '#22c55e';
@@ -244,37 +263,39 @@
           <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 12px;">
             📊 Signals Detected (${result.signals.length})
           </div>
+          <div style="max-height: 300px; overflow-y: auto;">
           ${result.signals.map(signal => `
             <div style="
-              margin-bottom: 16px;
-              padding: 12px;
+              margin-bottom: 12px;
+              padding: 10px;
               border-radius: 8px;
               background: ${signal.type === 'red' ? '#fef2f2' : signal.type === 'green' ? '#f0fdf4' : '#fefce8'};
               border-left: 3px solid ${signal.type === 'red' ? '#ef4444' : signal.type === 'green' ? '#22c55e' : '#eab308'};
             ">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                <span style="font-size: 18px;">${signal.icon}</span>
-                <span style="font-weight: 600; color: #333;">${signal.title}</span>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="font-size: 16px;">${signal.icon}</span>
+                <span style="font-weight: 600; color: #333; font-size: 13px;">${signal.title}</span>
                 <span style="
                   margin-left: auto;
-                  padding: 2px 8px;
+                  padding: 2px 6px;
                   border-radius: 4px;
-                  font-size: 11px;
+                  font-size: 10px;
                   font-weight: 600;
                   text-transform: uppercase;
                   background: ${signal.type === 'red' ? '#fecaca' : signal.type === 'green' ? '#bbf7d0' : '#fde047'};
                   color: ${signal.type === 'red' ? '#dc2626' : signal.type === 'green' ? '#16a34a' : '#a16207'};
                 ">${signal.type}</span>
               </div>
-              <div style="font-size: 13px; color: #555; margin-bottom: 6px; padding-left: 26px;">${signal.description}</div>
-              <div style="font-size: 12px; color: #666; padding-left: 26px; margin-bottom: 6px;">
+              <div style="font-size: 12px; color: #555; margin-bottom: 4px; padding-left: 24px;">${signal.description}</div>
+              <div style="font-size: 11px; color: #666; padding-left: 24px; margin-bottom: 4px;">
                 <strong>Impact:</strong> ${signal.impact}
               </div>
-              <div style="font-size: 12px; color: #2563eb; padding-left: 26px;">
+              <div style="font-size: 11px; color: #2563eb; padding-left: 24px;">
                 <strong>💡 Tip:</strong> ${signal.advice}
               </div>
             </div>
           `).join('')}
+          </div>
         </div>
       `;
     }
