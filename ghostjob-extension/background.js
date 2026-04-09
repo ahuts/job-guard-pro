@@ -175,22 +175,35 @@ function calculateDetailedScore(jobData) {
     });
   }
 
-  if (/years?.?(of)?.?experience|\d{1,2}\+?\s*years/i.test(desc)) {
-    const yearMatches = desc.match(/\d{1,2}\+?/g);
-    if (yearMatches) {
-      const years = Math.max(...yearMatches.map(y => parseInt(y)));
-      if (years >= 5 && years < 100) {  // Sanity check: less than 100 years
-        score -= 6;
-        signals.push({
-          type: 'red',
-          icon: '📅',
-          title: 'High Experience Requirements',
-          description: `Requires ${years}+ years of experience - may be unrealistic.`,
-          impact: 'Could indicate they want senior talent at junior/mid-level pay.',
-          advice: 'Apply anyway if you\'re close. Experience requirements are often flexible.'
-        });
+  // Check for experience requirements (look for specific patterns)
+  const expPatterns = [
+    /(\d{1,2})\+?\s*years?\s*(?:of\s*)?experience/i,
+    /(\d{1,2})\+?\s*years?\s*(?:of\s*)?[^\d]*?experience/i,
+    /requires?\s*(\d{1,2})\+?\s*years?/i,
+    /(?:minimum|min|at least)\s*(\d{1,2})\+?\s*years?/i
+  ];
+  
+  let years = 0;
+  for (const pattern of expPatterns) {
+    const match = desc.match(pattern);
+    if (match) {
+      const found = parseInt(match[1]);
+      if (found > years && found < 50) {
+        years = found;
       }
     }
+  }
+  
+  if (years >= 5) {
+    score -= 6;
+    signals.push({
+      type: 'red',
+      icon: '📅',
+      title: 'High Experience Requirements',
+      description: `Requires ${years}+ years of experience - may be unrealistic.`,
+      impact: 'Could indicate they want senior talent at junior/mid-level pay.',
+      advice: 'Apply anyway if you\'re close. Experience requirements are often flexible.'
+    });
   }
 
   if (/unlimited pto|unlimited vacation|take time as needed/i.test(desc)) {
