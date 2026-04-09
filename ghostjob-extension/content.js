@@ -10,6 +10,57 @@
 
   console.log('[GhostJob] Content script loaded');
 
+  // Create floating badge button (always visible)
+  function createFloatingBadge() {
+    const badge = document.createElement('button');
+    badge.id = 'ghostjob-float-btn';
+    badge.innerHTML = '👻';
+    badge.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 99999;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+    
+    badge.addEventListener('mouseenter', () => {
+      badge.style.transform = 'scale(1.1)';
+      badge.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.4)';
+    });
+    
+    badge.addEventListener('mouseleave', () => {
+      badge.style.transform = 'scale(1)';
+      badge.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+    });
+    
+    badge.addEventListener('click', handleScanClick);
+    
+    return badge;
+  }
+
+  // Add floating badge to body
+  function addFloatingBadge() {
+    // Remove existing if any
+    const existing = document.getElementById('ghostjob-float-btn');
+    if (existing) existing.remove();
+    
+    const badge = createFloatingBadge();
+    document.body.appendChild(badge);
+    console.log('[GhostJob] Floating badge added');
+  }
+
   // Create the GhostJob button
   function createGhostButton() {
     const button = document.createElement('button');
