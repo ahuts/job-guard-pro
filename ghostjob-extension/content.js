@@ -300,98 +300,118 @@
       `;
     }
 
-    resultDiv.style.cssText = `
-      margin-top: 16px;
-      padding: 16px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%);
-      border: 1px solid ${color}40;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      max-height: 600px;
+    // Create modal content card
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 85vh;
       overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     `;
 
-    resultDiv.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <div style="
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          background: ${color};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 24px;
-          font-weight: bold;
-        ">${score}</div>
-        <div>
-          <div style="font-size: 18px; font-weight: 700; color: ${color};">${label}</div>
-          <div style="font-size: 13px; color: #666; margin-top: 4px;">Ghost Score: ${score}/100</div>
+    modalContent.innerHTML = `
+      <div style="padding: 24px;">
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <div style="font-size: 20px; font-weight: 700; color: #333;">GhostJob Analysis</div>
+          <button id="ghostjob-close-modal" style="
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+          ">×</button>
         </div>
-      </div>
-      
-      ${result.summary ? `
-        <div style="font-size: 14px; color: #444; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.5); border-radius: 8px;">
-          <strong>Summary:</strong> ${result.summary}
-        </div>
-      ` : ''}
-      
-      ${signalsHtml}
-      
-      ${result.recommendation ? `
-        <div style="margin-top: 16px; padding: 12px; background: ${color}10; border-radius: 8px; border-left: 3px solid ${color};">
-          <div style="font-size: 13px; color: #444;">
-            <strong>🎯 Recommendation:</strong> ${result.recommendation}
+
+        <!-- Score Display -->
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding: 16px; background: ${color}10; border-radius: 12px;">
+          <div style="
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: ${color};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            flex-shrink: 0;
+          ">${score}</div>
+          <div>
+            <div style="font-size: 18px; font-weight: 700; color: ${color};">${label}</div>
+            <div style="font-size: 14px; color: #666; margin-top: 4px;">Ghost Score: ${score}/100</div>
           </div>
         </div>
-      ` : ''}
-      
-      <div style="margin-top: 16px; display: flex; gap: 8px;">
-        <button id="ghostjob-save-btn" style="
-          flex: 1;
-          padding: 10px 16px;
-          background: #667eea;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s;
-        ">💾 Save to Dashboard</button>
-        <button id="ghostjob-refresh-btn" style="
-          padding: 10px 16px;
-          background: #f3f4f6;
-          color: #374151;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-        ">🔄 Rescan</button>
+        
+        ${result.summary ? `
+          <div style="font-size: 14px; color: #444; margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 8px; border-left: 3px solid ${color};">
+            <strong>Summary:</strong> ${result.summary}
+          </div>
+        ` : ''}
+        
+        ${signalsHtml}
+        
+        ${result.recommendation ? `
+          <div style="margin-top: 20px; padding: 12px; background: ${color}08; border-radius: 8px; border-left: 3px solid ${color};">
+            <div style="font-size: 14px; color: #444;">
+              <strong>🎯 Recommendation:</strong> ${result.recommendation}
+            </div>
+          </div>
+        ` : ''}
+        
+        <!-- Action Buttons -->
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+          <button id="ghostjob-save-btn" style="
+            flex: 1;
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+          ">💾 Save to Dashboard</button>
+          <button id="ghostjob-close-btn" style="
+            padding: 12px 20px;
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+          ">Close</button>
+        </div>
+        
+        <div id="ghostjob-save-status" style="margin-top: 12px; font-size: 13px; text-align: center;"></div>
       </div>
-      <div id="ghostjob-save-status" style="margin-top: 8px; font-size: 12px; text-align: center;"></div>
     `;
 
-    const button = document.getElementById('ghostjob-scan-btn');
-    if (button) {
-      // Don't insert into button row - append to body as overlay
-      document.body.appendChild(overlay);
-    } else {
-      document.body.appendChild(overlay);
-    }
+    overlay.appendChild(modalContent);
+    document.body.appendChild(overlay);
+
+    // Close handlers
+    document.getElementById('ghostjob-close-modal')?.addEventListener('click', () => overlay.remove());
+    document.getElementById('ghostjob-close-btn')?.addEventListener('click', () => overlay.remove());
 
     // Add save button handler
     const saveBtn = document.getElementById('ghostjob-save-btn');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => handleSaveJob(result));
-    }
-
-    // Add refresh button handler
-    const refreshBtn = document.getElementById('ghostjob-refresh-btn');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', handleScanClick);
     }
   }
 
