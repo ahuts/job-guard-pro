@@ -467,6 +467,9 @@
 
     // Find injection point - expanded selector list
     const injectionSelectors = [
+      // Try to find Save button container first (most natural placement)
+      '[class*="save"]',  // Save button itself
+      'button[aria-label*="Save"]',  // Save by aria-label
       // LinkedIn job detail containers (various layouts)
       '.job-details-jobs-unified-top-card__container',
       '.job-details-jobs-unified-top-card__content',
@@ -486,17 +489,26 @@
 
     let injected = false;
     for (const selector of injectionSelectors) {
-      const container = document.querySelector(selector);
-      if (container) {
+      const element = document.querySelector(selector);
+      if (element) {
         const button = createGhostButton();
         
-        // If injecting into body, use fixed positioning
-        if (selector === 'body') {
+        // If we found Save button, insert our button right after it
+        if (selector.includes('save') || selector.includes('Save')) {
+          button.style.cssText = button.style.cssText.replace('margin-top: 16px;', 'margin-left: 8px; display: inline-flex;');
+          element.parentNode.insertBefore(button, element.nextSibling);
+          console.log('[GhostJob] Button injected next to Save button');
+        } else if (selector === 'body') {
+          // Body fallback - fixed position
           button.style.cssText += 'position: fixed; bottom: 20px; right: 20px; z-index: 9999;';
+          element.appendChild(button);
+          console.log('[GhostJob] Button injected into body (fixed position)');
+        } else {
+          // Regular container
+          element.appendChild(button);
+          console.log('[GhostJob] Button injected into:', selector);
         }
         
-        container.appendChild(button);
-        console.log('[GhostJob] Button injected into:', selector);
         injected = true;
         break;
       }
