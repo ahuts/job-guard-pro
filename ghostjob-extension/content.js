@@ -515,14 +515,32 @@
     injectButton();
   }
 
-  // Re-inject on URL changes (LinkedIn SPA navigation)
+  // Re-inject on URL changes AND DOM changes (LinkedIn SPA navigation)
   let lastUrl = location.href;
+  let reinjectTimeout = null;
+  
   new MutationObserver(() => {
     const url = location.href;
+    
+    // URL changed - definitely re-inject
     if (url !== lastUrl) {
       lastUrl = url;
       console.log('[GhostJob] URL changed, re-injecting...');
-      setTimeout(injectButton, 1000);
+      clearTimeout(reinjectTimeout);
+      reinjectTimeout = setTimeout(injectButton, 500);
+      return;
+    }
+    
+    // Check if button is missing (LinkedIn re-rendered)
+    if (url.includes('/jobs/view/')) {
+      const existingBtn = document.getElementById('ghostjob-scan-btn');
+      const existingFloat = document.getElementById('ghostjob-float-btn');
+      
+      if (!existingBtn && !existingFloat) {
+        console.log('[GhostJob] Button missing, re-injecting...');
+        clearTimeout(reinjectTimeout);
+        reinjectTimeout = setTimeout(injectButton, 500);
+      }
     }
   }).observe(document, { subtree: true, childList: true });
 
