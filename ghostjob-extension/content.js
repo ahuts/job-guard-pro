@@ -493,11 +493,22 @@
       if (element) {
         const button = createGhostButton();
         
-        // If we found Save button, insert our button right after it
+        // If we found Save button, insert our button into the PARENT container
+        // so it appears in the same row
         if (selector.includes('save') || selector.includes('Save')) {
-          button.style.cssText = button.style.cssText.replace('margin-top: 16px;', 'margin-left: 8px; display: inline-flex;');
-          element.parentNode.insertBefore(button, element.nextSibling);
-          console.log('[GhostJob] Button injected next to Save button');
+          button.style.cssText = button.style.cssText.replace('margin-top: 16px;', 'margin-left: 8px;');
+          button.style.display = 'inline-flex';
+          
+          // Insert into grandparent (the flex row container)
+          const flexRow = element.closest('[class*="flex"]') || element.parentElement?.parentElement;
+          if (flexRow) {
+            flexRow.appendChild(button);
+            console.log('[GhostJob] Button injected into flex row next to Save');
+          } else {
+            // Fallback: insert after Save button's container
+            element.parentElement.parentElement.appendChild(button);
+            console.log('[GhostJob] Button injected next to Save button');
+          }
         } else if (selector === 'body') {
           // Body fallback - fixed position
           button.style.cssText += 'position: fixed; bottom: 20px; right: 20px; z-index: 9999;';
