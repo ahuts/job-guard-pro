@@ -175,11 +175,11 @@ function calculateDetailedScore(jobData) {
     });
   }
 
-  if (/years?.?(of)?.?experience|\d+\+?\s*years/i.test(desc)) {
-    const yearMatches = desc.match(/\d+\+?/g);
+  if (/years?.?(of)?.?experience|\d{1,2}\+?\s*years/i.test(desc)) {
+    const yearMatches = desc.match(/\d{1,2}\+?/g);
     if (yearMatches) {
       const years = Math.max(...yearMatches.map(y => parseInt(y)));
-      if (years >= 5) {
+      if (years >= 5 && years < 100) {  // Sanity check: less than 100 years
         score -= 6;
         signals.push({
           type: 'red',
