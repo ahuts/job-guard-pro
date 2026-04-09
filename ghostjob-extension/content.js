@@ -376,7 +376,10 @@
 
     const button = document.getElementById('ghostjob-scan-btn');
     if (button) {
-      button.parentNode.insertBefore(resultDiv, button.nextSibling);
+      // Don't insert into button row - append to body as overlay
+      document.body.appendChild(overlay);
+    } else {
+      document.body.appendChild(overlay);
     }
 
     // Add save button handler
