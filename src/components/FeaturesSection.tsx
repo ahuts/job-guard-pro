@@ -92,12 +92,12 @@ const FeaturesSection = () => {
                 <h4 className="font-semibold text-foreground">Red Flags</h4>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>🔄 Reposted job (-10)</li>
-                <li>⚡ Urgency language (-10)</li>
-                <li>📊 Unrealistic experience (-8)</li>
-                <li>💰 Vague "competitive" salary (-8)</li>
-                <li>📝 Generic description (-6)</li>
-                <li>🎯 High experience for entry-level (-6)</li>
+                <li>🔄 Reposted job</li>
+                <li>⚡ Urgency language</li>
+                <li>📊 Unrealistic experience</li>
+                <li>💰 Vague "competitive" salary</li>
+                <li>📝 Generic description</li>
+                <li>🎯 High experience for entry-level</li>
               </ul>
             </div>
             <div className="bg-card rounded-xl border border-warning/20 p-6">
@@ -106,12 +106,12 @@ const FeaturesSection = () => {
                 <h4 className="font-semibold text-foreground">Yellow Flags</h4>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>🔍 No salary range listed (-4)</li>
-                <li>👤 No team/manager mentioned (-4)</li>
-                <li>📍 Vague or missing location (-3)</li>
-                <li>🤖 AI-generated language (-3)</li>
-                <li>⚡ Culture buzzwords + red flags (-4)</li>
-                <li>⏳ Stale listing 30+ days (-6)</li>
+                <li>🔍 No salary range listed</li>
+                <li>👤 No team/manager mentioned</li>
+                <li>📍 Vague or missing location</li>
+                <li>🤖 AI-generated language</li>
+                <li>⚡ Culture buzzwords + red flags</li>
+                <li>⏳ Stale listing 30+ days</li>
               </ul>
             </div>
             <div className="bg-card rounded-xl border border-safe/20 p-6">
@@ -120,11 +120,11 @@ const FeaturesSection = () => {
                 <h4 className="font-semibold text-foreground">Green Flags</h4>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>💰 Salary transparency (+10)</li>
-                <li>🏥 Benefits mentioned (+6)</li>
-                <li>🏠 Flexible work options (+5)</li>
-                <li>👤 Hiring manager contact (+4)</li>
-                <li>📋 Clear, specific requirements (+4)</li>
+                <li>💰 Salary transparency</li>
+                <li>🏥 Benefits mentioned</li>
+                <li>🏠 Flexible work options</li>
+                <li>👤 Hiring manager contact</li>
+                <li>📋 Clear, specific requirements</li>
               </ul>
             </div>
           </div>
