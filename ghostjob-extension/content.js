@@ -4,11 +4,16 @@
 (function() {
   'use strict';
 
-  // Prevent multiple injections
-  if (window.ghostJobInjected) return;
-  window.ghostJobInjected = true;
+  // Prevent multiple injections from THIS script load only
+  // Don't use window.ghostJobInjected - it persists across extension reloads
+  const scriptId = 'ghostjob-' + Date.now();
+  if (window.ghostJobActiveScript) {
+    console.log('[GhostJob] Another instance already running');
+    return;
+  }
+  window.ghostJobActiveScript = scriptId;
 
-  console.log('[GhostJob] Content script loaded');
+  console.log('[GhostJob] Content script loaded, ID:', scriptId);
 
   // Create floating badge button (always visible)
   function createFloatingBadge() {
@@ -103,6 +108,15 @@
   async function handleScanClick() {
     const button = document.getElementById('ghostjob-scan-btn');
     if (!button) return;
+    
+    // Check if extension context is still valid
+    try {
+      chrome.runtime.getURL('');
+    } catch (e) {
+      console.error('[GhostJob] Extension context invalidated');
+      showError('Extension updated. Please refresh the page to continue.');
+      return;
+    }
 
     // Show loading state
     const originalText = button.innerHTML;
@@ -128,7 +142,14 @@
       }
     } catch (error) {
       console.error('[GhostJob] Scan error:', error);
-      showError('Extension error. Please try again.');
+      
+      // Check for extension context invalidated (extension was reloaded)
+      if (error.message?.includes('Extension context invalidated') || 
+          error.toString().includes('Extension context invalidated')) {
+        showError('Extension updated. Please refresh the page to continue.');
+      } else {
+        showError('Extension error. Please try again or refresh the page.');
+      }
     } finally {
       button.innerHTML = originalText;
       button.disabled = false;
@@ -222,13 +243,13 @@
     return data;
   }
 
-  // Show Ghost Score result with detailed signals - as floating modal
+  // Show Ghost Score result with detailed signals - as integrated side panel
   function showGhostScore(result) {
     // Remove existing modal
     const existing = document.getElementById('ghostjob-modal-overlay');
     if (existing) existing.remove();
 
-    // Create overlay backdrop
+    // Create overlay backdrop - NO blur, semi-transparent
     const overlay = document.createElement('div');
     overlay.id = 'ghostjob-modal-overlay';
     overlay.style.cssText = `
@@ -237,12 +258,13 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.3);
       z-index: 99999;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(4px);
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 20px;
+      padding-top: 80px;
     `;
     
     // Close on backdrop click
@@ -300,17 +322,19 @@
       `;
     }
 
-    // Create modal content card
+    // Create modal content card - positioned on right side
     const modalContent = document.createElement('div');
     modalContent.style.cssText = `
       background: white;
-      border-radius: 16px;
-      width: 90%;
-      max-width: 500px;
-      max-height: 85vh;
+      border-radius: 16px 0 0 16px;
+      width: 580px;
+      max-height: calc(100vh - 100px);
       overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin-right: 0;
+      border: 1px solid #e5e7eb;
+      border-right: none;
     `;
 
     modalContent.innerHTML = `
@@ -512,8 +536,9 @@
     // Find injection point - expanded selector list
     const injectionSelectors = [
       // Try to find Save button container first (most natural placement)
-      '[class*="save"]',  // Save button itself
-      'button[aria-label*="Save"]',  // Save by aria-label
+      '[data-testid="job-save-button"]',  // LinkedIn's save button
+      '[aria-label*="Save"]',  // Save by aria-label
+      'button[type="button"][aria-label*="Save job"]',  // Specific save button
       // LinkedIn job detail containers (various layouts)
       '.job-details-jobs-unified-top-card__container',
       '.job-details-jobs-unified-top-card__content',
@@ -532,26 +557,37 @@
     ];
 
     let injected = false;
+    console.log('[GhostJob] Looking for injection points...');
+    
     for (const selector of injectionSelectors) {
       const element = document.querySelector(selector);
+      console.log('[GhostJob] Checking selector:', selector, 'Found:', !!element);
+      
       if (element) {
         const button = createGhostButton();
         
         // If we found Save button, insert our button into the PARENT container
         // so it appears in the same row
-        if (selector.includes('save') || selector.includes('Save')) {
+        if (selector.includes('save') || selector.includes('Save') || selector.includes('aria-label')) {
           button.style.cssText = button.style.cssText.replace('margin-top: 16px;', 'margin-left: 8px;');
           button.style.display = 'inline-flex';
           
-          // Insert into grandparent (the flex row container)
-          const flexRow = element.closest('[class*="flex"]') || element.parentElement?.parentElement;
+          // Try to find the flex row container
+          let flexRow = element.closest('[class*="flex"]');
+          if (!flexRow && element.parentElement) {
+            flexRow = element.parentElement.closest('[class*="flex"]');
+          }
+          if (!flexRow && element.parentElement?.parentElement) {
+            flexRow = element.parentElement.parentElement;
+          }
+          
           if (flexRow) {
             flexRow.appendChild(button);
             console.log('[GhostJob] Button injected into flex row next to Save');
           } else {
-            // Fallback: insert after Save button's container
-            element.parentElement.parentElement.appendChild(button);
-            console.log('[GhostJob] Button injected next to Save button');
+            // Fallback: insert after the element
+            element.parentNode.insertBefore(button, element.nextSibling);
+            console.log('[GhostJob] Button injected next to Save button (fallback)');
           }
         } else if (selector === 'body') {
           // Body fallback - fixed position
@@ -570,43 +606,95 @@
     }
 
     if (!injected) {
-      console.log('[GhostJob] Could not find injection point, will retry on next navigation...');
-      // Don't spam retry - LinkedIn is SPA, will re-inject on navigation
+      console.log('[GhostJob] Could not find injection point, using floating badge fallback...');
+      // Always add floating badge as fallback
+      addFloatingBadge();
+    } else {
+      // Also add floating badge when main button is injected
+      addFloatingBadge();
     }
   }
 
-  // Initial injection
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectButton);
-  } else {
+  // Initial injection with retry for async LinkedIn rendering
+  function attemptInitialInjection(attempt = 1) {
+    if (!location.href.includes('/jobs/view/')) {
+      console.log('[GhostJob] Not on job page, skipping initial injection');
+      return;
+    }
+    
+    console.log(`[GhostJob] Initial injection attempt ${attempt}...`);
     injectButton();
+    
+    // Check if button was actually injected
+    const existingBtn = document.getElementById('ghostjob-scan-btn');
+    const existingFloat = document.getElementById('ghostjob-float-btn');
+    
+    if (!existingBtn && !existingFloat && attempt < 10) {
+      // LinkedIn hasn't rendered yet, retry with increasing delay
+      const delay = Math.min(500 * attempt, 3000); // Cap at 3 seconds
+      console.log(`[GhostJob] Buttons not found, retrying in ${delay}ms...`);
+      setTimeout(() => attemptInitialInjection(attempt + 1), delay);
+    } else if (existingFloat && !existingBtn) {
+      console.log('[GhostJob] Floating badge exists but main button missing - LinkedIn structure may have changed');
+    } else if (existingBtn) {
+      console.log('[GhostJob] Successfully injected main button!');
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      attemptInitialInjection();
+    });
+  } else {
+    attemptInitialInjection();
   }
 
   // Re-inject on URL changes AND DOM changes (LinkedIn SPA navigation)
   let lastUrl = location.href;
   let reinjectTimeout = null;
+  let lastCheckTime = 0;
+  let domChangeCount = 0;
   
-  new MutationObserver(() => {
+  new MutationObserver((mutations) => {
     const url = location.href;
+    const now = Date.now();
+    
+    // Count significant DOM changes
+    const significantChanges = mutations.filter(m => 
+      m.type === 'childList' && m.addedNodes.length > 0
+    ).length;
+    domChangeCount += significantChanges;
     
     // URL changed - definitely re-inject
     if (url !== lastUrl) {
       lastUrl = url;
-      console.log('[GhostJob] URL changed, re-injecting...');
+      domChangeCount = 0; // Reset counter
+      console.log('[GhostJob] URL changed to:', url);
       clearTimeout(reinjectTimeout);
-      reinjectTimeout = setTimeout(injectButton, 500);
+      reinjectTimeout = setTimeout(() => {
+        if (url.includes('/jobs/view/')) {
+          console.log('[GhostJob] Re-injecting after navigation...');
+          injectButton();
+        }
+      }, 1000); // Wait longer for LinkedIn to render
       return;
     }
     
-    // Check if button is missing (LinkedIn re-rendered)
-    if (url.includes('/jobs/view/')) {
+    // Only check every 300ms max to avoid performance issues
+    if (now - lastCheckTime < 300) return;
+    lastCheckTime = now;
+    
+    // If we've seen many DOM changes, LinkedIn is probably rendering
+    // Check if we're on a job page and button is missing
+    if (url.includes('/jobs/view/') && domChangeCount > 5) {
       const existingBtn = document.getElementById('ghostjob-scan-btn');
       const existingFloat = document.getElementById('ghostjob-float-btn');
       
       if (!existingBtn && !existingFloat) {
-        console.log('[GhostJob] Button missing, re-injecting...');
+        console.log('[GhostJob] Significant DOM changes detected, re-injecting...');
         clearTimeout(reinjectTimeout);
         reinjectTimeout = setTimeout(injectButton, 500);
+        domChangeCount = 0; // Reset after re-inject attempt
       }
     }
   }).observe(document, { subtree: true, childList: true });

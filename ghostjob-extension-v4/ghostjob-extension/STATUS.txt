@@ -1,0 +1,51 @@
+👻 GhostJob Extension MVP Complete!
+
+## Structure
+
+ghostjob-extension/
+├── manifest.json          ✅ Extension configuration
+├── content.js             ✅ Injects button on LinkedIn
+├── popup.html             ✅ Extension popup UI
+├── popup.js               ✅ Popup logic
+├── background.js          ✅ Service worker (API calls)
+├── icons/                 ⚠️ Needs actual PNG icons
+└── README.md              ✅ Installation guide
+
+## Next Steps
+
+1. **Add Icons:**
+   - Create 16x16, 48x48, 128x128 PNG icons
+   - Replace placeholder .txt files
+
+2. **Test Locally:**
+   - Load in Chrome: chrome://extensions/ → Developer mode → Load unpacked
+   - Navigate to LinkedIn job posting
+   - Click "Check for Ghost Job" button
+
+3. **Debug Issues:**
+   - Check console for errors
+   - Verify API endpoint is responding
+   - Test on different LinkedIn job URLs
+
+4. **Submit to Chrome Web Store:**
+   - Zip the extension folder
+   - Upload to Chrome Developer Dashboard
+   - Wait for review (1-2 weeks)
+
+## Key Features
+
+✅ Injects "Check for Ghost Job" button on LinkedIn
+✅ Extracts job data from page (title, company, location, description)
+✅ Sends to GhostJob API for analysis
+✅ Shows Ghost Score (0-100) with color coding
+✅ Popup UI for extension status
+✅ Service worker for background API calls
+
+## API Integration
+
+- Endpoint: https://jobghost-gamma.vercel.app/api/scrape-job
+- Method: POST
+- Body: { url, title, company, location, description }
+- Response: { success: true, data: { ghostScore, ... } }
+
+**Ready to test! 🚀**
