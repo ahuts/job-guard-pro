@@ -10,7 +10,7 @@ const tiers = [
     price: "$0",
     period: "forever",
     description: "Perfect for getting started",
-    features: ["3 scans per month", "Basic ghost score", "URL analysis", "Red flag summary"],
+    features: ["3 scans per month", "Basic Trust Score", "Red flag summary", "Chrome extension included"],
     cta: "Start Free",
     featured: false,
   },
@@ -21,7 +21,7 @@ const tiers = [
     description: "For serious job seekers",
     features: [
       "Unlimited scans",
-      "Full detailed analysis",
+      "Full Trust Score breakdown",
       "Application tracker",
       "Weekly insight reports",
       "Priority support",

@@ -1,20 +1,20 @@
-import { Link2, Search, CheckCircle2 } from "lucide-react";
+import { Chrome, Search, ShieldCheck } from "lucide-react";
 
 const steps = [
   {
-    icon: Link2,
-    title: "Paste Job URL",
-    description: "Copy any job listing URL from LinkedIn, Indeed, Glassdoor, or any job board.",
+    icon: Chrome,
+    title: "Install the Extension",
+    description: "Add GhostJob to Chrome. A \"Scan for Ghost Jobs\" button appears next to every LinkedIn posting.",
   },
   {
     icon: Search,
-    title: "Get Instant Ghost Score",
-    description: "Our AI analyzes the posting in seconds, checking dozens of legitimacy signals.",
+    title: "Click Scan",
+    description: "One click analyzes the posting for 10+ legitimacy signals — reposted jobs, vague salaries, urgency language, and more.",
   },
   {
-    icon: CheckCircle2,
+    icon: ShieldCheck,
     title: "Apply with Confidence",
-    description: "Focus your energy on real opportunities. Skip the ghost jobs entirely.",
+    description: "See your Trust Score (0–100) with detailed signal breakdowns and actual quotes from the posting. Focus on real opportunities.",
   },
 ];
 
@@ -27,7 +27,7 @@ const HowItWorksSection = () => {
             How It Works
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Three simple steps to a smarter job search.
+            Three steps. No copy/paste. No leaving LinkedIn.
           </p>
         </div>
 
@@ -47,6 +47,18 @@ const HowItWorksSection = () => {
               <p className="text-muted-foreground text-sm max-w-xs mx-auto">{step.description}</p>
             </div>
           ))}
+        </div>
+
+        {/* Key differentiator */}
+        <div className="mt-14 max-w-2xl mx-auto text-center">
+          <div className="bg-card rounded-xl border border-primary/20 p-6">
+            <p className="text-lg font-semibold text-foreground mb-2">
+              🎯 The only tool that works directly inside LinkedIn
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Other tools make you copy/paste URLs or leave the page. GhostJob injects a scan button right into the LinkedIn interface — one click, instant results.
+            </p>
+          </div>
         </div>
       </div>
     </section>

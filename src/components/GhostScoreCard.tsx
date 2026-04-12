@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const GhostScoreCard = () => {
   const [score, setScore] = useState(0);
-  const targetScore = 87;
+  const targetScore = 28; // Low trust score = likely ghost job
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -21,15 +21,21 @@ const GhostScoreCard = () => {
   }, []);
 
   const getScoreColor = (s: number) => {
-    if (s >= 70) return "text-danger";
-    if (s >= 40) return "text-warning";
-    return "text-safe";
+    if (s >= 61) return "text-safe";
+    if (s >= 31) return "text-warning";
+    return "text-danger";
   };
 
   const getScoreLabel = (s: number) => {
-    if (s >= 70) return "High Risk";
-    if (s >= 40) return "Moderate";
-    return "Likely Safe";
+    if (s >= 61) return "Likely Legitimate";
+    if (s >= 31) return "Proceed with Caution";
+    return "Likely Ghost Job";
+  };
+
+  const getBadgeColor = (s: number) => {
+    if (s >= 61) return "bg-safe";
+    if (s >= 31) return "bg-warning";
+    return "bg-danger";
   };
 
   return (
@@ -45,8 +51,8 @@ const GhostScoreCard = () => {
         </div>
         <div className="flex gap-2 flex-wrap">
           <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">Full-time</span>
-          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">$80k–$150k</span>
-          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">Posted 47d ago</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">"Competitive salary"</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">Reposted 3x</span>
         </div>
         <div className="space-y-1.5">
           <div className="h-2 rounded-full bg-secondary w-full" />
@@ -55,24 +61,24 @@ const GhostScoreCard = () => {
         </div>
       </div>
 
-      {/* Ghost Score Badge Overlay */}
+      {/* Trust Score Badge Overlay */}
       <div className="absolute -top-4 -right-4 animate-score-pulse">
-        <div className="bg-danger rounded-xl px-4 py-2.5 shadow-lg shadow-danger/30">
-          <p className="text-[10px] font-semibold tracking-wider uppercase text-danger-foreground">Ghost Score</p>
-          <p className={`text-2xl font-extrabold text-danger-foreground`}>{score}</p>
+        <div className={`${getBadgeColor(score)} rounded-xl px-4 py-2.5 shadow-lg`}>
+          <p className="text-[10px] font-semibold tracking-wider uppercase text-white">Trust Score</p>
+          <p className="text-2xl font-extrabold text-white">{score}</p>
         </div>
       </div>
 
-      {/* Red flags */}
+      {/* Red/yellow flags */}
       <div className="border-t border-border pt-3 mt-3 space-y-1.5">
         <p className="text-xs font-semibold text-danger flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger" /> Posted 47 days ago
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger" /> 🔁 Reposted 3 times
         </p>
         <p className="text-xs font-semibold text-warning flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-warning" /> Vague salary range
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-warning" /> 💰 Vague "competitive" salary
         </p>
         <p className="text-xs font-semibold text-danger flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger" /> Company layoffs reported
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger" /> ⚡ "Immediate start" urgency language
         </p>
       </div>
 

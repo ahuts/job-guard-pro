@@ -36,12 +36,12 @@ const HeroSection = () => {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-foreground">
-                Don't Waste Time on{" "}
-                <span className="text-gradient-hero">Ghost Jobs</span>
+                Stop Getting Ghosted by{" "}
+                <span className="text-gradient-hero">Fake Jobs</span>
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
-                Enter any job details and instantly see if it's worth your time. Stop applying to positions that were never meant to be filled.
+                GhostJob scans any LinkedIn posting for ghost job signals — reposted listings, vague salaries, urgency pressure, and more. Know what's real before you apply.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
