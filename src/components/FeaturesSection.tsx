@@ -30,13 +30,6 @@ const features = [
     bg: "bg-primary/10",
   },
   {
-    icon: Eye,
-    title: "Quote Extraction",
-    description: "Every signal shows the actual text from the job posting — no guessing about why something was flagged.",
-    color: "text-warning",
-    bg: "bg-warning/10",
-  },
-  {
     icon: Clock,
     title: "Stale & Reposted Detection",
     description: "Jobs open 30+ days or reposted without closing the original? That's a major ghost signal. 30-40% of reposted roles never result in a hire.",
