@@ -39,51 +39,51 @@ const GhostScoreCard = () => {
   };
 
   return (
-    <div className="relative bg-card rounded-xl border border-border shadow-2xl shadow-primary/10 p-6 max-w-sm w-full">
+    <div className="relative bg-card rounded-2xl border border-border shadow-2xl shadow-primary/10 p-8 max-w-md w-full">
       {/* Fake job listing */}
-      <div className="space-y-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground">TC</div>
+      <div className="space-y-4 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-lg bg-secondary flex items-center justify-center text-base font-bold text-muted-foreground">TC</div>
           <div>
-            <p className="font-semibold text-sm text-foreground">Senior Product Manager</p>
-            <p className="text-xs text-muted-foreground">TechCorp Inc. · Remote</p>
+            <p className="font-semibold text-base text-foreground">Senior Product Manager</p>
+            <p className="text-sm text-muted-foreground">TechCorp Inc. · Remote</p>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">Full-time</span>
-          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">"Competitive salary"</span>
-          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">Reposted 3x</span>
+        <div className="flex gap-2.5 flex-wrap">
+          <span className="text-sm px-3 py-1.5 rounded-full bg-secondary text-muted-foreground">Full-time</span>
+          <span className="text-sm px-3 py-1.5 rounded-full bg-secondary text-muted-foreground">"Competitive salary"</span>
+          <span className="text-sm px-3 py-1.5 rounded-full bg-secondary text-muted-foreground">Reposted 3x</span>
         </div>
-        <div className="space-y-1.5">
-          <div className="h-2 rounded-full bg-secondary w-full" />
-          <div className="h-2 rounded-full bg-secondary w-4/5" />
-          <div className="h-2 rounded-full bg-secondary w-3/5" />
+        <div className="space-y-2">
+          <div className="h-2.5 rounded-full bg-secondary w-full" />
+          <div className="h-2.5 rounded-full bg-secondary w-4/5" />
+          <div className="h-2.5 rounded-full bg-secondary w-3/5" />
         </div>
       </div>
 
       {/* Trust Score Badge Overlay */}
-      <div className="absolute -top-4 -right-4 animate-score-pulse">
-        <div className={`${getBadgeColor(score)} rounded-xl px-4 py-2.5 shadow-lg`}>
-          <p className="text-[10px] font-semibold tracking-wider uppercase text-white">Trust Score</p>
-          <p className="text-2xl font-extrabold text-white">{score}</p>
+      <div className="absolute -top-5 -right-5 animate-score-pulse">
+        <div className={`${getBadgeColor(score)} rounded-xl px-5 py-3 shadow-lg`}>
+          <p className="text-xs font-semibold tracking-wider uppercase text-white">Trust Score</p>
+          <p className="text-3xl font-extrabold text-white">{score}</p>
         </div>
       </div>
 
       {/* Red/yellow flags */}
-      <div className="border-t border-border pt-3 mt-3 space-y-1.5">
-        <p className="text-xs font-semibold text-danger flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger" /> 🔁 Reposted 3 times
+      <div className="border-t border-border pt-4 mt-4 space-y-2">
+        <p className="text-sm font-semibold text-danger flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-danger" /> 🔁 Reposted 3 times
         </p>
-        <p className="text-xs font-semibold text-warning flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-warning" /> 💰 Vague "competitive" salary
+        <p className="text-sm font-semibold text-warning flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-warning" /> 💰 Vague "competitive" salary
         </p>
-        <p className="text-xs font-semibold text-danger flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger" /> ⚡ "Immediate start" urgency language
+        <p className="text-sm font-semibold text-danger flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-danger" /> ⚡ "Immediate start" urgency language
         </p>
       </div>
 
-      <div className="mt-3 text-center">
-        <span className={`text-xs font-bold ${getScoreColor(score)}`}>
+      <div className="mt-4 text-center">
+        <span className={`text-sm font-bold ${getScoreColor(score)}`}>
           {getScoreLabel(score)}
         </span>
       </div>
