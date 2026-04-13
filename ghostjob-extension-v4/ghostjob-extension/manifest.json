@@ -12,7 +12,17 @@
     "https://jobghost-gamma.vercel.app/*"
   ],
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/GhostJob4_logov1.2_16x.png",
+      "48": "icons/GhostJob4_logov1.2_48x.png",
+      "128": "icons/GhostJob4_logov1.2_128x.png"
+    }
+  },
+  "icons": {
+    "16": "icons/GhostJob4_logov1.2_16x.png",
+    "48": "icons/GhostJob4_logov1.2_48x.png",
+    "128": "icons/GhostJob4_logov1.2_128x.png"
   },
   "content_scripts": [
     {
