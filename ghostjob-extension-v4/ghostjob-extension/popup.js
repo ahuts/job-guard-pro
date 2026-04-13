@@ -93,8 +93,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const scoreLabel = document.getElementById('score-label');
     const scoreValue = document.getElementById('score-value');
 
-    const score = data.ghostScore || data.score || 50;
-    const isLow = score <= 30, isMid = score <= 60;
+    const score = data.trustScore || data.ghostScore || data.score || 50;
+    const isLow = score < 31, isMid = score < 61;
     const color = isLow ? '#ef4444' : isMid ? '#f59e0b' : '#22c55e';
     const label = isLow ? '⚠️ Likely Ghost Job' : isMid ? '⚡ Proceed with Caution' : '✅ Looks Legitimate';
 

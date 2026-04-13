@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "GhostJob - Ghost Job Detector",
   "version": "1.0.4",
-  "description": "Detect ghost jobs on LinkedIn with Ghost Score",
+  "description": "Detect ghost jobs on LinkedIn with Trust Score",
   "permissions": [
     "activeTab",
     "storage"
