@@ -1,4 +1,5 @@
-import { Ghost, Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
+import ghostJobLogo from "@/assets/ghostjob-logo.png";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,9 +14,8 @@ const Navbar = () => {
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <div className="flex items-center gap-2">
-            <Ghost className="h-7 w-7 text-primary" />
-            <span className="text-xl font-bold text-foreground">GhostJob</span>
+          <div className="flex items-center">
+            <img src={ghostJobLogo} alt="GhostJob" className="h-8" />
           </div>
 
           <div className="hidden md:flex items-center gap-8">
