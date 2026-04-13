@@ -19,25 +19,25 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
-            <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
-            <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+            <a href="#features" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
+            <a href="#how-it-works" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
+            <a href="#pricing" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <span className="text-sm text-muted-foreground truncate max-w-[150px]">
+                <span className="text-base text-muted-foreground truncate max-w-[150px]">
                   {user.email}
                 </span>
-                <Button variant="ghost" size="sm" onClick={signOut}>
-                  <LogOut className="h-4 w-4 mr-1" /> Log Out
+                <Button variant="ghost" size="default" onClick={signOut}>
+                  <LogOut className="h-5 w-5 mr-1" /> Log Out
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => setAuthOpen(true)}>Log In</Button>
-                <Button variant="hero" size="sm" onClick={() => setAuthOpen(true)}>Get Started Free</Button>
+                <Button variant="ghost" size="default" onClick={() => setAuthOpen(true)}>Log In</Button>
+                <Button variant="hero" size="default" onClick={() => setAuthOpen(true)}>Get Started Free</Button>
               </>
             )}
           </div>
