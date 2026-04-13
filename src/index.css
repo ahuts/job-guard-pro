@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 26% 14%;
 
-    --primary: 221 83% 53%;
+    --primary: 196 67% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 13% 95%;
@@ -41,7 +41,7 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 221 83% 53%;
+    --ring: 196 67% 45%;
 
     --radius: 0.75rem;
 
@@ -62,7 +62,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-    --primary: 221 83% 53%;
+    --primary: 196 67% 45%;
     --primary-foreground: 0 0% 100%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -74,7 +74,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 221 83% 53%;
+    --ring: 196 67% 45%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -98,7 +98,7 @@
 
 @layer utilities {
   .ghost-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(221 83% 40%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(196 67% 35%) 100%);
   }
 
   .score-gradient-high {
