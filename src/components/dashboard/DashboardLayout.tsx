@@ -1,4 +1,5 @@
 import { Ghost, Briefcase, BarChart3, Settings, Menu, LogOut, User, ChevronDown, Bell } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,11 +17,10 @@ type NavItem = {
   label: string;
   icon: React.ElementType;
   href: string;
-  active?: boolean;
 };
 
 const navItems: NavItem[] = [
-  { label: "Jobs", icon: Briefcase, href: "/dashboard", active: true },
+  { label: "Jobs", icon: Briefcase, href: "/dashboard" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/analytics" },
   { label: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
@@ -32,6 +32,10 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (href: string) =>
+    href === "/dashboard" ? location.pathname === "/dashboard" : location.pathname.startsWith(href);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -50,7 +54,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  item.active
+                  isActive(item.href)
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
