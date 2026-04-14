@@ -16,7 +16,7 @@
   const SCAN_API_URL = 'https://jobghost-gamma.vercel.app/api/scan';
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
-  const VERSION  = '1.0.6';
+  const VERSION  = '1.0.7';
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }

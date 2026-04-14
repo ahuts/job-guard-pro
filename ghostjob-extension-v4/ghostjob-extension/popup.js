@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resultCard = document.getElementById('result-card');
   const errorMessage = document.getElementById('error-message');
   const authBtn = document.getElementById('auth-btn');
+  const authGoogleBtn = document.getElementById('auth-google-btn');
   const authEmail = document.getElementById('auth-email');
   const authPassword = document.getElementById('auth-password');
   const authStatus = document.getElementById('auth-status');
@@ -87,6 +88,80 @@ document.addEventListener('DOMContentLoaded', async () => {
       authEmail.value = '';
       authPassword.value = '';
     });
+  });
+
+  // ─── Google Sign-In ────────────────────────────────────────────────────
+  authGoogleBtn.addEventListener('click', async () => {
+    authGoogleBtn.disabled = true;
+    authGoogleBtn.textContent = 'Connecting...';
+    authStatus.textContent = '';
+
+    try {
+      // Use Supabase OAuth flow - opens a popup for Google sign-in
+      // The redirect URL must match what's configured in Supabase
+      const redirectUrl = chrome.identity.getRedirectURL();
+      const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+
+      chrome.identity.launchWebAuthFlow({
+        url: authUrl,
+        interactive: true,
+      }, async (responseUrl) => {
+        if (chrome.runtime.lastError || !responseUrl) {
+          authStatus.textContent = '❌ Sign in cancelled';
+          authStatus.style.color = '#fca5a5';
+          authGoogleBtn.disabled = false;
+          authGoogleBtn.textContent = '🔑 Sign in with Google';
+          return;
+        }
+
+        // Extract tokens from the redirect URL
+        const url = new URL(responseUrl);
+        const hashParams = new URLSearchParams(url.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (!accessToken) {
+          authStatus.textContent = '❌ Authentication failed';
+          authStatus.style.color = '#fca5a5';
+          authGoogleBtn.disabled = false;
+          authGoogleBtn.textContent = '🔑 Sign in with Google';
+          return;
+        }
+
+        // Get user info from the token
+        try {
+          const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + accessToken,
+            },
+          });
+          const userData = await userRes.json();
+
+          chrome.storage.local.set({
+            gj_auth_token: accessToken,
+            gj_refresh_token: refreshToken,
+            gj_user_id: userData.id,
+            gj_user_email: userData.email || 'Google User',
+          }, () => {
+            showLoggedIn(userData.email || 'Google User');
+            authStatus.textContent = '✅ Signed in with Google!';
+            authStatus.style.color = '#86efac';
+          });
+        } catch (err) {
+          authStatus.textContent = '❌ ' + err.message;
+          authStatus.style.color = '#fca5a5';
+        } finally {
+          authGoogleBtn.disabled = false;
+          authGoogleBtn.textContent = '🔑 Sign in with Google';
+        }
+      });
+    } catch (err) {
+      authStatus.textContent = '❌ ' + err.message;
+      authStatus.style.color = '#fca5a5';
+      authGoogleBtn.disabled = false;
+      authGoogleBtn.textContent = '🔑 Sign in with Google';
+    }
   });
 
   function showLoggedIn(email) {
