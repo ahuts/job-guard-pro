@@ -44,6 +44,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 's-maxage=300'); // Cache for 5 min
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -66,14 +67,15 @@ export default async function handler(
     // === Company-level signals ===
     // These require server-side data we can't get from the extension
 
-    // 1. Check for company careers page
+    // 1. Check for company careers page (async, with short timeout)
     if (company && company !== 'Unknown Company') {
       try {
-        const careersUrl = `https://www.${company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com/careers`;
+        const companySlug = company.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const careersUrl = `https://www.${companySlug}.com/careers`;
         const careersRes = await fetch(careersUrl, {
           method: 'HEAD',
           headers: { 'User-Agent': 'Mozilla/5.0' },
-          signal: AbortSignal.timeout(5000),
+          signal: AbortSignal.timeout(3000), // 3s timeout
         });
         const hasCareersPage = careersRes.ok;
         if (!companyData) companyData = { hasCareersPage: null, recentLayoffs: null };
@@ -88,6 +90,8 @@ export default async function handler(
         }
       } catch {
         // Can't verify — skip, don't penalize
+        if (!companyData) companyData = { hasCareersPage: null, recentLayoffs: null };
+        companyData.hasCareersPage = null; // unknown
       }
     }
 
