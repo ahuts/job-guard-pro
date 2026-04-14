@@ -84,6 +84,7 @@ export default async function handler(
           apiSignals.push({
             type: 'green',
             name: 'Active careers page',
+            quote: `Found careers page at ${companySlug}.com/careers`,
             weight: 4,
             source: 'api',
           });
@@ -110,6 +111,7 @@ export default async function handler(
         apiSignals.push({
           type: 'red',
           name: 'Layoff language detected',
+          quote: `Restructuring or downsizing language found in company description`,
           weight: 8,
           source: 'api',
         });
@@ -122,6 +124,7 @@ export default async function handler(
       apiSignals.push({
         type: 'red',
         name: 'Reposted job listing',
+        quote: 'Job URL contains repost indicator',
         weight: 10,
         source: 'api',
       });

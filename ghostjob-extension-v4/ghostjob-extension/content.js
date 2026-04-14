@@ -306,9 +306,29 @@
     })
     .then(function(data) {
       log('Scan API enhanced score:', data.trustScore, '(was', analysis.score + ')');
+      // Merge API signals with local, filtering out invalid ones and adding defaults
+      var apiSignals = (data.signals || []).filter(function(s) {
+        return s && s.name && s.type;
+      }).map(function(s) {
+        return {
+          type:          s.type,
+          name:          s.name,
+          quote:         s.quote || '',
+          weight:        s.weight || 0,
+          source:        s.source || 'api',
+          // Local-only fields get defaults for API signals
+          emoji:         s.emoji || (s.type === 'red' ? '🔴' : s.type === 'yellow' ? '🟡' : '✅'),
+          tip:           s.tip || ''
+        };
+      });
+      // Keep local signals that aren't duplicated by API
+      var localOnly = analysis.signals.filter(function(ls) {
+        return !apiSignals.some(function(as) { return as.name === ls.name; });
+      });
+      var merged = localOnly.concat(apiSignals);
       return {
         ghostScore:     data.trustScore !== undefined ? data.trustScore : analysis.score,
-        signals:        data.signals || analysis.signals,
+        signals:        merged.length > 0 ? merged : analysis.signals,
         summary:        analysis.summary,
         recommendation: analysis.recommendation,
         source:         'api',
