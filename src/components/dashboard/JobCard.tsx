@@ -107,20 +107,23 @@ export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">Detected Signals</p>
                 <ul className="space-y-1.5">
-                  {job.signals.map((signal, i) => (
-                    <li
-                      key={i}
-                      className={cn(
-                        "text-sm px-3 py-2 rounded-md border-l-4",
-                        getSignalColor(signal)
-                      )}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className={cn("h-2 w-2 rounded-full shrink-0", getSignalDot(signal))} />
-                        {signal}
-                      </span>
-                    </li>
-                  ))}
+                  {job.signals.map((signal: any, i: number) => {
+                    const label = typeof signal === 'string' ? signal : (signal?.title || signal?.type || JSON.stringify(signal));
+                    return (
+                      <li
+                        key={i}
+                        className={cn(
+                          "text-sm px-3 py-2 rounded-md border-l-4",
+                          getSignalColor(label)
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className={cn("h-2 w-2 rounded-full shrink-0", getSignalDot(label))} />
+                          {label}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ) : (
