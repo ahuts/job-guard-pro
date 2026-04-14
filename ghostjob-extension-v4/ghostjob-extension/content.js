@@ -249,44 +249,19 @@
   }
 
   // ─── Remote API call ──────────────────────────────────────────────────────
-  // Step 1: Try to scrape job data from API (optional enhancement)
-  // Step 2: Run local scoring regardless
-  // Step 3: Try scan API to enhance with company-level signals
+  // Extension extracts job data client-side, then calls scan API for company-level signals.
+  // The old scrape-job API is no longer needed (content script handles extraction).
   function fetchRemoteAnalysis(jobData) {
-    // First, try to get enhanced data from the scrape API
-    return fetch(API_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        url:         jobData.url,
-        title:       jobData.title,
-        company:     jobData.company,
-        location:    jobData.location,
-        description: jobData.description
-      })
-    })
-    .then(function(res) {
-      if (!res.ok) return res.json().then(function(e) { throw new Error(e.error || 'HTTP ' + res.status); });
-      return res.json();
-    })
-    .then(function(data) {
-      // Use API data if available, fall back to local extraction
-      var enhancedData = (data.success && data.data) ? Object.assign({}, jobData, data.data) : jobData;
-      var analysis = calculateLocalScore(enhancedData);
-      
-      // Now try the scan API for company-level signals
-      return enhanceWithScanApi(analysis, jobData);
-    })
-    .catch(function(err) {
-      // Scrape API failed — just use local scoring, then try scan API
-      warn('Scrape API failed:', err.message);
-      var analysis = calculateLocalScore(jobData);
-      return enhanceWithScanApi(analysis, jobData);
-    });
+    var analysis = calculateLocalScore(jobData);
+    return enhanceWithScanApi(analysis, jobData);
   }
   
   // ─── Enhance with Scan API (company-level signals) ───────────────────────────
   function enhanceWithScanApi(analysis, jobData) {
+    // 8-second timeout — if API doesn't respond, use local results
+    var controller = new AbortController();
+    var timeout = setTimeout(function() { controller.abort(); }, 8000);
+    
     return fetch(SCAN_API_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -298,9 +273,11 @@
         description: jobData.description,
         localScore:  analysis.score,
         localSignals: analysis.signals
-      })
+      }),
+      signal: controller.signal
     })
     .then(function(res) {
+      clearTimeout(timeout);
       if (!res.ok) throw new Error('Scan API HTTP ' + res.status);
       return res.json();
     })
@@ -337,6 +314,7 @@
       };
     })
     .catch(function(err) {
+      clearTimeout(timeout);
       // Scan API failed — return local scoring as-is
       warn('Scan API failed, using local results:', err.message);
       return {
