@@ -19,7 +19,8 @@ function getScoreBadge(score: number) {
   return { label: "Ghost Job", className: "bg-destructive/15 text-destructive border-destructive/30" };
 }
 
-function getSignalColor(signal: string) {
+function getSignalColor(signal: unknown) {
+  if (typeof signal !== 'string') return "border-l-warning bg-warning/5";
   const lower = signal.toLowerCase();
   if (lower.includes("no salary") || lower.includes("layoff") || lower.includes("ghost") || lower.includes("months ago") || lower.includes("repost") || lower.includes("vague"))
     return "border-l-destructive bg-destructive/5";
@@ -28,7 +29,8 @@ function getSignalColor(signal: string) {
   return "border-l-warning bg-warning/5";
 }
 
-function getSignalDot(signal: string) {
+function getSignalDot(signal: unknown) {
+  if (typeof signal !== 'string') return "bg-warning";
   const lower = signal.toLowerCase();
   if (lower.includes("no salary") || lower.includes("layoff") || lower.includes("ghost") || lower.includes("months ago") || lower.includes("repost") || lower.includes("vague"))
     return "bg-destructive";
