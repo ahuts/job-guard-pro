@@ -312,18 +312,19 @@
       }).map(function(s) {
         return {
           type:          s.type,
-          name:          s.name,
-          quote:         s.quote || '',
-          weight:        s.weight || 0,
-          source:        s.source || 'api',
-          // Local-only fields get defaults for API signals
-          emoji:         s.emoji || (s.type === 'red' ? '🔴' : s.type === 'yellow' ? '🟡' : '✅'),
-          tip:           s.tip || ''
+          icon:          s.icon || s.emoji || (s.type === 'red' ? '🔴' : s.type === 'yellow' ? '🟡' : '✅'),
+          title:         s.title || s.name,
+          description:   s.description || s.name,
+          impact:       s.impact || '',
+          advice:       s.advice || s.tip || '',
+          quote:        s.quote || '',
+          weight:       s.weight || 0,
+          source:       s.source || 'api'
         };
       });
       // Keep local signals that aren't duplicated by API
       var localOnly = analysis.signals.filter(function(ls) {
-        return !apiSignals.some(function(as) { return as.name === ls.name; });
+        return !apiSignals.some(function(as) { return as.title === ls.title; });
       });
       var merged = localOnly.concat(apiSignals);
       return {
