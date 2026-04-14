@@ -101,6 +101,101 @@
       transform: none;
     }
 
+    .auth-section {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .auth-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .auth-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .auth-input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .auth-input:focus {
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .auth-btn {
+      width: 100%;
+      padding: 10px;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .auth-btn:hover {
+      opacity: 0.9;
+    }
+
+    .auth-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .auth-status {
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+      opacity: 0.8;
+    }
+
+    .auth-logged-in {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .auth-user {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .auth-logout {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .auth-logout:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
     .features {
       background: rgba(255, 255, 255, 0.1);
       border-radius: 12px;
@@ -211,6 +306,23 @@
     </div>
   </div>
 
+  <!-- Auth Section -->
+  <div class="auth-section" id="auth-section">
+    <div class="auth-title">Dashboard Login</div>
+    <div id="auth-form-container">
+      <div class="auth-form" id="login-form">
+        <input class="auth-input" type="email" id="auth-email" placeholder="Email address" />
+        <input class="auth-input" type="password" id="auth-password" placeholder="Password" />
+        <button class="auth-btn" id="auth-btn">Sign In</button>
+        <div class="auth-status" id="auth-status">Save jobs to your dashboard</div>
+      </div>
+      <div class="auth-logged-in" id="auth-logged-in" style="display:none">
+        <span class="auth-user" id="auth-user-email"></span>
+        <button class="auth-logout" id="auth-logout">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
   <button class="scan-btn" id="scan-btn" disabled>
     Scan Current Job
   </button>
@@ -244,7 +356,7 @@
   </div>
 
   <div class="footer">
-    GhostJob Extension v1.0.4
+    GhostJob Extension v1.0.6
   </div>
 
   <script src="popup.js"></script>

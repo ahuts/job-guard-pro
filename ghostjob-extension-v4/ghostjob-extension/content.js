@@ -14,7 +14,9 @@
   const MODAL_ID = 'ghostjob-modal-overlay';
   const API_URL     = 'https://jobghost-gamma.vercel.app/api/scrape-job';
   const SCAN_API_URL = 'https://jobghost-gamma.vercel.app/api/scan';
-  const VERSION  = '1.0.5';
+  const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
+  const VERSION  = '1.0.6';
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }
@@ -981,7 +983,7 @@
     function onSaved(totalSaved) {
       saveBtn.textContent     = '✅ Saved!';
       saveBtn.style.background = '#22c55e';
-      statusDiv.textContent   = 'Saved (' + totalSaved + ' total)';
+      statusDiv.textContent   = 'Saved to dashboard';
       statusDiv.style.color   = '#22c55e';
       setTimeout(function(){
         saveBtn.textContent     = '💾 Save to Dashboard';
@@ -1004,18 +1006,66 @@
       }, 3000);
     }
 
-    try {
-      chrome.runtime.sendMessage({ action: 'saveJob', jobData: payload }, function(response) {
-        if (chrome.runtime.lastError || !response) {
-          saveViaStorageDirect(payload, onSaved, onError);
-          return;
-        }
-        if (response.success) onSaved(response.data.totalSaved);
-        else onError(response.error);
-      });
-    } catch(e) {
+    // Try Supabase first (if logged in), then fall back to local storage
+    saveToSupabase(payload, onSaved, function(errMsg) {
+      warn('Supabase save failed:', errMsg, '— falling back to local');
       saveViaStorageDirect(payload, onSaved, onError);
-    }
+    });
+  }
+
+  // ─── Save to Supabase ────────────────────────────────────────────────────
+  function saveToSupabase(jobData, onSaved, onError) {
+    chrome.storage.local.get(['gj_auth_token', 'gj_user_id'], function(stored) {
+      if (!stored.gj_auth_token || !stored.gj_user_id) {
+        onError('Sign in to save to dashboard (saved locally instead)');
+        return;
+      }
+
+      var signals = (jobData.signals || []).map(function(s) {
+        return {
+          type: s.type,
+          title: s.title || s.name,
+          quote: s.quote || '',
+          weight: s.weight || 0
+        };
+      });
+
+      var row = {
+        user_id:         stored.gj_user_id,
+        job_url:         jobData.url || '',
+        job_title:       jobData.title || '',
+        company_name:    jobData.company || '',
+        company_location: jobData.location || '',
+        description:     (jobData.description || '').substring(0, 2000),
+        ghost_score:     jobData.ghostScore != null ? jobData.ghostScore : 50,
+        signals:         signals,
+        application_status: 'not_applied'
+      };
+
+      fetch(SUPABASE_URL + '/rest/v1/scanned_jobs', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + stored.gj_auth_token,
+          'Prefer':        'return=minimal'
+        },
+        body: JSON.stringify(row)
+      })
+      .then(function(res) {
+        if (res.ok) {
+          log('Saved to Supabase!');
+          onSaved(1);
+        } else {
+          return res.json().then(function(e) {
+            onError(e.message || e.msg || 'Supabase error');
+          });
+        }
+      })
+      .catch(function(err) {
+        onError(err.message);
+      });
+    });
   }
 
   function saveViaStorageDirect(jobData, onSaved, onError) {
