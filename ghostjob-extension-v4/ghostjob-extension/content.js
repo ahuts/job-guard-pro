@@ -12,8 +12,9 @@
   const BTN_ID   = 'ghostjob-scan-btn';
   const FLOAT_ID = 'ghostjob-float-btn';
   const MODAL_ID = 'ghostjob-modal-overlay';
-  const API_URL  = 'https://jobghost-gamma.vercel.app/api/scrape-job';
-  const VERSION  = '1.0.4';
+  const API_URL     = 'https://jobghost-gamma.vercel.app/api/scrape-job';
+  const SCAN_API_URL = 'https://jobghost-gamma.vercel.app/api/scan';
+  const VERSION  = '1.0.5';
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }
@@ -248,7 +249,11 @@
   }
 
   // ─── Remote API call ──────────────────────────────────────────────────────
+  // Step 1: Try to scrape job data from API (optional enhancement)
+  // Step 2: Run local scoring regardless
+  // Step 3: Try scan API to enhance with company-level signals
   function fetchRemoteAnalysis(jobData) {
+    // First, try to get enhanced data from the scrape API
     return fetch(API_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -265,15 +270,61 @@
       return res.json();
     })
     .then(function(data) {
-      if (!data.success) throw new Error(data.error || 'API unsuccessful');
-      var analysis = calculateLocalScore(data.data || jobData);
-      return Object.assign({}, data.data, {
+      // Use API data if available, fall back to local extraction
+      var enhancedData = (data.success && data.data) ? Object.assign({}, jobData, data.data) : jobData;
+      var analysis = calculateLocalScore(enhancedData);
+      
+      // Now try the scan API for company-level signals
+      return enhanceWithScanApi(analysis, jobData);
+    })
+    .catch(function(err) {
+      // Scrape API failed — just use local scoring, then try scan API
+      warn('Scrape API failed:', err.message);
+      var analysis = calculateLocalScore(jobData);
+      return enhanceWithScanApi(analysis, jobData);
+    });
+  }
+  
+  // ─── Enhance with Scan API (company-level signals) ───────────────────────────
+  function enhanceWithScanApi(analysis, jobData) {
+    return fetch(SCAN_API_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        url:          jobData.url,
+        title:        jobData.title,
+        company:     jobData.company,
+        location:    jobData.location,
+        description: jobData.description,
+        localScore:  analysis.score,
+        localSignals: analysis.signals
+      })
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('Scan API HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      log('Scan API enhanced score:', data.trustScore, '(was', analysis.score + ')');
+      return {
+        ghostScore:     data.trustScore !== undefined ? data.trustScore : analysis.score,
+        signals:        data.signals || analysis.signals,
+        summary:        analysis.summary,
+        recommendation: analysis.recommendation,
+        source:         'api',
+        companyData:    data.companyData || null
+      };
+    })
+    .catch(function(err) {
+      // Scan API failed — return local scoring as-is
+      warn('Scan API failed, using local results:', err.message);
+      return {
         ghostScore:     analysis.score,
         signals:        analysis.signals,
         summary:        analysis.summary,
         recommendation: analysis.recommendation,
-        source:         'api'  // Bug #10: only set 'api' when API actually succeeded
-      });
+        source:         'local'
+      };
     });
   }
 
