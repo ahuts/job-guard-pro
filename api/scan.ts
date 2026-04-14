@@ -84,7 +84,10 @@ export default async function handler(
           apiSignals.push({
             type: 'green',
             name: 'Active careers page',
+            description: 'Company has an active careers page on their website.',
             quote: `Found careers page at ${companySlug}.com/careers`,
+            impact: 'Companies actively investing in hiring maintain visible career pages — a strong sign of real open positions.',
+            advice: 'Browse their careers page to see how many roles they have. A handful of generic postings may still be a red flag.',
             weight: 4,
             source: 'api',
           });
@@ -111,7 +114,10 @@ export default async function handler(
         apiSignals.push({
           type: 'red',
           name: 'Layoff language detected',
-          quote: `Restructuring or downsizing language found in company description`,
+          description: 'Restructuring or downsizing language found in company description.',
+          quote: 'Restructuring or downsizing language found in company description',
+          impact: 'Companies undergoing layoffs may post jobs to maintain appearance or build pipelines without intent to hire.',
+          advice: 'Search for recent news about the company. If layoffs are confirmed, the posting may be a ghost job.',
           weight: 8,
           source: 'api',
         });
@@ -124,7 +130,10 @@ export default async function handler(
       apiSignals.push({
         type: 'red',
         name: 'Reposted job listing',
+        description: 'Job URL indicates this is a reposted listing.',
         quote: 'Job URL contains repost indicator',
+        impact: 'Reposted jobs often indicate ghost listings — companies recycle postings to appear active without actually hiring.',
+        advice: 'Check if the original posting is still active. Ask the recruiter why the role was reopened.',
         weight: 10,
         source: 'api',
       });
