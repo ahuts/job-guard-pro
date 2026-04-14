@@ -5,8 +5,7 @@
   "description": "Detect ghost jobs on LinkedIn with Trust Score",
   "permissions": [
     "activeTab",
-    "storage",
-    "identity"
+    "storage"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
