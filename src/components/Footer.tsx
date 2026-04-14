@@ -13,7 +13,7 @@ const Footer = () => {
 
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-            <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
             <a href="#" className="hover:text-foreground transition-colors">Contact</a>
           </div>
 
