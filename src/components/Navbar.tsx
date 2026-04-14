@@ -57,9 +57,14 @@ const Navbar = () => {
             <a href="#how-it-works" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>How It Works</a>
             <a href="#pricing" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Pricing</a>
             {user ? (
-              <Button variant="ghost" className="w-full" onClick={signOut}>
-                <LogOut className="h-4 w-4 mr-1" /> Log Out
-              </Button>
+              <>
+                <Link to="/dashboard" className="block" onClick={() => setMobileOpen(false)}>
+                  <Button variant="ghost" className="w-full">Dashboard</Button>
+                </Link>
+                <Button variant="ghost" className="w-full" onClick={signOut}>
+                  <LogOut className="h-4 w-4 mr-1" /> Log Out
+                </Button>
+              </>
             ) : (
               <Button variant="hero" className="w-full" onClick={() => { setAuthOpen(true); setMobileOpen(false); }}>
                 Get Started Free
