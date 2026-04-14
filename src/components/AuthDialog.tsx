@@ -108,6 +108,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
 
         {view === "main" && (
           <div className="space-y-3 pt-4">
+            {/* Google OAuth disabled for now — re-enable when redirect URL is configured
             <Button
               variant="outline"
               className="w-full py-6 text-base gap-3"
@@ -130,6 +131,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                 <span className="bg-background px-2 text-muted-foreground">or</span>
               </div>
             </div>
+            */}
 
             <Button
               variant="outline"
