@@ -28,6 +28,9 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
+                <Link to="/dashboard">
+                  <Button variant="ghost" size="default">Dashboard</Button>
+                </Link>
                 <span className="text-base text-muted-foreground truncate max-w-[150px]">
                   {user.email}
                 </span>
