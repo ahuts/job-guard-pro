@@ -41,37 +41,37 @@ const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-3">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
-                    <Avatar className="h-9 w-9 cursor-pointer">
-                      <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                        {getUserInitials(user.email)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium truncate">{user.email}</p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
-                      <Briefcase className="h-4 w-4" /> Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard/settings" className="flex items-center gap-2 cursor-pointer">
-                      <Settings className="h-4 w-4" /> Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive">
-                    <LogOut className="h-4 w-4" /> Log Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <Link to="/dashboard">
+                  <Button variant="ghost" size="default">Dashboard</Button>
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
+                      <Avatar className="h-9 w-9 cursor-pointer">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                          {getUserInitials(user.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-2 py-1.5">
+                      <p className="text-sm font-medium truncate">{user.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard/settings" className="flex items-center gap-2 cursor-pointer">
+                        <Settings className="h-4 w-4" /> Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive">
+                      <LogOut className="h-4 w-4" /> Log Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <>
                 <Button variant="ghost" size="default" onClick={() => setAuthOpen(true)}>Log In</Button>
