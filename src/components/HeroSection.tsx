@@ -15,8 +15,6 @@ const HeroSection = () => {
   const handleCTA = () => {
     if (!user) {
       setAuthOpen(true);
-    } else {
-      setShowScanner(true);
     }
   };
 
