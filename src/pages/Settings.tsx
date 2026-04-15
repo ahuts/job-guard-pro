@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { User, Settings as SettingsIcon, LogOut, Save, Loader2 } from "lucide-react";
+import { User, Settings as SettingsIcon, LogOut, Save, Loader2, CreditCard, Crown, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
 
 const TIME_RANGE_OPTIONS = [
   { value: "7", label: "Last 7 days" },
