@@ -6,19 +6,28 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Search, AlertTriangle, XCircle } from 'lucide-react';
 import { analyzeJob } from '@/services/jobScraper';
 import { GhostScoreDisplay } from './GhostScoreDisplay';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthDialog from './AuthDialog';
 import type { AnalysisResult } from '@/services/jobScraper';
 
 export function JobScanner() {
+  const { user } = useAuth();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [scansRemaining, setScansRemaining] = useState(3);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setResult(null);
+
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
 
     if (!url.trim()) {
       setError('Please enter a job URL');
@@ -114,6 +123,8 @@ export function JobScanner() {
           onSave={() => console.log('Save job', result)}
         />
       )}
+
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </div>
   );
 }
