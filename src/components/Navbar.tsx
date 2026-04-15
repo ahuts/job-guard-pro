@@ -43,7 +43,7 @@ const Navbar = () => {
             {user ? (
               <>
                 <Link to="/dashboard">
-                  <Button size="lg" className="bg-transparent text-foreground border border-border hover:bg-black hover:text-purple-400 text-lg px-8 py-3 h-auto font-semibold transition-colors">Dashboard</Button>
+                  <Button size="lg" className="bg-primary/10 text-primary hover:bg-primary/20 hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)] text-lg px-8 py-3 h-auto font-semibold transition-all duration-300 hover:scale-105">Dashboard</Button>
                 </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
