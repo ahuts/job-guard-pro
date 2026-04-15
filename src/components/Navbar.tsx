@@ -38,9 +38,11 @@ const Navbar = () => {
                 <Link to="/dashboard">
                   <Button variant="ghost" size="default">Dashboard</Button>
                 </Link>
-                <span className="text-base text-muted-foreground truncate max-w-[150px]">
-                  {user.email}
-                </span>
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                    {getUserInitials(user.email)}
+                  </AvatarFallback>
+                </Avatar>
                 <Button variant="ghost" size="default" onClick={signOut}>
                   <LogOut className="h-5 w-5 mr-1" /> Log Out
                 </Button>
