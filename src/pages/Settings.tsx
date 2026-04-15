@@ -24,11 +24,13 @@ const TIME_RANGE_OPTIONS = [
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState("free");
+  const [upgrading, setUpgrading] = useState(false);
 
   // Preferences (stored in localStorage for MVP)
   const [defaultTimeRange, setDefaultTimeRange] = useState(
