@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 
 const stats = [
   { value: 43, suffix: "%", label: "of job postings are ghost jobs", source: "Resume Builder Survey, 2024" },
-  { value: 737, suffix: "M+", label: "lost to fake job offers in the US since 2019", source: "FTC & BBB Reports" },
-  { value: 11, suffix: "hrs/wk", label: "wasted on fake listings per job seeker", source: "Industry Research, 2025" },
+  { value: 737, prefix: "$", suffix: " million+", label: "lost to fake job offers in the US since 2019", source: "FTC & BBB Reports" },
+  { value: 11, suffix: " hrs/wk", label: "wasted on fake listings per job seeker", source: "Industry Research, 2025" },
   { value: 40, suffix: "%", label: "of reposted roles never result in a hire", source: "Built In / Freshteam Data" },
 ];
 
-const AnimatedNumber = ({ target, suffix }: { target: number; suffix: string }) => {
+const AnimatedNumber = ({ target, suffix, prefix = "" }: { target: number; suffix: string; prefix?: string }) => {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
@@ -40,7 +40,7 @@ const AnimatedNumber = ({ target, suffix }: { target: number; suffix: string }) 
 
   return (
     <div ref={ref} className="text-5xl md:text-6xl font-extrabold text-foreground">
-      {count.toLocaleString()}{suffix}
+      {prefix}{count.toLocaleString()}{suffix}
     </div>
   );
 };
@@ -61,7 +61,7 @@ const SocialProofSection = () => {
         <div className="grid md:grid-cols-4 gap-10 max-w-5xl mx-auto text-center">
           {stats.map((stat) => (
             <div key={stat.label} className="space-y-2">
-              <AnimatedNumber target={stat.value} suffix={stat.suffix} />
+              <AnimatedNumber target={stat.value} suffix={stat.suffix} prefix={stat.prefix} />
               <p className="text-muted-foreground font-medium text-sm">{stat.label}</p>
               <p className="text-xs text-muted-foreground/60">{stat.source}</p>
             </div>
