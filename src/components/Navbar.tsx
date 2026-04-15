@@ -1,7 +1,14 @@
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, Settings, Briefcase } from "lucide-react";
 import ghostJobLogo from "@/assets/ghostjob-logo.png";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthDialog from "@/components/AuthDialog";
@@ -34,19 +41,37 @@ const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-3">
             {user ? (
-              <>
-                <Link to="/dashboard">
-                  <Button variant="ghost" size="default">Dashboard</Button>
-                </Link>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                    {getUserInitials(user.email)}
-                  </AvatarFallback>
-                </Avatar>
-                <Button variant="ghost" size="default" onClick={signOut}>
-                  <LogOut className="h-5 w-5 mr-1" /> Log Out
-                </Button>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
+                    <Avatar className="h-9 w-9 cursor-pointer">
+                      <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                        {getUserInitials(user.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium truncate">{user.email}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                      <Briefcase className="h-4 w-4" /> Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard/settings" className="flex items-center gap-2 cursor-pointer">
+                      <Settings className="h-4 w-4" /> Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive">
+                    <LogOut className="h-4 w-4" /> Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <>
                 <Button variant="ghost" size="default" onClick={() => setAuthOpen(true)}>Log In</Button>
@@ -69,6 +94,9 @@ const Navbar = () => {
               <>
                 <Link to="/dashboard" className="block" onClick={() => setMobileOpen(false)}>
                   <Button variant="ghost" className="w-full">Dashboard</Button>
+                </Link>
+                <Link to="/dashboard/settings" className="block" onClick={() => setMobileOpen(false)}>
+                  <Button variant="ghost" className="w-full">Settings</Button>
                 </Link>
                 <Button variant="ghost" className="w-full" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-1" /> Log Out
