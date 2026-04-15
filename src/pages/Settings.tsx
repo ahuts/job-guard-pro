@@ -112,6 +112,31 @@ export default function Settings() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    if (!user) return;
+    setUpgrading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("create-portal", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No portal URL returned");
+      }
+    } catch (err: any) {
+      console.error("Portal error:", err);
+      toast({ title: "Error", description: err.message || "Failed to open billing portal.", variant: "destructive" });
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
   const savePreferences = () => {
     localStorage.setItem("ghostjob_default_range", defaultTimeRange);
     localStorage.setItem("ghostjob_ghost_threshold", String(ghostThreshold));
