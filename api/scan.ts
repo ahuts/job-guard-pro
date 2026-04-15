@@ -68,24 +68,68 @@ export default async function handler(
     // These require server-side data we can't get from the extension
 
     // 1. Check for company careers page (async, with short timeout)
+    // Try multiple TLDs since companies use .com, .io, .org, .co, etc.
     if (company && company !== 'Unknown Company') {
       try {
         const companySlug = company.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const careersUrl = `https://www.${companySlug}.com/careers`;
-        const careersRes = await fetch(careersUrl, {
-          method: 'HEAD',
-          headers: { 'User-Agent': 'Mozilla/5.0' },
-          signal: AbortSignal.timeout(3000), // 3s timeout
+        const tlds = ['.com', '.io', '.co', '.org', '.net', '.ai'];
+        let foundUrl: string | null = null;
+
+        // Race all TLDs in parallel with 3s total budget
+        const checks = tlds.map(async (tld) => {
+          const url = `https://www.${companySlug}${tld}/careers`;
+          try {
+            const res = await fetch(url, {
+              method: 'HEAD',
+              headers: { 'User-Agent': 'Mozilla/5.0' },
+              signal: AbortSignal.timeout(2500),
+            });
+            if (res.ok) return url;
+          } catch { /* skip */ }
+          return null;
         });
-        const hasCareersPage = careersRes.ok;
+
+        const results = await Promise.allSettled(checks);
+        for (const r of results) {
+          if (r.status === 'fulfilled' && r.value) {
+            foundUrl = r.value;
+            break;
+          }
+        }
+
+        // Also try without 'www' for the first hit TLD
+        if (!foundUrl) {
+          const bareChecks = tlds.map(async (tld) => {
+            const url = `https://${companySlug}${tld}/careers`;
+            try {
+              const res = await fetch(url, {
+                method: 'HEAD',
+                headers: { 'User-Agent': 'Mozilla/5.0' },
+                signal: AbortSignal.timeout(2500),
+              });
+              if (res.ok) return url;
+            } catch { /* skip */ }
+            return null;
+          });
+          const bareResults = await Promise.allSettled(bareChecks);
+          for (const r of bareResults) {
+            if (r.status === 'fulfilled' && r.value) {
+              foundUrl = r.value;
+              break;
+            }
+          }
+        }
+
+        const hasCareersPage = foundUrl !== null;
         if (!companyData) companyData = { hasCareersPage: null, recentLayoffs: null };
         companyData.hasCareersPage = hasCareersPage;
-        if (hasCareersPage) {
+        if (hasCareersPage && foundUrl) {
+          const displayDomain = foundUrl.replace('https://', '').replace('www.', '').replace(/\/$/, '');
           apiSignals.push({
             type: 'green',
             name: 'Active careers page',
             description: 'Company has an active careers page on their website.',
-            quote: `Found careers page at ${companySlug}.com/careers`,
+            quote: `Found careers page at ${displayDomain}`,
             impact: 'Companies actively investing in hiring maintain visible career pages — a strong sign of real open positions.',
             advice: 'Browse their careers page to see how many roles they have. A handful of generic postings may still be a red flag.',
             weight: 4,

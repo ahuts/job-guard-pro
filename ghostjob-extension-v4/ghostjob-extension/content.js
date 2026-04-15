@@ -1189,40 +1189,54 @@
       };
 
       function doSave(token) {
-        fetch(SUPABASE_URL + '/rest/v1/scanned_jobs', {
-          method:  'POST',
+        // Check for duplicate first
+        var checkUrl = SUPABASE_URL + '/rest/v1/scanned_jobs?select=id&user_id=eq.' + encodeURIComponent(stored.gj_user_id) + '&job_url=eq.' + encodeURIComponent(row.job_url);
+        fetch(checkUrl, {
+          method: 'GET',
           headers: {
-            'Content-Type':  'application/json',
-            'apikey':        SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + token,
-            'Prefer':        'return=minimal'
-          },
-          body: JSON.stringify(row)
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + token
+          }
         })
-        .then(function(res) {
-          if (res.ok) {
-            log('Saved to Supabase!');
-            onSaved(1);
-          } else if (res.status === 401) {
-            // Token expired — try refresh
-            log('Token expired, refreshing...');
-            refreshToken(function(newToken) {
-              if (newToken) {
-                doSave(newToken); // Retry with fresh token
-              } else {
-                onError('Session expired. Please sign in again.');
-              }
-            });
-          } else {
-            // Check for duplicate (409 Conflict)
-            if (res.status === 409) {
-              onError('Job already saved to dashboard');
+        .then(function(res) { return res.json(); })
+        .then(function(existing) {
+          if (Array.isArray(existing) && existing.length > 0) {
+            onError('Job already saved to dashboard');
+            return;
+          }
+          // No duplicate — proceed with insert
+          fetch(SUPABASE_URL + '/rest/v1/scanned_jobs', {
+            method:  'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'apikey':        SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + token,
+              'Prefer':        'return=minimal'
+            },
+            body: JSON.stringify(row)
+          })
+          .then(function(res) {
+            if (res.ok) {
+              log('Saved to Supabase!');
+              onSaved(1);
+            } else if (res.status === 401) {
+              log('Token expired, refreshing...');
+              refreshToken(function(newToken) {
+                if (newToken) {
+                  doSave(newToken);
+                } else {
+                  onError('Session expired. Please sign in again.');
+                }
+              });
             } else {
               return res.json().then(function(e) {
                 onError(e.message || e.msg || 'Supabase error');
               });
             }
-          }
+          })
+          .catch(function(err) {
+            onError(err.message);
+          });
         })
         .catch(function(err) {
           onError(err.message);
