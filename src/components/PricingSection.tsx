@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthDialog from "./AuthDialog";
+import { getUpgradeUrl } from "@/lib/stripe";
 
 const tiers = [
   {
@@ -36,8 +37,14 @@ const PricingSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const { user } = useAuth();
 
-  const handleCTA = () => {
-    if (!user) {
+  const handleCTA = (tier: typeof tiers[0]) => {
+    if (tier.featured) {
+      if (!user) {
+        setAuthOpen(true);
+      } else {
+        window.location.href = getUpgradeUrl(user.id, user.email ?? undefined);
+      }
+    } else if (!user) {
       setAuthOpen(true);
     }
   };
@@ -87,7 +94,7 @@ const PricingSection = () => {
                 <Button
                   variant={tier.featured ? "hero" : "heroOutline"}
                   className="w-full py-5"
-                  onClick={handleCTA}
+                  onClick={() => handleCTA(tier)}
                 >
                   {tier.cta}
                 </Button>

@@ -1,6 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Ghost, Zap } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getUpgradeUrl } from "@/lib/stripe";
 
 interface FreePlanBannerProps {
   scansUsed: number;
@@ -9,6 +11,7 @@ interface FreePlanBannerProps {
 
 export default function FreePlanBanner({ scansUsed, maxScans }: FreePlanBannerProps) {
   const remaining = Math.max(0, maxScans - scansUsed);
+  const { user } = useAuth();
 
   return (
     <Card className="border-primary/30 bg-primary/5">
@@ -26,7 +29,11 @@ export default function FreePlanBanner({ scansUsed, maxScans }: FreePlanBannerPr
             </p>
           </div>
         </div>
-        <Button size="sm" className="shrink-0 gap-1.5">
+        <Button
+          size="sm"
+          className="shrink-0 gap-1.5"
+          onClick={() => window.location.href = getUpgradeUrl(user?.id, user?.email ?? undefined)}
+        >
           <Zap className="h-4 w-4" />
           Upgrade to Pro
         </Button>
