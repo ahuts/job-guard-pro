@@ -112,6 +112,31 @@ export default function Settings() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    if (!user) return;
+    setUpgrading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("create-portal", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No portal URL returned");
+      }
+    } catch (err: any) {
+      console.error("Portal error:", err);
+      toast({ title: "Error", description: err.message || "Failed to open billing portal.", variant: "destructive" });
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
   const savePreferences = () => {
     localStorage.setItem("ghostjob_default_range", defaultTimeRange);
     localStorage.setItem("ghostjob_ghost_threshold", String(ghostThreshold));
@@ -259,12 +284,22 @@ export default function Settings() {
                 </Button>
               </div>
             ) : (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">You're on the Pro plan</p>
-                  <p className="text-xs text-muted-foreground">Enjoy unlimited scans and advanced features.</p>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-foreground">You're on the Pro plan</p>
+                    <p className="text-xs text-muted-foreground">Enjoy unlimited scans and advanced features.</p>
+                  </div>
                 </div>
+                <Button onClick={handleManageSubscription} disabled={upgrading} size="sm" variant="outline">
+                  {upgrading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  {upgrading ? "Redirecting..." : "Manage Subscription"}
+                </Button>
               </div>
             )}
 
