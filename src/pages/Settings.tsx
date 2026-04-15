@@ -228,6 +228,46 @@ export default function Settings() {
                 {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)}
               </Badge>
             </div>
+
+            {subscriptionTier === "free" ? (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-primary" />
+                  <p className="font-medium text-foreground">Upgrade to Pro</p>
+                </div>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Unlimited job scans
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Advanced analytics
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Priority support
+                  </li>
+                </ul>
+                <Button onClick={handleUpgrade} disabled={upgrading} size="sm" variant="hero">
+                  {upgrading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  {upgrading ? "Redirecting..." : "Upgrade Now"}
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">You're on the Pro plan</p>
+                  <p className="text-xs text-muted-foreground">Enjoy unlimited scans and advanced features.</p>
+                </div>
+              </div>
+            )}
+
             <Separator />
             <Button variant="destructive" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
