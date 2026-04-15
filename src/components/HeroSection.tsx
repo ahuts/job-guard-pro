@@ -10,7 +10,7 @@ import { EmailCaptureModal } from "./EmailCaptureModal";
 const HeroSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const { user } = useAuth();
-  const [showScanner, setShowScanner] = useState(false);
+  const showScanner = true;
 
   const handleCTA = () => {
     if (!user) {
@@ -51,18 +51,7 @@ const HeroSection = () => {
               </div>
 
               <div className="mt-8">
-                {!showScanner ? (
-                  <Button 
-                    onClick={() => setShowScanner(true)}
-                    variant="outline" 
-                    size="lg"
-                    className="w-full"
-                  >
-                    Scan a Job URL
-                  </Button>
-                ) : (
-                  <JobScanner />
-                )}
+                <JobScanner />
               </div>
 
               <div className="flex items-center gap-2 justify-center lg:justify-start text-sm text-muted-foreground">
