@@ -1,47 +1,25 @@
 
 
-# Stripe Upgrade Button in Settings
+# Simplify Upgrade to Use Stripe Payment Link
 
 ## Overview
-Add an "Upgrade to Pro" button in the Settings Account section that creates a Stripe Checkout session and redirects the user to pay. After successful payment, a webhook updates their `subscription_tier` in the database.
-
-## What You'll Need
-- Your **Stripe Secret Key** (starts with `sk_test_` or `sk_live_`) — stored securely as an Edge Function secret
-- A **Stripe Price ID** for the Pro plan — you'll create this in your Stripe Dashboard (Products → Add Product → copy the Price ID like `price_xxx`)
-
-## Architecture
-
-```text
-Settings Page → Edge Function (create-checkout) → Stripe Checkout → Stripe Webhook → Edge Function (stripe-webhook) → Update profiles table
-```
+Replace the Edge Function checkout flow with a simple redirect to your Stripe Payment Link URL. No backend call needed — just open the link directly.
 
 ## Steps
 
-### 1. Store your Stripe Secret Key
-Use the `add_secret` tool to securely store `STRIPE_SECRET_KEY` as a backend secret.
+### 1. Update Settings UI
+- Remove the `handleUpgrade` function that calls the `create-checkout` edge function
+- Replace it with a simple `window.open(paymentLinkUrl)` or `window.location.href = paymentLinkUrl`
+- You'll provide the Payment Link URL (e.g. `https://buy.stripe.com/xxx`)
 
-### 2. Create `create-checkout` Edge Function
-- Accepts the user's auth token and desired plan
-- Creates a Stripe Checkout Session with the correct Price ID
-- Returns the Checkout URL for redirect
-- Validates JWT and uses the user's profile email as the Stripe customer email
+### 2. Optional: Pass user identity via URL params
+- Stripe Payment Links support `client_reference_id` and `prefilled_email` query params
+- We can append `?client_reference_id={userId}&prefilled_email={email}` so the webhook can still map the payment back to the user
 
-### 3. Create `stripe-webhook` Edge Function
-- Receives `checkout.session.completed` events from Stripe
-- Updates `profiles.subscription_tier` to `"pro"` and stores `stripe_customer_id`
-- Verifies the webhook signature using `STRIPE_WEBHOOK_SECRET`
+### 3. Keep webhook intact
+- The `stripe-webhook` edge function stays — it still processes `checkout.session.completed` to update `subscription_tier`
+- The `client_reference_id` from the Payment Link maps to the user
 
-### 4. Update Settings UI
-- In the Account card, add an "Upgrade to Pro" button (shown only when tier is `free`)
-- Clicking it calls the `create-checkout` function and redirects to Stripe
-- Show a "Manage Subscription" state when already on Pro
-
-### 5. Store Webhook Secret
-After deploying, you'll copy the Edge Function URL into Stripe's webhook settings. Stripe gives you a webhook signing secret (`whsec_xxx`) which we'll store as `STRIPE_WEBHOOK_SECRET`.
-
-## Post-Build Setup (on your end)
-1. Create a Pro product + price in Stripe Dashboard
-2. Share the Price ID so it can be configured
-3. Add the webhook endpoint URL in Stripe Dashboard → Webhooks
-4. Copy the webhook signing secret back into Lovable
+### What I need from you
+- Your Stripe Payment Link URL
 
