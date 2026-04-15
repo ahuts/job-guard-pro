@@ -1,10 +1,17 @@
 import { Menu, X, LogOut } from "lucide-react";
 import ghostJobLogo from "@/assets/ghostjob-logo.png";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthDialog from "@/components/AuthDialog";
 import { Link } from "react-router-dom";
+
+function getUserInitials(email?: string | null): string {
+  if (!email) return "U";
+  const name = email.split("@")[0];
+  return name.slice(0, 2).toUpperCase();
+}
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -31,9 +38,11 @@ const Navbar = () => {
                 <Link to="/dashboard">
                   <Button variant="ghost" size="default">Dashboard</Button>
                 </Link>
-                <span className="text-base text-muted-foreground truncate max-w-[150px]">
-                  {user.email}
-                </span>
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                    {getUserInitials(user.email)}
+                  </AvatarFallback>
+                </Avatar>
                 <Button variant="ghost" size="default" onClick={signOut}>
                   <LogOut className="h-5 w-5 mr-1" /> Log Out
                 </Button>
