@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getUpgradeUrl } from "@/lib/stripe";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,12 +90,7 @@ export default function Settings() {
 
   const handleUpgrade = () => {
     if (!user) return;
-    const paymentUrl = new URL("https://buy.stripe.com/9B628t8MU8Z22Pq0h34F207");
-    paymentUrl.searchParams.set("client_reference_id", user.id);
-    if (user.email) {
-      paymentUrl.searchParams.set("prefilled_email", user.email);
-    }
-    window.location.href = paymentUrl.toString();
+    window.location.href = getUpgradeUrl(user.id, user.email ?? undefined);
   };
 
   const handleManageSubscription = async () => {
