@@ -39,7 +39,7 @@ const AnimatedNumber = ({ target, suffix, prefix = "" }: { target: number; suffi
   }, [target, hasAnimated]);
 
   return (
-    <div ref={ref} className="text-5xl md:text-6xl font-extrabold text-foreground">
+    <div ref={ref} className="text-3xl md:text-6xl font-extrabold text-foreground">
       {prefix}{count.toLocaleString()}{suffix}
     </div>
   );
