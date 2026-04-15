@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { User, Settings as SettingsIcon, LogOut, Save, Loader2 } from "lucide-react";
+import { User, Settings as SettingsIcon, LogOut, Save, Loader2, CreditCard, Crown, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
 
 const TIME_RANGE_OPTIONS = [
   { value: "7", label: "Last 7 days" },
@@ -23,11 +24,13 @@ const TIME_RANGE_OPTIONS = [
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState("free");
+  const [upgrading, setUpgrading] = useState(false);
 
   // Preferences (stored in localStorage for MVP)
   const [defaultTimeRange, setDefaultTimeRange] = useState(
@@ -54,6 +57,21 @@ export default function Settings() {
     loadProfile();
   }, [user]);
 
+  // Handle upgrade success/cancel query params
+  useEffect(() => {
+    const upgrade = searchParams.get("upgrade");
+    if (upgrade === "success") {
+      toast({ title: "🎉 Welcome to Pro!", description: "Your account has been upgraded." });
+      setSubscriptionTier("pro");
+      searchParams.delete("upgrade");
+      setSearchParams(searchParams, { replace: true });
+    } else if (upgrade === "cancelled") {
+      toast({ title: "Upgrade cancelled", description: "No changes were made." });
+      searchParams.delete("upgrade");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams]);
+
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
@@ -66,6 +84,31 @@ export default function Settings() {
       toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" });
     } else {
       toast({ title: "Saved", description: "Profile updated successfully." });
+    }
+  };
+
+  const handleUpgrade = async () => {
+    if (!user) return;
+    setUpgrading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      console.error("Upgrade error:", err);
+      toast({ title: "Error", description: err.message || "Failed to start checkout.", variant: "destructive" });
+    } finally {
+      setUpgrading(false);
     }
   };
 
@@ -185,6 +228,46 @@ export default function Settings() {
                 {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)}
               </Badge>
             </div>
+
+            {subscriptionTier === "free" ? (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-primary" />
+                  <p className="font-medium text-foreground">Upgrade to Pro</p>
+                </div>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Unlimited job scans
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Advanced analytics
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Priority support
+                  </li>
+                </ul>
+                <Button onClick={handleUpgrade} disabled={upgrading} size="sm" variant="hero">
+                  {upgrading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  {upgrading ? "Redirecting..." : "Upgrade Now"}
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">You're on the Pro plan</p>
+                  <p className="text-xs text-muted-foreground">Enjoy unlimited scans and advanced features.</p>
+                </div>
+              </div>
+            )}
+
             <Separator />
             <Button variant="destructive" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
