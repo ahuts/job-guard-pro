@@ -24,6 +24,11 @@ export function JobScanner() {
     setError('');
     setResult(null);
 
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+
     if (!url.trim()) {
       setError('Please enter a job URL');
       return;
