@@ -1,5 +1,5 @@
 import { Ghost, Briefcase, BarChart3, Settings, Menu, LogOut, User, ChevronDown, Bell } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
