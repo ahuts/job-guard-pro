@@ -72,6 +72,14 @@ const Navbar = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="ghost" size="default" onClick={() => setAuthOpen(true)}>Log In</Button>
+                <Button variant="hero" size="default" onClick={() => setAuthOpen(true)}>Get Started Free</Button>
+              </>
+            )}
+          </div>
+
           <button className="md:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -86,6 +94,9 @@ const Navbar = () => {
               <>
                 <Link to="/dashboard" className="block" onClick={() => setMobileOpen(false)}>
                   <Button variant="ghost" className="w-full">Dashboard</Button>
+                </Link>
+                <Link to="/dashboard/settings" className="block" onClick={() => setMobileOpen(false)}>
+                  <Button variant="ghost" className="w-full">Settings</Button>
                 </Link>
                 <Button variant="ghost" className="w-full" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-1" /> Log Out
