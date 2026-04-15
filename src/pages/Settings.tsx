@@ -57,6 +57,21 @@ export default function Settings() {
     loadProfile();
   }, [user]);
 
+  // Handle upgrade success/cancel query params
+  useEffect(() => {
+    const upgrade = searchParams.get("upgrade");
+    if (upgrade === "success") {
+      toast({ title: "🎉 Welcome to Pro!", description: "Your account has been upgraded." });
+      setSubscriptionTier("pro");
+      searchParams.delete("upgrade");
+      setSearchParams(searchParams, { replace: true });
+    } else if (upgrade === "cancelled") {
+      toast({ title: "Upgrade cancelled", description: "No changes were made." });
+      searchParams.delete("upgrade");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams]);
+
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
@@ -69,6 +84,31 @@ export default function Settings() {
       toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" });
     } else {
       toast({ title: "Saved", description: "Profile updated successfully." });
+    }
+  };
+
+  const handleUpgrade = async () => {
+    if (!user) return;
+    setUpgrading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      console.error("Upgrade error:", err);
+      toast({ title: "Error", description: err.message || "Failed to start checkout.", variant: "destructive" });
+    } finally {
+      setUpgrading(false);
     }
   };
 
