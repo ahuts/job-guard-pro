@@ -40,10 +40,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-4 py-6">
+      <Link to="/" className="flex items-center gap-2 px-4 py-6 hover:opacity-80 transition-opacity">
         <Ghost className="h-8 w-8 text-primary" />
         <span className="text-xl font-bold text-foreground">GhostJob</span>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4">
