@@ -87,29 +87,14 @@ export default function Settings() {
     }
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     if (!user) return;
-    setUpgrading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (err: any) {
-      console.error("Upgrade error:", err);
-      toast({ title: "Error", description: err.message || "Failed to start checkout.", variant: "destructive" });
-    } finally {
-      setUpgrading(false);
+    const paymentUrl = new URL("https://buy.stripe.com/9B628t8MU8Z22Pq0h34F207");
+    paymentUrl.searchParams.set("client_reference_id", user.id);
+    if (user.email) {
+      paymentUrl.searchParams.set("prefilled_email", user.email);
     }
+    window.location.href = paymentUrl.toString();
   };
 
   const handleManageSubscription = async () => {
