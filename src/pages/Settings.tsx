@@ -284,12 +284,22 @@ export default function Settings() {
                 </Button>
               </div>
             ) : (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">You're on the Pro plan</p>
-                  <p className="text-xs text-muted-foreground">Enjoy unlimited scans and advanced features.</p>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-foreground">You're on the Pro plan</p>
+                    <p className="text-xs text-muted-foreground">Enjoy unlimited scans and advanced features.</p>
+                  </div>
                 </div>
+                <Button onClick={handleManageSubscription} disabled={upgrading} size="sm" variant="outline">
+                  {upgrading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  {upgrading ? "Redirecting..." : "Manage Subscription"}
+                </Button>
               </div>
             )}
 
