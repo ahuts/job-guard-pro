@@ -123,6 +123,8 @@ export function JobScanner() {
           onSave={() => console.log('Save job', result)}
         />
       )}
+
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </div>
   );
 }
