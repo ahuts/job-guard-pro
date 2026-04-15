@@ -16,7 +16,8 @@
   const SCAN_API_URL = 'https://jobghost-gamma.vercel.app/api/scan';
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
-  const VERSION  = '1.0.7';
+  const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
+  const VERSION  = '1.0.8';
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }
@@ -214,10 +215,61 @@
   // SCAN - runs entirely in content script, no background needed
   // ─────────────────────────────────────────────────────────────────────────
 
+  // ─── Scan limit tracking ─────────────────────────────────────────────────
+  function getMonthKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function checkScanLimit(callback) {
+    chrome.storage.local.get(['gj_scans'], function(stored) {
+      var scans = stored.gj_scans || {};
+      var month = getMonthKey();
+      var count = scans[month] || 0;
+
+      // If logged in, no limit for now (will add Pro tier later)
+      // If not logged in, enforce free limit
+      chrome.storage.local.get(['gj_auth_token'], function(auth) {
+        if (auth.gj_auth_token) {
+          // Authenticated user — track but don't block
+          callback(true, count, null);
+        } else if (count >= FREE_SCAN_LIMIT) {
+          // Free tier limit reached
+          callback(false, count, FREE_SCAN_LIMIT);
+        } else {
+          callback(true, count, FREE_SCAN_LIMIT);
+        }
+      });
+    });
+  }
+
+  function recordScan() {
+    chrome.storage.local.get(['gj_scans'], function(stored) {
+      var scans = stored.gj_scans || {};
+      var month = getMonthKey();
+      scans[month] = (scans[month] || 0) + 1;
+      // Only keep last 3 months of data
+      var keys = Object.keys(scans).sort();
+      while (keys.length > 3) { delete scans[keys.shift()]; }
+      chrome.storage.local.set({ gj_scans: scans });
+    });
+  }
+
   function handleScanClick() {
     log('Scan clicked');
-    var btn = document.getElementById(BTN_ID);
-    var origText = btn ? btn.textContent : '👻 Scan for Ghost Job';
+
+    // Check scan limit before proceeding
+    checkScanLimit(function(allowed, count, limit) {
+      if (!allowed) {
+        showLimitModal(count, limit);
+        return;
+      }
+
+      // Record this scan
+      recordScan();
+
+      var btn = document.getElementById(BTN_ID);
+      var origText = btn ? btn.textContent : '👻 Scan for Ghost Job';
 
     function setLoading(on) {
       if (!btn) return;
@@ -248,6 +300,62 @@
           source:         'local'  // Bug #10: preserve actual source
         });
       });
+    }); // end checkScanLimit
+  }
+
+  // ─── Scan limit modal ─────────────────────────────────────────────────────
+  function showLimitModal(count, limit) {
+    // Remove any existing overlay
+    var existing = document.getElementById('gj-limit-overlay');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'gj-limit-overlay';
+    overlay.style.cssText = [
+      'position:fixed','top:0','left:0','width:100vw','height:100vh',
+      'background:rgba(0,0,0,0.6)','z-index:2147483646',
+      'display:flex','align-items:center','justify-content:center'
+    ].join(';');
+
+    var card = document.createElement('div');
+    card.style.cssText = [
+      'background:#fff','border-radius:16px','padding:32px','max-width:380px',
+      'width:90%','text-align:center','font-family:-apple-system,BlinkMacSystemFont,sans-serif',
+      'box-shadow:0 20px 60px rgba(0,0,0,0.3)'
+    ].join(';');
+
+    card.innerHTML = [
+      '<div style="font-size:48px;margin-bottom:16px">🔒</div>',
+      '<h3 style="margin:0 0 8px;color:#1e293b;font-size:20px">Free Scan Limit Reached</h3>',
+      '<p style="color:#64748b;font-size:14px;margin:0 0 8px">',
+      'You\'ve used <strong>' + count + '/' + limit + '</strong> free scans this month.',
+      '</p>',
+      '<p style="color:#64748b;font-size:13px;margin:0 0 20px">',
+      'Sign in to save jobs to your dashboard and get unlimited scans.',
+      '</p>',
+      '<div style="display:flex;gap:10px;justify-content:center">',
+      '<button id="gj-limit-close" style="padding:10px 20px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:14px;color:#64748b">Close</button>',
+      '<button id="gj-limit-signin" style="padding:10px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#667eea,#7c3aed);cursor:pointer;font-size:14px;color:#fff;font-weight:600">Sign In</button>',
+      '</div>'
+    ].join('');
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
+    document.getElementById('gj-limit-close').addEventListener('click', function() { overlay.remove(); });
+    document.getElementById('gj-limit-signin').addEventListener('click', function() {
+      overlay.remove();
+      // Open the popup (user needs to click the extension icon)
+      // Show a hint instead since we can't programmatically open the popup
+      var hint = document.createElement('div');
+      hint.style.cssText = 'position:fixed;top:20px;right:20px;background:#667eea;color:#fff;padding:12px 20px;border-radius:8px;z-index:2147483647;font-size:14px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+      hint.textContent = '👆 Click the GhostJob icon in your toolbar to sign in';
+      document.body.appendChild(hint);
+      setTimeout(function() { hint.remove(); }, 5000);
+    });
   }
 
   // ─── Remote API call ──────────────────────────────────────────────────────
@@ -1013,6 +1121,44 @@
     });
   }
 
+  // ─── Token refresh ──────────────────────────────────────────────────────
+  function refreshToken(callback) {
+    chrome.storage.local.get(['gj_refresh_token', 'gj_user_email'], function(stored) {
+      if (!stored.gj_refresh_token) {
+        callback(null);
+        return;
+      }
+      fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ refresh_token: stored.gj_refresh_token })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.access_token) {
+          chrome.storage.local.set({
+            gj_auth_token: data.access_token,
+            gj_refresh_token: data.refresh_token
+          }, function() {
+            log('Token refreshed successfully');
+            callback(data.access_token);
+          });
+        } else {
+          warn('Token refresh failed:', data.error_description || 'unknown error');
+          // Refresh failed — log out user
+          chrome.storage.local.remove(['gj_auth_token', 'gj_refresh_token', 'gj_user_id', 'gj_user_email']);
+          callback(null);
+        }
+      })
+      .catch(function() {
+        callback(null);
+      });
+    });
+  }
+
   // ─── Save to Supabase ────────────────────────────────────────────────────
   function saveToSupabase(jobData, onSaved, onError) {
     chrome.storage.local.get(['gj_auth_token', 'gj_user_id'], function(stored) {
@@ -1042,29 +1188,48 @@
         application_status: 'not_applied'
       };
 
-      fetch(SUPABASE_URL + '/rest/v1/scanned_jobs', {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'apikey':        SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + stored.gj_auth_token,
-          'Prefer':        'return=minimal'
-        },
-        body: JSON.stringify(row)
-      })
-      .then(function(res) {
-        if (res.ok) {
-          log('Saved to Supabase!');
-          onSaved(1);
-        } else {
-          return res.json().then(function(e) {
-            onError(e.message || e.msg || 'Supabase error');
-          });
-        }
-      })
-      .catch(function(err) {
-        onError(err.message);
-      });
+      function doSave(token) {
+        fetch(SUPABASE_URL + '/rest/v1/scanned_jobs', {
+          method:  'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'apikey':        SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + token,
+            'Prefer':        'return=minimal'
+          },
+          body: JSON.stringify(row)
+        })
+        .then(function(res) {
+          if (res.ok) {
+            log('Saved to Supabase!');
+            onSaved(1);
+          } else if (res.status === 401) {
+            // Token expired — try refresh
+            log('Token expired, refreshing...');
+            refreshToken(function(newToken) {
+              if (newToken) {
+                doSave(newToken); // Retry with fresh token
+              } else {
+                onError('Session expired. Please sign in again.');
+              }
+            });
+          } else {
+            // Check for duplicate (409 Conflict)
+            if (res.status === 409) {
+              onError('Job already saved to dashboard');
+            } else {
+              return res.json().then(function(e) {
+                onError(e.message || e.msg || 'Supabase error');
+              });
+            }
+          }
+        })
+        .catch(function(err) {
+          onError(err.message);
+        });
+      }
+
+      doSave(stored.gj_auth_token);
     });
   }
 
