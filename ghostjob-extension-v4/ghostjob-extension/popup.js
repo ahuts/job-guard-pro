@@ -104,12 +104,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     chrome.storage.local.get('savedJobs', (stored) => {
       const allJobs = stored.savedJobs || [];
-      // Clean up old entries without titles
-      const cleanJobs = allJobs.filter(j => j.title && j.title !== 'Unknown');
+      // Remove entries saved before v1.1.0 that have no title field
+      const cleanJobs = allJobs.filter(j => j.title);
       if (cleanJobs.length !== allJobs.length) {
         chrome.storage.local.set({ savedJobs: cleanJobs });
       }
       const jobs = cleanJobs.slice(0, 5);
+      if (jobs.length === 0) {
+        historyDiv.style.display = 'none';
+        return;
+      }
       if (jobs.length === 0) {
         historyDiv.style.display = 'none';
         return;
