@@ -305,7 +305,7 @@
     fetchRemoteAnalysis(jobData)
       .then(function(data) {
         setLoading(false);
-        showGhostScore(data);
+        showGhostScore(data, jobData);
       })
       .catch(function(err) {
         warn('API failed, using local scoring:', err.message);
@@ -317,7 +317,7 @@
           summary:        analysis.summary,
           recommendation: analysis.recommendation,
           source:         'local'  // Bug #10: preserve actual source
-        });
+        }, jobData);
       });
     }); // end checkScanLimit
   }
@@ -1011,10 +1011,10 @@
   }
 
   // ─── Show Ghost Score panel (Bug #9: visual distinction for local) ────────
-  function showGhostScore(result) {
+  function showGhostScore(result, jobData) {
     // Save to recent scan history for popup
-    var jobData = extractJobData();
-    saveRecentScan(jobData, result);
+    var scanData = jobData || extractJobData();
+    saveRecentScan(scanData, result);
 
     var old = document.getElementById(MODAL_ID);
     if (old) old.remove();
@@ -1299,7 +1299,7 @@
           return Object.assign(a, { ghostScore: a.score, source: 'local' });
         })
         .then(function(data) {
-          showGhostScore(data);
+          showGhostScore(data, jobData);
           sendResponse({ success: true, data: data });
         });
       return true;
