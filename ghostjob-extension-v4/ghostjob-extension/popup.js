@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const historyList = document.getElementById('scan-history-list');
 
     chrome.storage.local.get('savedJobs', (stored) => {
-      const jobs = (stored.savedJobs || []).filter(j => j.title && j.title !== 'Unknown').slice(0, 5);
+      const jobs = (stored.savedJobs || []).slice(0, 5);
       if (jobs.length === 0) {
         historyDiv.style.display = 'none';
         return;
