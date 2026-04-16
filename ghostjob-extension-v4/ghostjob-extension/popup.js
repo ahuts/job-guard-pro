@@ -103,7 +103,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const historyList = document.getElementById('scan-history-list');
 
     chrome.storage.local.get('savedJobs', (stored) => {
-      const jobs = (stored.savedJobs || []).slice(0, 5);
+      const allJobs = stored.savedJobs || [];
+      // Clean up old entries without titles
+      const cleanJobs = allJobs.filter(j => j.title && j.title !== 'Unknown');
+      if (cleanJobs.length !== allJobs.length) {
+        chrome.storage.local.set({ savedJobs: cleanJobs });
+      }
+      const jobs = cleanJobs.slice(0, 5);
       if (jobs.length === 0) {
         historyDiv.style.display = 'none';
         return;
