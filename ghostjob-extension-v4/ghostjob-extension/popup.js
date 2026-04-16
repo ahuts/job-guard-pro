@@ -84,6 +84,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       authStatus.style.color = '';
       authEmail.value = '';
       authPassword.value = '';
+      document.getElementById('dashboard-link').style.display = 'none';
+      document.getElementById('scan-history').style.display = 'none';
     });
   });
 
@@ -91,7 +93,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     authLoginForm.style.display = 'none';
     authLoggedIn.style.display = 'flex';
     authUserEmail.textContent = '👤 ' + email;
+    document.getElementById('dashboard-link').style.display = 'block';
+    loadScanHistory();
   }
+
+  // ─── Scan History ────────────────────────────────────────────────────
+  function loadScanHistory() {
+    const historyDiv = document.getElementById('scan-history');
+    const historyList = document.getElementById('scan-history-list');
+
+    chrome.storage.local.get('savedJobs', (stored) => {
+      const jobs = (stored.savedJobs || []).slice(0, 5);
+      if (jobs.length === 0) {
+        historyDiv.style.display = 'none';
+        return;
+      }
+
+      historyDiv.style.display = 'block';
+      historyList.innerHTML = '';
+
+      jobs.forEach((job) => {
+        const score = job.ghostScore != null ? job.ghostScore : 50;
+        const isLow = score < 31, isMid = score < 61;
+        const color = isLow ? '#ef4444' : isMid ? '#f59e0b' : '#22c55e';
+
+        const item = document.createElement('div');
+        item.className = 'scan-item';
+        item.innerHTML = `
+          <div class="scan-item-score" style="background:${color}">${score}</div>
+          <div class="scan-item-info">
+            <div class="scan-item-title">${job.title || 'Unknown'}</div>
+            <div class="scan-item-company">${job.company || 'Unknown'}</div>
+          </div>
+        `;
+        historyList.appendChild(item);
+      });
+    });
+  }
+
+  // Also load scan history on startup (for already-logged-in users)
+  loadScanHistory();
 
   // ─── LinkedIn detection ─────────────────────────────────────────────────
   try {

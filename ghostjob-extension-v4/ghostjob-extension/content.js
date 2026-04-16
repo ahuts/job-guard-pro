@@ -17,7 +17,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.0.9';
+  const VERSION  = '1.1.0';
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }
@@ -252,6 +252,25 @@
       var keys = Object.keys(scans).sort();
       while (keys.length > 3) { delete scans[keys.shift()]; }
       chrome.storage.local.set({ gj_scans: scans });
+    });
+  }
+
+  // ─── Save recent scan for popup history ──────────────────────────────────
+  function saveRecentScan(jobData, result) {
+    chrome.storage.local.get('savedJobs', function(stored) {
+      var jobs = stored.savedJobs || [];
+      // Add to front, keep max 20
+      jobs.unshift({
+        id: Date.now().toString(),
+        title: jobData.title || '',
+        company: jobData.company || '',
+        location: jobData.location || '',
+        url: jobData.url || '',
+        ghostScore: result.ghostScore != null ? result.ghostScore : 50,
+        scannedAt: new Date().toISOString()
+      });
+      if (jobs.length > 20) jobs = jobs.slice(0, 20);
+      chrome.storage.local.set({ savedJobs: jobs });
     });
   }
 
@@ -993,6 +1012,10 @@
 
   // ─── Show Ghost Score panel (Bug #9: visual distinction for local) ────────
   function showGhostScore(result) {
+    // Save to recent scan history for popup
+    var jobData = extractJobData();
+    saveRecentScan(jobData, result);
+
     var old = document.getElementById(MODAL_ID);
     if (old) old.remove();
 
