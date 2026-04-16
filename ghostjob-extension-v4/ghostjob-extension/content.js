@@ -12,12 +12,12 @@
   const BTN_ID   = 'ghostjob-scan-btn';
   const FLOAT_ID = 'ghostjob-float-btn';
   const MODAL_ID = 'ghostjob-modal-overlay';
-  const API_URL     = 'https://jobghost-gamma.vercel.app/api/scrape-job';
-  const SCAN_API_URL = 'https://jobghost-gamma.vercel.app/api/scan';
+  const API_URL     = 'https://jobghost.io/api/scrape-job';
+  const SCAN_API_URL = 'https://jobghost.io/api/scan';
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.0.8';
+  const VERSION  = '1.0.9';
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }
