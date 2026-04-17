@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthDialog from "./AuthDialog";
-import { getUpgradeUrl } from "@/lib/stripe";
+import { redirectToCheckout } from "@/lib/stripe";
+import { useToast } from "@/hooks/use-toast";
 
 const tiers = [
   {
@@ -35,14 +36,27 @@ const tiers = [
 
 const PricingSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  const handleCTA = (tier: typeof tiers[0]) => {
+  const handleCTA = async (tier: typeof tiers[0]) => {
     if (tier.featured) {
       if (!user) {
         setAuthOpen(true);
-      } else {
-        window.location.href = getUpgradeUrl(user.id, user.email ?? undefined);
+        return;
+      }
+      try {
+        setUpgrading(true);
+        await redirectToCheckout();
+      } catch (err: any) {
+        console.error("Checkout error:", err);
+        toast({
+          title: "Could not start checkout",
+          description: err.message ?? "Please try again.",
+          variant: "destructive",
+        });
+        setUpgrading(false);
       }
     } else if (!user) {
       setAuthOpen(true);
@@ -95,8 +109,9 @@ const PricingSection = () => {
                   variant={tier.featured ? "hero" : "heroOutline"}
                   className="w-full py-5"
                   onClick={() => handleCTA(tier)}
+                  disabled={tier.featured && upgrading}
                 >
-                  {tier.cta}
+                  {tier.featured && upgrading ? "Redirecting..." : tier.cta}
                 </Button>
               </div>
             ))}

@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Ghost, Zap } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { getUpgradeUrl } from "@/lib/stripe";
+import { Ghost, Zap, Loader2 } from "lucide-react";
+import { redirectToCheckout } from "@/lib/stripe";
+import { useToast } from "@/hooks/use-toast";
 
 interface FreePlanBannerProps {
   scansUsed: number;
@@ -11,7 +12,23 @@ interface FreePlanBannerProps {
 
 export default function FreePlanBanner({ scansUsed, maxScans }: FreePlanBannerProps) {
   const remaining = Math.max(0, maxScans - scansUsed);
-  const { user } = useAuth();
+  const [upgrading, setUpgrading] = useState(false);
+  const { toast } = useToast();
+
+  const handleUpgrade = async () => {
+    try {
+      setUpgrading(true);
+      await redirectToCheckout();
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      toast({
+        title: "Could not start checkout",
+        description: err.message ?? "Please try again.",
+        variant: "destructive",
+      });
+      setUpgrading(false);
+    }
+  };
 
   return (
     <Card className="border-primary/30 bg-primary/5">
@@ -32,10 +49,11 @@ export default function FreePlanBanner({ scansUsed, maxScans }: FreePlanBannerPr
         <Button
           size="sm"
           className="shrink-0 gap-1.5"
-          onClick={() => window.location.href = getUpgradeUrl(user?.id, user?.email ?? undefined)}
+          onClick={handleUpgrade}
+          disabled={upgrading}
         >
-          <Zap className="h-4 w-4" />
-          Upgrade to Pro
+          {upgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+          {upgrading ? "Redirecting..." : "Upgrade to Pro"}
         </Button>
       </CardContent>
     </Card>

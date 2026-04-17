@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getUpgradeUrl } from "@/lib/stripe";
+import { redirectToCheckout } from "@/lib/stripe";
+import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,11 +27,11 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { subscriptionTier, refetch: refetchProfile } = useProfile();
 
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [subscriptionTier, setSubscriptionTier] = useState("free");
   const [upgrading, setUpgrading] = useState(false);
 
   // Preferences (stored in localStorage for MVP)
@@ -46,12 +47,11 @@ export default function Settings() {
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, subscription_tier")
+        .select("full_name")
         .eq("id", user.id)
         .single();
       if (data) {
         setFullName(data.full_name || "");
-        setSubscriptionTier(data.subscription_tier || "free");
       }
       setLoading(false);
     }
@@ -63,7 +63,8 @@ export default function Settings() {
     const upgrade = searchParams.get("upgrade");
     if (upgrade === "success") {
       toast({ title: "🎉 Welcome to Pro!", description: "Your account has been upgraded." });
-      setSubscriptionTier("pro");
+      // Refetch profile in case the webhook landed before the redirect
+      refetchProfile();
       searchParams.delete("upgrade");
       setSearchParams(searchParams, { replace: true });
     } else if (upgrade === "cancelled") {
@@ -71,6 +72,7 @@ export default function Settings() {
       searchParams.delete("upgrade");
       setSearchParams(searchParams, { replace: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const saveProfile = async () => {
@@ -88,9 +90,20 @@ export default function Settings() {
     }
   };
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     if (!user) return;
-    window.location.href = getUpgradeUrl(user.id, user.email ?? undefined);
+    try {
+      setUpgrading(true);
+      await redirectToCheckout();
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      toast({
+        title: "Could not start checkout",
+        description: err.message ?? "Please try again.",
+        variant: "destructive",
+      });
+      setUpgrading(false);
+    }
   };
 
   const handleManageSubscription = async () => {
