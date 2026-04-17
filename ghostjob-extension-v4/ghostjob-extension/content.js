@@ -222,24 +222,71 @@
   }
 
   function checkScanLimit(callback) {
-    chrome.storage.local.get(['gj_scans'], function(stored) {
+    chrome.storage.local.get(['gj_scans', 'gj_auth_token', 'gj_is_pro'], function(stored) {
       var scans = stored.gj_scans || {};
       var month = getMonthKey();
       var count = scans[month] || 0;
 
-      // If logged in, no limit for now (will add Pro tier later)
-      // If not logged in, enforce free limit
-      chrome.storage.local.get(['gj_auth_token'], function(auth) {
-        if (auth.gj_auth_token) {
-          // Authenticated user — track but don't block
-          callback(true, count, null);
-        } else if (count >= FREE_SCAN_LIMIT) {
-          // Free tier limit reached
-          callback(false, count, FREE_SCAN_LIMIT);
-        } else {
-          callback(true, count, FREE_SCAN_LIMIT);
-        }
-      });
+      // If we already know they're Pro (cached), skip limit
+      if (stored.gj_is_pro) {
+        callback(true, count, null);
+        return;
+      }
+
+      // If logged in, check subscription status from Supabase
+      if (stored.gj_auth_token) {
+        checkProStatus(stored.gj_auth_token, function(isPro) {
+          if (isPro) {
+            // Pro user — unlimited scans
+            chrome.storage.local.set({ gj_is_pro: true });
+            callback(true, count, null);
+          } else {
+            // Free authenticated user — same 3/month limit
+            if (count >= FREE_SCAN_LIMIT) {
+              callback(false, count, FREE_SCAN_LIMIT);
+            } else {
+              callback(true, count, FREE_SCAN_LIMIT);
+            }
+          }
+        });
+      } else if (count >= FREE_SCAN_LIMIT) {
+        // Not logged in — enforce free limit
+        callback(false, count, FREE_SCAN_LIMIT);
+      } else {
+        callback(true, count, FREE_SCAN_LIMIT);
+      }
+    });
+  }
+
+  // ─── Check Pro/subscription status ────────────────────────────────────
+  function checkProStatus(token, callback) {
+    // Check if user has an active subscription via Supabase
+    // Looks for a row in 'subscriptions' table with active status
+    fetch(SUPABASE_URL + '/rest/v1/subscriptions?select=status&status=eq.active&limit=1', {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + token
+      }
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        // Can't check — assume free (safe default)
+        callback(false);
+        return;
+      }
+      return res.json();
+    })
+    .then(function(data) {
+      if (Array.isArray(data) && data.length > 0) {
+        callback(true);
+      } else {
+        callback(false);
+      }
+    })
+    .catch(function() {
+      // Network error — assume free
+      callback(false);
     });
   }
 
@@ -309,52 +356,68 @@
     var existing = document.getElementById('gj-limit-overlay');
     if (existing) existing.remove();
 
-    var overlay = document.createElement('div');
-    overlay.id = 'gj-limit-overlay';
-    overlay.style.cssText = [
-      'position:fixed','top:0','left:0','width:100vw','height:100vh',
-      'background:rgba(0,0,0,0.6)','z-index:2147483646',
-      'display:flex','align-items:center','justify-content:center'
-    ].join(';');
+    // Check if user is logged in — different message for authed free users
+    chrome.storage.local.get(['gj_auth_token'], function(auth) {
+      var isLoggedIn = !!auth.gj_auth_token;
+      var heading = isLoggedIn ? 'Free Plan Limit Reached' : 'Free Scan Limit Reached';
+      var bodyText = isLoggedIn
+        ? 'You\'ve used <strong>' + count + '/' + limit + '</strong> free scans this month. Upgrade to Pro for unlimited scans.'
+        : 'You\'ve used <strong>' + count + '/' + limit + '</strong> free scans this month. Sign in to save jobs and get more scans.';
+      var ctaText = isLoggedIn ? '🚀 Upgrade to Pro' : 'Sign In';
+      var ctaLink = isLoggedIn ? 'https://jobghost.io/#pricing' : null;
 
-    var card = document.createElement('div');
-    card.style.cssText = [
-      'background:#fff','border-radius:16px','padding:32px','max-width:380px',
-      'width:90%','text-align:center','font-family:-apple-system,BlinkMacSystemFont,sans-serif',
-      'box-shadow:0 20px 60px rgba(0,0,0,0.3)'
-    ].join(';');
+      var overlay = document.createElement('div');
+      overlay.id = 'gj-limit-overlay';
+      overlay.style.cssText = [
+        'position:fixed','top:0','left:0','width:100vw','height:100vh',
+        'background:rgba(0,0,0,0.6)','z-index:2147483646',
+        'display:flex','align-items:center','justify-content:center'
+      ].join(';');
 
-    card.innerHTML = [
-      '<div style="font-size:48px;margin-bottom:16px">🔒</div>',
-      '<h3 style="margin:0 0 8px;color:#1e293b;font-size:20px">Free Scan Limit Reached</h3>',
-      '<p style="color:#64748b;font-size:14px;margin:0 0 8px">',
-      'You\'ve used <strong>' + count + '/' + limit + '</strong> free scans this month.',
-      '</p>',
-      '<p style="color:#64748b;font-size:13px;margin:0 0 20px">',
-      'Sign in to save jobs to your dashboard and get unlimited scans.',
-      '</p>',
-      '<div style="display:flex;gap:10px;justify-content:center">',
-      '<button id="gj-limit-close" style="padding:10px 20px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:14px;color:#64748b">Close</button>',
-      '<button id="gj-limit-signin" style="padding:10px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#667eea,#7c3aed);cursor:pointer;font-size:14px;color:#fff;font-weight:600">Sign In</button>',
-      '</div>'
-    ].join('');
+      var card = document.createElement('div');
+      card.style.cssText = [
+        'background:#fff','border-radius:16px','padding:32px','max-width:380px',
+        'width:90%','text-align:center','font-family:-apple-system,BlinkMacSystemFont,sans-serif',
+        'box-shadow:0 20px 60px rgba(0,0,0,0.3)'
+      ].join(';');
 
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
+      card.innerHTML = [
+        '<div style="font-size:48px;margin-bottom:16px">🔒</div>',
+        '<h3 style="margin:0 0 8px;color:#1e293b;font-size:20px">' + heading + '</h3>',
+        '<p style="color:#64748b;font-size:14px;margin:0 0 20px">',
+        bodyText,
+        '</p>',
+        '<div style="display:flex;gap:10px;justify-content:center">',
+        '<button id="gj-limit-close" style="padding:10px 20px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:14px;color:#64748b">Close</button>',
+        '<button id="gj-limit-cta" style="padding:10px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#667eea,#7c3aed);cursor:pointer;font-size:14px;color:#fff;font-weight:600">' + ctaText + '</button>',
+        '</div>'
+      ].join('');
 
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) overlay.remove();
-    });
-    document.getElementById('gj-limit-close').addEventListener('click', function() { overlay.remove(); });
-    document.getElementById('gj-limit-signin').addEventListener('click', function() {
-      overlay.remove();
-      // Open the popup (user needs to click the extension icon)
-      // Show a hint instead since we can't programmatically open the popup
-      var hint = document.createElement('div');
-      hint.style.cssText = 'position:fixed;top:20px;right:20px;background:#667eea;color:#fff;padding:12px 20px;border-radius:8px;z-index:2147483647;font-size:14px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
-      hint.textContent = '👆 Click the GhostJob icon in your toolbar to sign in';
-      document.body.appendChild(hint);
-      setTimeout(function() { hint.remove(); }, 5000);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      document.getElementById('gj-limit-close').addEventListener('click', function() { overlay.remove(); });
+      document.getElementById('gj-limit-cta').addEventListener('click', function() {
+        overlay.remove();
+        if (isLoggedIn && ctaLink) {
+          // Logged in free user — open pricing page
+          chrome.storage.local.get(['gj_auth_token', 'gj_refresh_token'], function(stored) {
+            var url = ctaLink;
+            if (stored.gj_auth_token) {
+              url += '?token=' + encodeURIComponent(stored.gj_auth_token) + '&refresh_token=' + encodeURIComponent(stored.gj_refresh_token || '');
+            }
+            window.open(url, '_blank');
+          });
+        } else {
+          // Not logged in — show toolbar hint
+          var hint = document.createElement('div');
+          hint.style.cssText = 'position:fixed;top:20px;right:20px;background:#667eea;color:#fff;padding:12px 20px;border-radius:8px;z-index:2147483647;font-size:14px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+          hint.textContent = '👆 Click the GhostJob icon in your toolbar to sign in';
+          document.body.appendChild(hint);
+          setTimeout(function() { hint.remove(); }, 5000);
+        }
+      });
     });
   }
 

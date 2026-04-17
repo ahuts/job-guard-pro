@@ -20,6 +20,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dashboardLink = document.getElementById('dashboard-link');
 
   // ─── Auth ────────────────────────────────────────────────────────────
+  function updateDashboardLink() {
+    chrome.storage.local.get(['gj_auth_token', 'gj_refresh_token'], (stored) => {
+      if (stored.gj_auth_token) {
+        dashboardLink.href = 'https://jobghost.io/?token=' + encodeURIComponent(stored.gj_auth_token) + '&refresh_token=' + encodeURIComponent(stored.gj_refresh_token || '');
+        dashboardLink.style.display = 'block';
+      }
+    });
+  }
+
   chrome.storage.local.get(['gj_auth_token', 'gj_user_email'], (stored) => {
     if (stored.gj_auth_token && stored.gj_user_email) {
       showLoggedIn(stored.gj_user_email);
@@ -93,13 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     authLoginForm.style.display = 'none';
     authLoggedIn.style.display = 'flex';
     authUserEmail.textContent = '👤 ' + email;
-    // Update dashboard link with token so website auto-logs in
-    chrome.storage.local.get(['gj_auth_token', 'gj_refresh_token'], (stored) => {
-      if (stored.gj_auth_token) {
-        dashboardLink.href = 'https://jobghost.io/?token=' + encodeURIComponent(stored.gj_auth_token) + '&refresh_token=' + encodeURIComponent(stored.gj_refresh_token || '');
-        dashboardLink.style.display = 'block';
-      }
-    });
+    updateDashboardLink();
   }
 
   // ─── LinkedIn detection ─────────────────────────────────────────────────
