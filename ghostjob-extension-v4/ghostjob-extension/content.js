@@ -260,24 +260,33 @@
 
   // ─── Check Pro/subscription status ────────────────────────────────────
   function checkProStatus(token, callback) {
-    // Check if user has Pro subscription via profiles table
-    fetch(SUPABASE_URL + '/rest/v1/profiles?select=subscription_tier&subscription_tier=eq.pro&limit=1', {
+    // Check if current user has Pro subscription via profiles table
+    // First get user ID from the token, then check their tier
+    fetch(SUPABASE_URL + '/auth/v1/user', {
       method: 'GET',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + token
       }
     })
+    .then(function(res) { return res.json(); })
+    .then(function(user) {
+      if (!user.id) { callback(false); return; }
+      return fetch(SUPABASE_URL + '/rest/v1/profiles?select=subscription_tier&id=eq.' + user.id + '&limit=1', {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + token
+        }
+      });
+    })
     .then(function(res) {
-      if (!res.ok) {
-        // Can't check — assume free (safe default)
-        callback(false);
-        return;
-      }
+      if (!res) { callback(false); return; }
+      if (!res.ok) { callback(false); return; }
       return res.json();
     })
     .then(function(data) {
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data) && data.length > 0 && data[0].subscription_tier === 'pro') {
         callback(true);
       } else {
         callback(false);

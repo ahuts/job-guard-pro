@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Logout handler
   authLogout.addEventListener('click', () => {
-    chrome.storage.local.remove(['gj_auth_token', 'gj_refresh_token', 'gj_user_id', 'gj_user_email'], () => {
+    chrome.storage.local.remove(['gj_auth_token', 'gj_refresh_token', 'gj_user_id', 'gj_user_email', 'gj_is_pro'], () => {
       authLoginForm.style.display = 'flex';
       authLoggedIn.style.display = 'none';
       authStatus.textContent = 'Signed out';
