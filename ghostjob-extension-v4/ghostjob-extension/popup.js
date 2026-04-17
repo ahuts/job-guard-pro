@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const authUserEmail = document.getElementById('auth-user-email');
   const authLogout = document.getElementById('auth-logout');
   const dashboardLink = document.getElementById('dashboard-link');
+  const scanCounterCard = document.getElementById('scan-counter-card');
+  const scanCounter = document.getElementById('scan-counter');
 
   // ─── Auth ────────────────────────────────────────────────────────────
   function updateDashboardLink() {
@@ -104,6 +106,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     authUserEmail.textContent = '👤 ' + email;
     updateDashboardLink();
   }
+
+  // ─── Scan Counter ────────────────────────────────────────────────────
+  function updateScanCounter() {
+    const now = new Date();
+    const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+    chrome.storage.local.get(['gj_scans', 'gj_auth_token', 'gj_is_pro'], (stored) => {
+      const scans = stored.gj_scans || {};
+      const count = scans[monthKey] || 0;
+
+      scanCounterCard.style.display = 'block';
+
+      if (stored.gj_is_pro) {
+        scanCounter.innerHTML = '<span style="color:#22c55e;font-weight:600">✨ Unlimited</span> — Pro Plan';
+      } else {
+        const remaining = Math.max(0, 3 - count);
+        const bar = '█'.repeat(count) + '░'.repeat(remaining);
+        const color = remaining === 0 ? '#ef4444' : remaining === 1 ? '#f59e0b' : '#22c55e';
+        scanCounter.innerHTML = '<span style="color:' + color + ';font-weight:600">' + bar + '</span> ' + remaining + '/3 remaining';
+      }
+    });
+  }
+  updateScanCounter();
 
   // ─── LinkedIn detection ─────────────────────────────────────────────────
   try {
