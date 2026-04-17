@@ -1,4 +1,4 @@
-// GhostJob Popup Script v1.0.7
+// GhostJob Popup Script v1.1.0
 // Handles scanning from the extension popup + Supabase auth
 
 const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const authLoggedIn = document.getElementById('auth-logged-in');
   const authUserEmail = document.getElementById('auth-user-email');
   const authLogout = document.getElementById('auth-logout');
+  const dashboardLink = document.getElementById('dashboard-link');
 
   // ─── Auth ────────────────────────────────────────────────────────────
   chrome.storage.local.get(['gj_auth_token', 'gj_user_email'], (stored) => {
@@ -84,8 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       authStatus.style.color = '';
       authEmail.value = '';
       authPassword.value = '';
-      document.getElementById('dashboard-link').style.display = 'none';
-      document.getElementById('scan-history').style.display = 'none';
+      dashboardLink.style.display = 'none';
     });
   });
 
@@ -93,73 +93,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     authLoginForm.style.display = 'none';
     authLoggedIn.style.display = 'flex';
     authUserEmail.textContent = '👤 ' + email;
-    document.getElementById('dashboard-link').style.display = 'block';
-    loadScanHistory();
+    dashboardLink.style.display = 'block';
   }
-
-  // ─── Scan History ────────────────────────────────────────────────────
-  function loadScanHistory() {
-    const historyDiv = document.getElementById('scan-history');
-    const historyList = document.getElementById('scan-history-list');
-
-    chrome.storage.local.get('savedJobs', (stored) => {
-      const allJobs = stored.savedJobs || [];
-      // Remove entries saved before v1.1.0 that have no title field
-      const cleanJobs = allJobs.filter(j => j.title);
-      if (cleanJobs.length !== allJobs.length) {
-        chrome.storage.local.set({ savedJobs: cleanJobs });
-      }
-      const jobs = cleanJobs.slice(0, 5);
-      if (jobs.length === 0) {
-        historyDiv.style.display = 'none';
-        return;
-      }
-      if (jobs.length === 0) {
-        historyDiv.style.display = 'none';
-        return;
-      }
-
-      historyDiv.style.display = 'block';
-      historyList.innerHTML = '';
-
-      jobs.forEach((job) => {
-        const score = job.ghostScore != null ? job.ghostScore : 50;
-        const isLow = score < 31, isMid = score < 61;
-        const color = isLow ? '#ef4444' : isMid ? '#f59e0b' : '#22c55e';
-
-        const item = document.createElement('div');
-        item.className = 'scan-item';
-        item.innerHTML = `
-          <div class="scan-item-score" style="background:${color}">${score}</div>
-          <div class="scan-item-info">
-            <div class="scan-item-title">${job.title || 'Unknown'}</div>
-            <div class="scan-item-company">${job.company || 'Unknown'}</div>
-          </div>
-        `;
-        historyList.appendChild(item);
-      });
-    });
-  }
-
-  // Also load scan history on startup (for already-logged-in users)
-  loadScanHistory();
 
   // ─── LinkedIn detection ─────────────────────────────────────────────────
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
+
     if (!tab) {
       pageStatus.textContent = 'No active tab found. Navigate to LinkedIn.';
       return;
     }
 
     const isLinkedIn = tab.url?.includes('linkedin.com/jobs/view/');
-    
+
     if (isLinkedIn) {
       let contentScriptReady = false;
       let attempts = 0;
       const maxAttempts = 5;
-      
+
       while (!contentScriptReady && attempts < maxAttempts) {
         try {
           await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
@@ -171,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         }
       }
-      
+
       if (contentScriptReady) {
         scanBtn.disabled = false;
         pageStatus.innerHTML = '<strong>LinkedIn job detected! </strong>Click "Check for Ghost Job" on the page for full details, or scan here.';
@@ -196,14 +148,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
+
       if (!tab || !tab.url?.includes('linkedin.com/jobs/view/')) {
         showError('Please navigate to a LinkedIn job posting first.');
         return;
       }
 
-      const response = await chrome.tabs.sendMessage(tab.id, { 
-        action: 'scanFromPopup' 
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'scanFromPopup'
       });
 
       if (response?.success) {
@@ -232,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     scoreCircle.style.background = color;
     scoreCircle.textContent = score;
     scoreLabel.textContent = label;
-    
+
     let detailText = `Based on ${data.signals?.length || 'multiple'} signals`;
     if (data.summary) {
       detailText += ` • ${data.summary}`;

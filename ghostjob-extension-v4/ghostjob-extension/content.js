@@ -255,25 +255,6 @@
     });
   }
 
-  // ─── Save recent scan for popup history ──────────────────────────────────
-  function saveRecentScan(jobData, result) {
-    chrome.storage.local.get('savedJobs', function(stored) {
-      var jobs = stored.savedJobs || [];
-      // Add to front, keep max 20
-      jobs.unshift({
-        id: Date.now().toString(),
-        title: jobData.title || '',
-        company: jobData.company || '',
-        location: jobData.location || '',
-        url: jobData.url || '',
-        ghostScore: result.ghostScore != null ? result.ghostScore : 50,
-        scannedAt: new Date().toISOString()
-      });
-      if (jobs.length > 20) jobs = jobs.slice(0, 20);
-      chrome.storage.local.set({ savedJobs: jobs });
-    });
-  }
-
   function handleScanClick() {
     log('Scan clicked');
 
@@ -305,7 +286,7 @@
     fetchRemoteAnalysis(jobData)
       .then(function(data) {
         setLoading(false);
-        showGhostScore(data, jobData);
+        showGhostScore(data);
       })
       .catch(function(err) {
         warn('API failed, using local scoring:', err.message);
@@ -317,7 +298,7 @@
           summary:        analysis.summary,
           recommendation: analysis.recommendation,
           source:         'local'  // Bug #10: preserve actual source
-        }, jobData);
+        });
       });
     }); // end checkScanLimit
   }
@@ -1011,11 +992,7 @@
   }
 
   // ─── Show Ghost Score panel (Bug #9: visual distinction for local) ────────
-  function showGhostScore(result, jobData) {
-    // Save to recent scan history for popup
-    var scanData = jobData || extractJobData();
-    saveRecentScan(scanData, result);
-
+  function showGhostScore(result) {
     var old = document.getElementById(MODAL_ID);
     if (old) old.remove();
 
@@ -1299,7 +1276,7 @@
           return Object.assign(a, { ghostScore: a.score, source: 'local' });
         })
         .then(function(data) {
-          showGhostScore(data, jobData);
+          showGhostScore(data);
           sendResponse({ success: true, data: data });
         });
       return true;
