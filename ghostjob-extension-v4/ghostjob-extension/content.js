@@ -260,9 +260,8 @@
 
   // ─── Check Pro/subscription status ────────────────────────────────────
   function checkProStatus(token, callback) {
-    // Check if user has an active subscription via Supabase
-    // Looks for a row in 'subscriptions' table with active status
-    fetch(SUPABASE_URL + '/rest/v1/subscriptions?select=status&status=eq.active&limit=1', {
+    // Check if user has Pro subscription via profiles table
+    fetch(SUPABASE_URL + '/rest/v1/profiles?select=subscription_tier&subscription_tier=eq.pro&limit=1', {
       method: 'GET',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
