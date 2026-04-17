@@ -20,6 +20,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for token from extension on page load
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const refreshToken = params.get("refresh_token") ?? "";
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -27,10 +32,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    if (token) {
+      // Clean the URL
+      window.history.replaceState({}, "", window.location.pathname);
+      supabase.auth
+        .setSession({ access_token: token, refresh_token: refreshToken })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Failed to set session from token:", error);
+          }
+          setSession(data?.session ?? null);
+          setLoading(false);
+        });
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setLoading(false);
+      });
+    }
 
     return () => subscription.unsubscribe();
   }, []);
