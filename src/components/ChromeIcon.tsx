@@ -12,4 +12,4 @@ export const ChromeIcon = ({ className = "w-5 h-5" }: ChromeIconProps) => (
 );
 
 export const CHROME_STORE_URL =
-  "https://chromewebstore.google.com/detail/ghostjob-ghost-job-detecto/clbbopifmidceplphamfdfapgacgbhnd";
+  "https://chromewebstore.google.com/detail/ghostjob-ghost-job-detect/clbbopifmidceplphamfdfapgacgbhnd";
