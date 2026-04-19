@@ -1,22 +1,14 @@
-import { Button } from "@/components/ui/button";
 import GhostScoreCard from "./GhostScoreCard";
 import AuthDialog from "./AuthDialog";
 import { Shield } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { JobScanner } from "./JobScanner";
-import { EmailCaptureModal } from "./EmailCaptureModal";
+import { ChromeIcon, CHROME_STORE_URL } from "./ChromeIcon";
 
 const HeroSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const { user } = useAuth();
-  const showScanner = true;
-
-  const handleCTA = () => {
-    if (!user) {
-      setAuthOpen(true);
-    }
-  };
 
   return (
     <>
@@ -42,10 +34,22 @@ const HeroSection = () => {
                 GhostJob scans any LinkedIn posting for ghost job signals — reposted listings, vague salaries, urgency pressure, and more. Know what's real before you apply.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Button variant="hero" size="lg" className="text-base px-8 py-6" onClick={handleCTA}>
-                  {user ? "Start Scanning" : "Get 3 Free Scans"}
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start">
+                <a
+                  href={CHROME_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-colors text-lg shadow-md"
+                >
+                  <ChromeIcon />
+                  Add to Chrome — Free
+                </a>
+                <a
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2 border border-border hover:border-foreground/40 text-foreground font-medium py-3 px-6 rounded-lg transition-colors text-lg"
+                >
+                  View Dashboard
+                </a>
               </div>
 
               <div className="mt-8">
