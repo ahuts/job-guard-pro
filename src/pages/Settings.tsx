@@ -235,6 +235,68 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+          </CardContent>
+        </Card>
+
+        {/* Change Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <KeyRound className="h-5 w-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>Update the password used to sign in to your account.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                maxLength={72}
+                disabled={changingPassword}
+                aria-invalid={!!passwordErrors.newPassword}
+              />
+              {passwordErrors.newPassword && (
+                <p className="text-xs text-destructive">{passwordErrors.newPassword}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Re-enter new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                maxLength={72}
+                disabled={changingPassword}
+                aria-invalid={!!passwordErrors.confirmPassword}
+              />
+              {passwordErrors.confirmPassword && (
+                <p className="text-xs text-destructive">{passwordErrors.confirmPassword}</p>
+              )}
+            </div>
+            <Button
+              onClick={handleChangePassword}
+              disabled={changingPassword || !newPassword || !confirmPassword}
+              size="sm"
+            >
+              {changingPassword ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <KeyRound className="h-4 w-4 mr-2" />
+              )}
+              Update Password
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Preferences */}
         <Card>
           <CardHeader>
