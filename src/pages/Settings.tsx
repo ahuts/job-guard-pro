@@ -12,9 +12,23 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { User, Settings as SettingsIcon, LogOut, Save, Loader2, CreditCard, Crown, CheckCircle2 } from "lucide-react";
+import { User, Settings as SettingsIcon, LogOut, Save, Loader2, CreditCard, Crown, CheckCircle2, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
+import { z } from "zod";
+
+const passwordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters" })
+      .max(72, { message: "Password must be less than 72 characters" }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 const TIME_RANGE_OPTIONS = [
   { value: "7", label: "Last 7 days" },
@@ -33,6 +47,12 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<{ newPassword?: string; confirmPassword?: string }>({});
 
   // Preferences (stored in localStorage for MVP)
   const [defaultTimeRange, setDefaultTimeRange] = useState(
@@ -137,6 +157,37 @@ export default function Settings() {
     toast({ title: "Saved", description: "Preferences updated." });
   };
 
+  const handleChangePassword = async () => {
+    setPasswordErrors({});
+    const result = passwordSchema.safeParse({ newPassword, confirmPassword });
+    if (!result.success) {
+      const fieldErrors: { newPassword?: string; confirmPassword?: string } = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as "newPassword" | "confirmPassword";
+        if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+      });
+      setPasswordErrors(fieldErrors);
+      return;
+    }
+
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: result.data.newPassword });
+    setChangingPassword(false);
+
+    if (error) {
+      toast({
+        title: "Could not update password",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setNewPassword("");
+    setConfirmPassword("");
+    toast({ title: "Password updated", description: "Your password has been changed." });
+  };
+
   const tierColors: Record<string, string> = {
     free: "bg-muted text-muted-foreground",
     pro: "bg-primary/10 text-primary",
@@ -180,6 +231,65 @@ export default function Settings() {
             <Button onClick={saveProfile} disabled={saving || loading} size="sm">
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Profile
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Change Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <KeyRound className="h-5 w-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>Update the password used to sign in to your account.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                maxLength={72}
+                disabled={changingPassword}
+                aria-invalid={!!passwordErrors.newPassword}
+              />
+              {passwordErrors.newPassword && (
+                <p className="text-xs text-destructive">{passwordErrors.newPassword}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Re-enter new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                maxLength={72}
+                disabled={changingPassword}
+                aria-invalid={!!passwordErrors.confirmPassword}
+              />
+              {passwordErrors.confirmPassword && (
+                <p className="text-xs text-destructive">{passwordErrors.confirmPassword}</p>
+              )}
+            </div>
+            <Button
+              onClick={handleChangePassword}
+              disabled={changingPassword || !newPassword || !confirmPassword}
+              size="sm"
+            >
+              {changingPassword ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <KeyRound className="h-4 w-4 mr-2" />
+              )}
+              Update Password
             </Button>
           </CardContent>
         </Card>
