@@ -12,9 +12,23 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { User, Settings as SettingsIcon, LogOut, Save, Loader2, CreditCard, Crown, CheckCircle2 } from "lucide-react";
+import { User, Settings as SettingsIcon, LogOut, Save, Loader2, CreditCard, Crown, CheckCircle2, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
+import { z } from "zod";
+
+const passwordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters" })
+      .max(72, { message: "Password must be less than 72 characters" }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 const TIME_RANGE_OPTIONS = [
   { value: "7", label: "Last 7 days" },
@@ -33,6 +47,12 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<{ newPassword?: string; confirmPassword?: string }>({});
 
   // Preferences (stored in localStorage for MVP)
   const [defaultTimeRange, setDefaultTimeRange] = useState(
@@ -135,6 +155,37 @@ export default function Settings() {
     localStorage.setItem("ghostjob_default_range", defaultTimeRange);
     localStorage.setItem("ghostjob_ghost_threshold", String(ghostThreshold));
     toast({ title: "Saved", description: "Preferences updated." });
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordErrors({});
+    const result = passwordSchema.safeParse({ newPassword, confirmPassword });
+    if (!result.success) {
+      const fieldErrors: { newPassword?: string; confirmPassword?: string } = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as "newPassword" | "confirmPassword";
+        if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+      });
+      setPasswordErrors(fieldErrors);
+      return;
+    }
+
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: result.data.newPassword });
+    setChangingPassword(false);
+
+    if (error) {
+      toast({
+        title: "Could not update password",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setNewPassword("");
+    setConfirmPassword("");
+    toast({ title: "Password updated", description: "Your password has been changed." });
   };
 
   const tierColors: Record<string, string> = {
