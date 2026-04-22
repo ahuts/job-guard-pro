@@ -61,13 +61,20 @@ describe("AuthContext - email verification redirect", () => {
     expect(callArg.options.data).toEqual({ full_name: "Test User" });
   });
 
-  it("maps internal lovableproject origins to the public preview dashboard URL", () => {
+  it("maps internal lovable hosts to the live dashboard URL", () => {
     expect(
       getEmailVerificationRedirectUrl(
         "https://e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5.lovableproject.com",
         "e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5",
       ),
-    ).toBe("https://id-preview--e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5.lovable.app/dashboard");
+    ).toBe("https://jobghost.io/dashboard");
+
+    expect(
+      getEmailVerificationRedirectUrl(
+        "https://id-preview--e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5.lovable.app",
+        "e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5",
+      ),
+    ).toBe("https://jobghost.io/dashboard");
   });
 
   it("creates an authenticated session when onAuthStateChange fires SIGNED_IN after verification", async () => {
