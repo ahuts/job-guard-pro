@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render, waitFor, act } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./AuthContext";
 
 // Mock supabase client
@@ -48,7 +48,9 @@ describe("AuthContext - email verification redirect", () => {
     );
 
     await waitFor(() => expect(auth).not.toBeNull());
-    await auth!.signUpWithEmail("test@example.com", "password123", "Test User");
+    await act(async () => {
+      await auth!.signUpWithEmail("test@example.com", "password123", "Test User");
+    });
 
     expect(signUpMock).toHaveBeenCalledTimes(1);
     const callArg = signUpMock.mock.calls[0][0];
@@ -76,7 +78,9 @@ describe("AuthContext - email verification redirect", () => {
       refresh_token: "refresh",
       user: { id: "user-1", email: "test@example.com" },
     };
-    callback("SIGNED_IN", fakeSession);
+    act(() => {
+      callback("SIGNED_IN", fakeSession);
+    });
 
     await waitFor(() => {
       expect(auth?.session).toEqual(fakeSession);
