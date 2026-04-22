@@ -235,9 +235,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-          </CardContent>
-        </Card>
-
         {/* Change Password */}
         <Card>
           <CardHeader>
