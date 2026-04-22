@@ -1,60 +1,50 @@
 
 
-## How upgrades are detected today
+## Add cascade delete from auth.users to profiles
 
-**Current flow:**
-1. User clicks "Upgrade to Pro" → redirected to a hardcoded Stripe Payment Link (`src/lib/stripe.ts`) with `client_reference_id=<userId>`.
-2. User pays on Stripe.
-3. Stripe is *supposed* to fire `checkout.session.completed` to `supabase/functions/stripe-webhook/index.ts`.
-4. The webhook flips `profiles.subscription_tier` from `'free'` to `'pro'`.
-5. App reads `profiles.subscription_tier` to gate Pro features.
+Currently when you delete a user from the auth system, their row in the `profiles` table is left behind as an orphan. This blocks re-signup with the same email because the `handle_new_user` trigger fails on the primary key conflict.
 
-## The gaps — why upgrades may not actually register
+This plan adds a foreign key with `ON DELETE CASCADE` so deleting an auth user automatically removes their profile (and through the existing chain, their scanned jobs and job applications too).
 
-1. **The webhook may not be registered in Stripe.** The function exists at `https://auevehneizminspolipf.supabase.co/functions/v1/stripe-webhook`, but Stripe needs to be told to send events there. If it's not configured in the Stripe Dashboard, no upgrade ever lands in your DB.
+### What will change
 
-2. **The Payment Link sends `client_reference_id`, but the webhook reads `metadata.supabase_user_id`.** Those are populated by the `create-checkout` edge function (which the UI isn't calling). So even if the webhook fires, `userId` is undefined and no profile gets updated.
+1. **Add cascade from `profiles.id` to `auth.users.id`**
+   - Drop any existing implicit constraint on `profiles.id`.
+   - Add `FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE`.
+   - Result: deleting an auth user automatically deletes their profile row.
 
-3. **No frontend confirmation.** After payment, nothing refetches the profile — user has to refresh to see Pro status.
+2. **Add cascade from `scanned_jobs.user_id` to `auth.users.id`**
+   - Currently `scanned_jobs.user_id` references `profiles.id` (per the generated types) but with no cascade behavior enforced at the DB level for auth deletions.
+   - Replace with `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`.
+   - Result: deleting an auth user automatically removes all of their scanned jobs.
 
-4. **No `subscriptions` table.** All state lives on `profiles` (tier, status, customer_id). Works for MVP but no history of renewals/cancellations.
+3. **Confirm cascade from `job_applications.job_id` to `scanned_jobs.id`**
+   - The existing `job_applications_job_id_fkey` will be recreated with `ON DELETE CASCADE` if it isn't already.
+   - Result: when a scanned job is deleted (including via the cascade above), its applications are deleted too.
 
-## Plan to fix
+### Resulting deletion chain
 
-**Step 1 — Use the existing `create-checkout` edge function**
-Update `PricingSection.tsx` and `FreePlanBanner.tsx` to call `supabase.functions.invoke('create-checkout')` instead of `getUpgradeUrl()`. Guarantees `metadata.supabase_user_id` is set so the webhook can match the user.
+```text
+DELETE auth.users(id)
+   │
+   ├─► profiles (cascades)
+   │
+   └─► scanned_jobs (cascades)
+            │
+            └─► job_applications (cascades)
+```
 
-**Step 2 — Harden the webhook** (`supabase/functions/stripe-webhook/index.ts`)
-- Read `client_reference_id` as a fallback for any legacy Payment Link traffic.
-- Also handle `customer.subscription.updated` (renewals, plan changes).
-- Add structured logging so we can verify events arrive.
+### Technical details
 
-**Step 3 — Register the webhook in Stripe** (manual one-time setup by you)
-- URL: `https://auevehneizminspolipf.supabase.co/functions/v1/stripe-webhook`
-- Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-- Copy the signing secret into `STRIPE_WEBHOOK_SECRET` (already exists, may need refresh).
+- Implemented as a single SQL migration through the database migration tool.
+- The migration uses `DROP CONSTRAINT IF EXISTS` followed by `ADD CONSTRAINT ... ON DELETE CASCADE` so it is idempotent and safe to re-run.
+- No application code changes are required. RLS policies and the `handle_new_user` trigger continue to work unchanged.
+- Existing data is preserved — only the foreign key behavior changes.
 
-**Step 4 — Frontend "Pro" awareness**
-- New `useProfile()` hook → exposes `subscriptionTier` from `profiles`.
-- On `/dashboard/settings?upgrade=success` → refetch profile + show toast.
-- Subscribe to realtime `postgres_changes` on `profiles` so the UI flips the moment the webhook lands.
+### Testing the signup flow afterwards
 
-**Step 5 (optional) — Dedicated `subscriptions` table**
-Keyed by `stripe_subscription_id` with status, current period end, cancel_at_period_end. Useful for renewal history and analytics. Skip if not needed yet.
-
-## Files touched
-- `src/lib/stripe.ts` — replace `getUpgradeUrl` with `redirectToCheckout()`
-- `src/components/PricingSection.tsx`, `src/components/dashboard/FreePlanBanner.tsx` — use new helper
-- `supabase/functions/stripe-webhook/index.ts` — fallback + subscription.updated + logging
-- `src/hooks/useProfile.ts` (new)
-- `src/pages/Settings.tsx` — success toast + refetch
-
-## Quick decision needed
-
-Pick a scope — tell me which and I'll build it:
-
-- **Full fix (recommended)** — Steps 1-4. End-to-end upgrade detection that actually works.
-- **Webhook + frontend only** — Keep the Payment Link, fix the webhook to read `client_reference_id`, add `useProfile` hook. Smallest change.
-- **Verify only** — Add logging + give you a Stripe Dashboard checklist. No code restructuring.
-- **Full fix + subscriptions table** — Step 5 added on top for renewal history.
+Once the migration runs you can simply:
+1. Delete the user from the Auth users list.
+2. Sign up again with the same email — the profile and any related rows will already be gone, so the trigger inserts cleanly.
+3. Click the verification link in the email and confirm you land on `/dashboard` signed in.
 
