@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor, act } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./AuthContext";
+import { getEmailVerificationRedirectUrl } from "@/lib/authRedirect";
 
 // Mock supabase client
 const signUpMock = vi.fn();
@@ -56,8 +57,17 @@ describe("AuthContext - email verification redirect", () => {
     const callArg = signUpMock.mock.calls[0][0];
     expect(callArg.email).toBe("test@example.com");
     expect(callArg.password).toBe("password123");
-    expect(callArg.options.emailRedirectTo).toBe(`${window.location.origin}/dashboard`);
+    expect(callArg.options.emailRedirectTo).toBe(getEmailVerificationRedirectUrl());
     expect(callArg.options.data).toEqual({ full_name: "Test User" });
+  });
+
+  it("maps internal lovableproject origins to the public preview dashboard URL", () => {
+    expect(
+      getEmailVerificationRedirectUrl(
+        "https://e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5.lovableproject.com",
+        "e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5",
+      ),
+    ).toBe("https://id-preview--e8d0384f-c5d7-429b-8c6c-44eb10c7bbb5.lovable.app/dashboard");
   });
 
   it("creates an authenticated session when onAuthStateChange fires SIGNED_IN after verification", async () => {
