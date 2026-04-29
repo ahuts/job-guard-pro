@@ -16,6 +16,7 @@ const TermsOfService = () => {
 
         <div className="mb-8 p-4 rounded-lg border border-border bg-secondary/40 text-sm text-muted-foreground">
           <strong className="text-foreground">In plain English:</strong> GhostJob is a free Chrome extension that estimates whether LinkedIn job postings are real. Scores are informational, not guarantees. Use them alongside your own judgment.
+        </div>
 
         <div className="prose prose-invert max-w-none space-y-8">
           <div>
