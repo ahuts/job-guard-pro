@@ -11,8 +11,11 @@ const TermsOfService = () => {
           <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Terms of Service
           </h1>
-          <p className="text-muted-foreground">Last updated: April 14, 2026</p>
+          <p className="text-muted-foreground">Last updated: April 14, 2026 · Effective: April 14, 2026</p>
         </div>
+
+        <div className="mb-8 p-4 rounded-lg border border-border bg-secondary/40 text-sm text-muted-foreground">
+          <strong className="text-foreground">In plain English:</strong> GhostJob is a free Chrome extension that estimates whether LinkedIn job postings are real. Scores are informational, not guarantees. Use them alongside your own judgment.
 
         <div className="prose prose-invert max-w-none space-y-8">
           <div>
@@ -82,8 +85,8 @@ const TermsOfService = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">10. Contact Us</h2>
             <p className="text-muted-foreground leading-relaxed">
               If you have questions about these Terms, please contact us at{' '}
-              <a href="mailto:legal@ghostjob.app" className="text-primary hover:underline">
-                legal@ghostjob.app
+              <a href="mailto:legal@jobghost.io" className="text-primary hover:underline">
+                legal@jobghost.io
               </a>.
             </p>
           </div>

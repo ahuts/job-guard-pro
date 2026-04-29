@@ -1,10 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 
 const stats = [
-  { value: 43, suffix: "%", label: "of job postings are ghost jobs", source: "Resume Builder Survey, 2024" },
-  { value: 737, prefix: "$", suffix: " million+", label: "lost to fake job offers in the US since 2019", source: "FTC & BBB Reports" },
-  { value: 11, suffix: " hrs/wk", label: "wasted on fake listings per job seeker", source: "Industry Research, 2025" },
-  { value: 40, suffix: "%", label: "of reposted roles never result in a hire", source: "Built In / Freshteam Data" },
+  {
+    value: 43,
+    suffix: "%",
+    label: "of job postings are ghost jobs",
+    source: "Resume Builder Survey, 2024",
+    sourceUrl: "https://www.resumebuilder.com/3-in-10-companies-currently-have-fake-job-listings/",
+  },
+  {
+    value: 737,
+    prefix: "$",
+    suffix: " million+",
+    label: "lost to fake job offers in the US since 2019",
+    source: "FTC & BBB Reports",
+    sourceUrl: "https://www.ftc.gov/news-events/data-visualizations/data-spotlight/2024/03/job-employment-agency-scams",
+  },
+  {
+    value: 11,
+    suffix: " hrs/wk",
+    label: "wasted on fake listings per job seeker",
+    source: "Industry Research, 2025",
+    sourceUrl: "https://www.aihr.com/hr-glossary/ghost-jobs/",
+  },
+  {
+    value: 40,
+    suffix: "%",
+    label: "of reposted roles never result in a hire",
+    source: "Built In / Freshteam Data",
+    sourceUrl: "https://builtin.com/articles/ghost-jobs",
+  },
 ];
 
 const AnimatedNumber = ({ target, suffix, prefix = "" }: { target: number; suffix: string; prefix?: string }) => {
@@ -63,7 +88,16 @@ const SocialProofSection = () => {
             <div key={stat.label} className="space-y-2">
               <AnimatedNumber target={stat.value} suffix={stat.suffix} prefix={stat.prefix} />
               <p className="text-muted-foreground font-medium text-sm">{stat.label}</p>
-              <p className="text-xs text-muted-foreground/60">{stat.source}</p>
+              <p className="text-xs text-muted-foreground/60">
+                <a
+                  href={stat.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary hover:underline transition-colors"
+                >
+                  Source: {stat.source}
+                </a>
+              </p>
             </div>
           ))}
         </div>
