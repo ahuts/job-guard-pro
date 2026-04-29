@@ -34,9 +34,10 @@ const Navbar = () => {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
-            <a href="#how-it-works" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
-            <a href="#pricing" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+            <Link to="/#features" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">Features</Link>
+            <Link to="/#how-it-works" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</Link>
+            <Link to="/#pricing" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
+            <Link to="/what-is-a-ghost-job" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">Learn</Link>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -87,9 +88,10 @@ const Navbar = () => {
 
         {mobileOpen && (
           <div className="md:hidden border-t border-border bg-background px-4 py-4 space-y-3">
-            <a href="#features" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Features</a>
-            <a href="#how-it-works" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>How It Works</a>
-            <a href="#pricing" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Pricing</a>
+            <Link to="/#features" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Features</Link>
+            <Link to="/#how-it-works" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>How It Works</Link>
+            <Link to="/#pricing" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Pricing</Link>
+            <Link to="/what-is-a-ghost-job" className="block text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Learn</Link>
             {user ? (
               <>
                 <Link to="/dashboard" className="block" onClick={() => setMobileOpen(false)}>

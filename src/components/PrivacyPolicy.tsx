@@ -11,7 +11,11 @@ const PrivacyPolicy = () => {
           <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Privacy Policy
           </h1>
-          <p className="text-muted-foreground">Last updated: April 13, 2026</p>
+          <p className="text-muted-foreground">Last updated: April 13, 2026 · Effective: April 13, 2026</p>
+        </div>
+
+        <div className="mb-8 p-4 rounded-lg border border-border bg-secondary/40 text-sm text-muted-foreground">
+          <strong className="text-foreground">Privacy summary:</strong> GhostJob runs locally in your browser. We do not transmit your LinkedIn activity, browsing history, or personal data to third-party servers. Scan results are stored only in your browser's local storage.
         </div>
 
         <div className="prose prose-invert max-w-none space-y-8">
