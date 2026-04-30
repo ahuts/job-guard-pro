@@ -2,6 +2,8 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import JobCard from "@/components/dashboard/JobCard";
 import FreePlanBanner from "@/components/dashboard/FreePlanBanner";
+import ExtensionInstallBanner from "@/components/dashboard/ExtensionInstallBanner";
+import ProUpgradeBanner from "@/components/dashboard/ProUpgradeBanner";
 import { Button } from "@/components/ui/button";
 import { Search, PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -53,8 +55,15 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Free plan banner */}
-        {isFree && (
+        {/* State-driven banners */}
+        {jobs.length === 0 ? (
+          <ExtensionInstallBanner savedJobsCount={jobs.length} />
+        ) : (
+          isFree && <ProUpgradeBanner isPro={!isFree} />
+        )}
+
+        {/* Free plan scan counter */}
+        {isFree && jobs.length > 0 && (
           <FreePlanBanner scansUsed={jobs.length} maxScans={FREE_SCAN_LIMIT} />
         )}
 
