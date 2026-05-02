@@ -53,15 +53,122 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Common red flags</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">The numbers</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Ghost jobs aren't edge cases — they're a systemic problem.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border border-border rounded-lg overflow-hidden">
+                  <thead className="bg-secondary">
+                    <tr>
+                      <th className="text-left p-3 text-foreground font-semibold">Statistic</th>
+                      <th className="text-left p-3 text-foreground font-semibold">Number</th>
+                      <th className="text-left p-3 text-foreground font-semibold">Source</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr className="border-t border-border">
+                      <td className="p-3">Jobs that are ghost postings</td>
+                      <td className="p-3 font-semibold text-foreground">43%</td>
+                      <td className="p-3">Resume Builder 2024</td>
+                    </tr>
+                    <tr className="border-t border-border">
+                      <td className="p-3">Recruiters who admit posting ghost jobs</td>
+                      <td className="p-3 font-semibold text-foreground">81%</td>
+                      <td className="p-3">Resume Builder 2024</td>
+                    </tr>
+                    <tr className="border-t border-border">
+                      <td className="p-3">Reposted roles that never fill</td>
+                      <td className="p-3 font-semibold text-foreground">1 in 5</td>
+                      <td className="p-3">Built In / Freshteam</td>
+                    </tr>
+                    <tr className="border-t border-border">
+                      <td className="p-3">US LinkedIn listings showing ghost patterns</td>
+                      <td className="p-3 font-semibold text-foreground">27%</td>
+                      <td className="p-3">Industry Research 2025</td>
+                    </tr>
+                    <tr className="border-t border-border">
+                      <td className="p-3">Money lost to fake job offers since 2019</td>
+                      <td className="p-3 font-semibold text-foreground">$737M+</td>
+                      <td className="p-3">FTC & BBB</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold text-foreground mb-3">The impact on job seekers</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Ghost jobs don't just waste time — they do real psychological damage.
+              </p>
               <ul className="space-y-2 text-muted-foreground list-disc list-inside">
-                <li>Posting has been live for 30+ days with no updates.</li>
-                <li>Same role keeps getting reposted every few weeks.</li>
-                <li>Vague or missing salary range and benefits.</li>
-                <li>Generic, copy-paste job description with no team specifics.</li>
-                <li>Urgency language ("apply immediately," "hiring fast") with no real follow-through.</li>
-                <li>Applicant counts that climb but never trigger outreach.</li>
+                <li><strong className="text-foreground">72% of job seekers</strong> report negative mental health impacts from drawn-out hiring processes.</li>
+                <li>The average job seeker spends <strong className="text-foreground">3+ hours</strong> on a single application.</li>
+                <li>Repeated rejection from ghost jobs leads to <strong className="text-foreground">imposter syndrome, anxiety, and depression</strong>.</li>
+                <li>Job seekers start to <strong className="text-foreground">blame themselves</strong> for not hearing back, when the job was never real.</li>
               </ul>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold text-foreground mb-3">Common questions</h2>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Are ghost jobs illegal?</h3>
+                  <p className="text-muted-foreground leading-relaxed">Not currently. California passed a law in 2024 requiring employers to disclose whether a role is actively hiring, but most states have no such requirement. The FTC has flagged deceptive job postings as a growing concern.</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Can I report a ghost job?</h3>
+                  <p className="text-muted-foreground leading-relaxed">You can report suspicious postings to the platform (LinkedIn, Indeed, etc.) and to the FTC. However, enforcement is limited — most platforms don't verify that roles are actively hiring.</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Why doesn't LinkedIn do anything about it?</h3>
+                  <p className="text-muted-foreground leading-relaxed">LinkedIn's business model benefits from more listings, not fewer. Removing ghost jobs could reduce their job posting count by an estimated 30–40%.</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Is every job without a salary a ghost job?</h3>
+                  <p className="text-muted-foreground leading-relaxed">No. Many legitimate roles don't post salary ranges. It's one signal among many — the key is looking at the <em>pattern</em>. No salary + no hiring manager + generic description + reposted 3× = likely ghost. No salary + specific requirements + team details + real hiring manager = probably legitimate.</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How to spot a ghost job</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Red flags are patterns, not single signals. One yellow flag doesn't mean a job is fake — but three or more should make you cautious.
+              </p>
+              <div className="space-y-4">
+                <div className="bg-red-950/30 border border-red-800/50 rounded-lg p-4">
+                  <h4 className="text-red-400 font-semibold mb-2">🚩 Red Flags (Strong Indicators)</h4>
+                  <ul className="space-y-1 text-muted-foreground list-disc list-inside text-sm">
+                    <li>Reposted multiple times without closing the original</li>
+                    <li>Urgency language ("immediate start," "ASAP") without clear reason</li>
+                    <li>Vague or missing salary ("competitive" or absent)</li>
+                    <li>Unrealistic requirements (5 years for entry-level)</li>
+                    <li>Generic description with no team or project details</li>
+                  </ul>
+                </div>
+                <div className="bg-yellow-950/30 border border-yellow-800/50 rounded-lg p-4">
+                  <h4 className="text-yellow-400 font-semibold mb-2">⚠️ Yellow Flags (Caution)</h4>
+                  <ul className="space-y-1 text-muted-foreground list-disc list-inside text-sm">
+                    <li>No salary range listed</li>
+                    <li>No hiring manager or team info</li>
+                    <li>Vague or missing location</li>
+                    <li>AI-generated, buzzword-heavy language</li>
+                    <li>Stale listing (30+ days with no updates)</li>
+                  </ul>
+                </div>
+                <div className="bg-green-950/30 border border-green-800/50 rounded-lg p-4">
+                  <h4 className="text-green-400 font-semibold mb-2">✅ Green Flags (Positive)</h4>
+                  <ul className="space-y-1 text-muted-foreground list-disc list-inside text-sm">
+                    <li>Salary transparency — clear range or exact number</li>
+                    <li>Benefits and perks detailed</li>
+                    <li>Flexible work options specified</li>
+                    <li>Hiring manager contact info</li>
+                    <li>Clear, specific requirements and scope</li>
+                  </ul>
+                </div>
+              </div>
             </section>
 
             <section>
