@@ -36,18 +36,18 @@ function filterByRange(jobs: Job[], range: TimeRange): Job[] {
   return jobs.filter((j) => new Date(j.created_at) >= cutoff);
 }
 
-function getRiskLabel(score: number) {
-  if (score <= 25) return "Low Risk";
-  if (score <= 50) return "Medium Risk";
-  if (score <= 75) return "High Risk";
-  return "Ghost Job";
+function getTrustLabel(score: number) {
+  if (score <= 30) return "Likely Ghost Job";
+  if (score <= 60) return "Proceed with Caution";
+  if (score <= 80) return "Looks Legitimate";
+  return "Excellent Posting";
 }
 
-function getRiskColor(score: number) {
-  if (score <= 25) return "hsl(160, 84%, 39%)";
-  if (score <= 50) return "hsl(38, 92%, 50%)";
-  if (score <= 75) return "hsl(25, 95%, 53%)";
-  return "hsl(0, 84%, 60%)";
+function getTrustColor(score: number) {
+  if (score <= 30) return "hsl(0, 84%, 60%)";
+  if (score <= 60) return "hsl(38, 92%, 50%)";
+  if (score <= 80) return "hsl(160, 84%, 39%)";
+  return "hsl(142, 76%, 36%)";
 }
 
 export default function Analytics() {
@@ -59,21 +59,21 @@ export default function Analytics() {
   // === Stat cards ===
   const totalScans = jobs.length;
   const avgScore = totalScans > 0 ? Math.round(jobs.reduce((s, j) => s + j.ghost_score, 0) / totalScans) : 0;
-  const ghostCount = jobs.filter((j) => j.ghost_score > 75).length;
-  const ghostPct = totalScans > 0 ? Math.round((ghostCount / totalScans) * 100) : 0;
+  const likelyGhostCount = jobs.filter((j) => j.ghost_score <= 30).length;
+  const likelyGhostPct = totalScans > 0 ? Math.round((likelyGhostCount / totalScans) * 100) : 0;
 
   // === Score distribution ===
   const distribution = useMemo(() => {
     const buckets = [
-      { name: "0-25", range: "Low Risk", count: 0, fill: "hsl(160, 84%, 39%)" },
-      { name: "26-50", range: "Medium", count: 0, fill: "hsl(38, 92%, 50%)" },
-      { name: "51-75", range: "High Risk", count: 0, fill: "hsl(25, 95%, 53%)" },
-      { name: "76-100", range: "Ghost Job", count: 0, fill: "hsl(0, 84%, 60%)" },
+      { name: "0-30", range: "Likely Ghost Job", count: 0, fill: "hsl(0, 84%, 60%)" },
+      { name: "31-60", range: "Proceed with Caution", count: 0, fill: "hsl(38, 92%, 50%)" },
+      { name: "61-80", range: "Looks Legitimate", count: 0, fill: "hsl(160, 84%, 39%)" },
+      { name: "81-100", range: "Excellent Posting", count: 0, fill: "hsl(142, 76%, 36%)" },
     ];
     jobs.forEach((j) => {
-      if (j.ghost_score <= 25) buckets[0].count++;
-      else if (j.ghost_score <= 50) buckets[1].count++;
-      else if (j.ghost_score <= 75) buckets[2].count++;
+      if (j.ghost_score <= 30) buckets[0].count++;
+      else if (j.ghost_score <= 60) buckets[1].count++;
+      else if (j.ghost_score <= 80) buckets[2].count++;
       else buckets[3].count++;
     });
     return buckets;
@@ -106,9 +106,9 @@ export default function Analytics() {
       .map(([signal, count]) => ({ signal, count }));
   }, [jobs]);
 
-  // === High-risk jobs ===
-  const highRiskJobs = useMemo(
-    () => jobs.filter((j) => j.ghost_score > 75).sort((a, b) => b.ghost_score - a.ghost_score).slice(0, 10),
+  // === Low-trust jobs ===
+  const lowTrustJobs = useMemo(
+    () => jobs.filter((j) => j.ghost_score <= 30).sort((a, b) => a.ghost_score - b.ghost_score).slice(0, 10),
     [jobs]
   );
 
@@ -152,9 +152,9 @@ export default function Analytics() {
         {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={BarChart3} label="Total Scans" value={totalScans} />
-          <StatCard icon={TrendingUp} label="Avg Ghost Score" value={avgScore} suffix="/100" />
-          <StatCard icon={AlertTriangle} label="Ghost Jobs" value={ghostCount} className="text-destructive" />
-          <StatCard icon={Activity} label="Ghost Rate" value={`${ghostPct}%`} />
+          <StatCard icon={TrendingUp} label="Avg Trust Score" value={avgScore} suffix="/100" />
+          <StatCard icon={AlertTriangle} label="Likely Ghost Jobs" value={likelyGhostCount} className="text-destructive" />
+          <StatCard icon={Activity} label="Likely Ghost Rate" value={`${likelyGhostPct}%`} />
         </div>
 
         {/* Charts Row */}
@@ -248,19 +248,19 @@ export default function Analytics() {
           </Card>
         )}
 
-        {/* Recent High-Risk */}
+        {/* Recent Low-Trust */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Recent High-Risk Scans</CardTitle>
+            <CardTitle className="text-base">Recent Low-Trust Scans</CardTitle>
           </CardHeader>
           <CardContent>
-            {highRiskJobs.length === 0 ? (
+            {lowTrustJobs.length === 0 ? (
               <p className="text-sm text-muted-foreground italic py-6 text-center">
                 No ghost jobs detected yet — that's a good sign!
               </p>
             ) : (
               <div className="divide-y divide-border">
-                {highRiskJobs.map((job) => (
+                {lowTrustJobs.map((job) => (
                   <div key={job.id} className="flex items-center justify-between py-3 gap-4">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{job.job_title}</p>
@@ -270,9 +270,9 @@ export default function Analytics() {
                       <Badge
                         variant="outline"
                         className="text-xs"
-                        style={{ borderColor: getRiskColor(job.ghost_score), color: getRiskColor(job.ghost_score) }}
+                        style={{ borderColor: getTrustColor(job.ghost_score), color: getTrustColor(job.ghost_score) }}
                       >
-                        {job.ghost_score}/100
+                        {job.ghost_score}/100 · {getTrustLabel(job.ghost_score)}
                       </Badge>
                       {job.job_url && (
                         <a

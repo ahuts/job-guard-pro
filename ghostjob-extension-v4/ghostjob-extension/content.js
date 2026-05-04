@@ -17,7 +17,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.1.0';
+  const VERSION  = '1.2.1';
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }
@@ -350,6 +350,7 @@
         showGhostScore({
           ghostScore:     analysis.score,
           signals:        analysis.signals,
+          auditChecklist: analysis.auditChecklist,
           summary:        analysis.summary,
           recommendation: analysis.recommendation,
           source:         'local'  // Bug #10: preserve actual source
@@ -410,13 +411,7 @@
         overlay.remove();
         if (isLoggedIn && ctaLink) {
           // Logged in free user — open pricing page
-          chrome.storage.local.get(['gj_auth_token', 'gj_refresh_token'], function(stored) {
-            var url = ctaLink;
-            if (stored.gj_auth_token) {
-              url += '?token=' + encodeURIComponent(stored.gj_auth_token) + '&refresh_token=' + encodeURIComponent(stored.gj_refresh_token || '');
-            }
-            window.open(url, '_blank');
-          });
+          window.open(ctaLink, '_blank');
         } else {
           // Not logged in — show toolbar hint
           var hint = document.createElement('div');
@@ -488,6 +483,7 @@
       return {
         ghostScore:     data.trustScore !== undefined ? data.trustScore : analysis.score,
         signals:        merged.length > 0 ? merged : analysis.signals,
+        auditChecklist: appendApiSignalChecklist(analysis.auditChecklist, merged.length > 0 ? merged : analysis.signals, data.companyData || null),
         summary:        analysis.summary,
         recommendation: analysis.recommendation,
         source:         'api',
@@ -501,6 +497,7 @@
       return {
         ghostScore:     analysis.score,
         signals:        analysis.signals,
+        auditChecklist: analysis.auditChecklist,
         summary:        analysis.summary,
         recommendation: analysis.recommendation,
         source:         'local'
@@ -705,9 +702,111 @@
     return snippet;
   }
 
+  var SIGNAL_CATALOG = [
+    { id:'reposted_job', category:'Red Flags', label:'Reposted Job', type:'red', scoreImpact:-10, matchTitles:['Reposted Job'], checkText:'Checked whether LinkedIn marked this listing as reposted.' },
+    { id:'urgency_language', category:'Red Flags', label:'Urgency Language', type:'red', scoreImpact:-10, matchTitles:['Urgency Language'], checkText:'Looked for urgent hiring language like ASAP, immediate, or hiring now.' },
+    { id:'buzzy_titles', category:'Red Flags', label:'Buzzy Job Titles', type:'red', scoreImpact:-10, matchTitles:['Buzzy Job Titles'], checkText:'Looked for unclear title words like rockstar, ninja, guru, wizard, or unicorn.' },
+    { id:'vague_salary', category:'Red Flags', label:'Vague Salary Info', type:'red', scoreImpact:-8, matchTitles:['Vague Salary Info'], checkText:'Looked for vague pay language like competitive salary without numbers.' },
+    { id:'understaffed_code', category:'Red Flags', label:'Code for Understaffed', type:'red', scoreImpact:-8, matchTitles:['Code for Understaffed'], checkText:'Looked for workload euphemisms like wear many hats or all hands on deck.' },
+    { id:'unlimited_pto', category:'Red Flags', label:'"Unlimited" PTO', type:'red', scoreImpact:-6, matchTitles:['"Unlimited" PTO'], checkText:'Looked for unlimited PTO or take time as needed language.' },
+    { id:'high_experience', category:'Red Flags', label:'High Experience Requirements', type:'red', scoreImpact:-6, matchTitles:['High Experience Requirements'], checkText:'Checked for high years-of-experience requirements.' },
+    { id:'unrealistic_experience', category:'Red Flags', label:'Unrealistic Experience Combo', type:'red', scoreImpact:-8, matchTitles:['Unrealistic Experience Combo'], checkText:'Checked for unusually high experience requirements or conflicting senior/junior level signals.' },
+    { id:'vague_description', category:'Red Flags', label:'Vague Description', type:'red', scoreImpact:-6, matchTitles:['Vague Description'], checkText:'Measured whether the job description has enough role-specific substance.' },
+    { id:'no_salary_range', category:'Yellow Flags', label:'No Salary Range Listed', type:'yellow', scoreImpact:-4, matchTitles:['No Salary Range Listed'], checkText:'Checked the posting and page text for a concrete salary range or number.' },
+    { id:'no_team_manager', category:'Yellow Flags', label:'No Team or Manager Mentioned', type:'yellow', scoreImpact:-4, matchTitles:['No Team or Manager Mentioned'], checkText:'Looked for team, manager, reporting, supervisor, or mentor context.' },
+    { id:'vague_location', category:'Yellow Flags', label:'Vague Location', type:'yellow', scoreImpact:-3, matchTitles:['Vague Location'], checkText:'Looked for vague location language like various locations or location flexible.' },
+    { id:'no_location', category:'Yellow Flags', label:'No Location Listed', type:'yellow', scoreImpact:-3, matchTitles:['No Location Listed'], checkText:'Checked whether a usable location was extracted from the listing.' },
+    { id:'ai_language', category:'Yellow Flags', label:'AI-Generated Language Patterns', type:'yellow', scoreImpact:-3, matchTitles:['AI-Generated Language Patterns'], checkText:'Looked for clusters of generic AI-style phrases and business buzzwords.' },
+    { id:'culture_contradiction', category:'Yellow Flags', label:'Culture Buzzwords + Red Flags', type:'yellow', scoreImpact:-4, matchTitles:['Culture Buzzwords + Red Flags'], checkText:'Checked whether positive culture claims appear alongside stronger red flags.' },
+    { id:'stale_listing', category:'Yellow Flags', label:'Stale Listing', type:'yellow', scoreImpact:-6, matchTitles:['Stale Listing'], checkText:'Checked whether the listing age is 30 days or older when posted-age data is available.' },
+    { id:'salary_transparency', category:'Green Flags', label:'Salary Transparency', type:'green', scoreImpact:10, matchTitles:['Salary Transparency'], checkText:'Looked for specific salary numbers or ranges.' },
+    { id:'flexible_work', category:'Green Flags', label:'Flexible Work Options', type:'green', scoreImpact:5, matchTitles:['Flexible Work Options'], checkText:'Looked for remote, hybrid, flexible, WFH, or work-from-home options.' },
+    { id:'benefits', category:'Green Flags', label:'Benefits Mentioned', type:'green', scoreImpact:6, matchTitles:['Benefits Mentioned'], checkText:'Looked for concrete benefits like health insurance, 401k, dental, or vision.' },
+    { id:'growth', category:'Green Flags', label:'Growth Opportunities', type:'green', scoreImpact:5, matchTitles:['Growth Opportunities'], checkText:'Looked for training, learning budget, professional development, or growth opportunities.' },
+    { id:'hiring_contact', category:'Green Flags', label:'Hiring Manager Contact', type:'green', scoreImpact:4, matchTitles:['Hiring Manager Contact'], checkText:'Looked for a hiring manager, direct contact, DM, or recruiter contact language.' },
+    { id:'clear_requirements', category:'Green Flags', label:'Clear, Specific Requirements', type:'green', scoreImpact:6, matchTitles:['Clear, Specific Requirements'], checkText:'Checked for concrete responsibilities, qualifications, tools, bullets, and measurable scope.' }
+  ];
+
+  var API_SIGNAL_CATALOG = [
+    { id:'api_active_careers_page', category:'Enhanced/API Signals', label:'Active Careers Page', type:'green', scoreImpact:5, matchTitles:['Active Careers Page'], checkText:'Checked whether the company appears to have an active careers page.' },
+    { id:'api_layoff_language', category:'Enhanced/API Signals', label:'Layoff Language Detected', type:'red', scoreImpact:-8, matchTitles:['Layoff Language Detected'], checkText:'Checked company-level context for layoff or hiring-freeze language.' },
+    { id:'api_reposted_job', category:'Enhanced/API Signals', label:'API Reposted Job Listing', type:'red', scoreImpact:-8, matchTitles:['Reposted Job Listing', 'API Reposted Job Listing'], checkText:'Checked API/company context for reposted-listing signals.' }
+  ];
+
+  function normalizeSignalTitle(title) {
+    return String(title || '').toLowerCase().replace(/\s*\([^)]*\)\s*/g, '').trim();
+  }
+
+  function signalMatchesCatalog(signal, item) {
+    var title = normalizeSignalTitle(signal && (signal.title || signal.name));
+    return (item.matchTitles || [item.label]).some(function(matchTitle) {
+      return title === normalizeSignalTitle(matchTitle);
+    });
+  }
+
+  function buildSignalChecklist(signals, overrides, includeApiSignals) {
+    var detectedSignals = signals || [];
+    var checklist = SIGNAL_CATALOG.map(function(item) {
+      var detected = detectedSignals.some(function(signal) { return signalMatchesCatalog(signal, item); });
+      var status = detected
+        ? (item.type === 'green' ? 'Found' : 'Detected')
+        : (item.type === 'green' ? 'Not found' : 'Passed');
+      if (overrides && overrides[item.id]) status = overrides[item.id];
+      return Object.assign({}, item, {
+        status: status,
+        checked: status !== 'Not enough data'
+      });
+    });
+
+    if (includeApiSignals) {
+      checklist = checklist.concat(API_SIGNAL_CATALOG.map(function(item) {
+        var detected = detectedSignals.some(function(signal) { return signalMatchesCatalog(signal, item); });
+        var status = detected
+          ? (item.type === 'green' ? 'Found' : 'Detected')
+          : (item.type === 'green' ? 'Not found' : 'Passed');
+        return Object.assign({}, item, {
+          status: status,
+          checked: true
+        });
+      }));
+    }
+
+    return checklist;
+  }
+
+  function appendApiSignalChecklist(checklist, signals, companyData) {
+    var detectedSignals = signals || [];
+    return (checklist || []).concat(API_SIGNAL_CATALOG.map(function(item) {
+      var detected = detectedSignals.some(function(signal) { return signalMatchesCatalog(signal, item); });
+      var status = detected
+        ? (item.type === 'green' ? 'Found' : 'Detected')
+        : (item.type === 'green' ? 'Not found' : 'Passed');
+      if (item.id === 'api_active_careers_page' && companyData && companyData.hasCareersPage === null) {
+        status = 'Not enough data';
+      }
+      if (item.id === 'api_layoff_language' && companyData && companyData.recentLayoffs === null) {
+        status = 'Not enough data';
+      }
+      return Object.assign({}, item, {
+        status: status,
+        checked: status !== 'Not enough data'
+      });
+    }));
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // ─── Local scoring (v4.2 - bugs fixed + 8 new signals + quotes) ────────────
   function calculateLocalScore(jobData) {
     var score = 50, signals = [];
+    var checklistOverrides = {};
     // Keep original-case versions for quote extraction
     var titleOrig = (jobData.title || '');
     var descOrig  = (jobData.description || '');
@@ -953,7 +1052,11 @@
             advice:'Ask the recruiter about the hiring timeline. If they can\'t give specifics, the role may not be real.',
             quote: postedAgoOrig });
         }
+      } else {
+        checklistOverrides.stale_listing = 'Not enough data';
       }
+    } else {
+      checklistOverrides.stale_listing = 'Not enough data';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1044,10 +1147,35 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Finalize - invert so higher = safer (Trust Score)
+    // Clear, specific requirements
+    var requirementMarkerRe = /requirements?|qualifications?|responsibilities|what you'?ll do|you will|we'?re looking for|preferred qualifications|must have|nice to have/i;
+    var specificDetailRe = /responsible for|experience with|proficiency in|knowledge of|build|design|implement|manage|own|collaborate|partner|support|deliver/i;
+    var toolSkillRe = /\b(react|typescript|javascript|python|sql|aws|azure|gcp|salesforce|hubspot|excel|tableau|figma|node|java|kubernetes|docker|postgres|graphql|api|crm|saas|jira)\b/i;
+    var measurableScopeRe = /\b\d+\+?\s*(users|customers|clients|employees|years|projects|systems|markets|accounts)|\b\d+%|\$\d/i;
+    var bulletMatches = descOrig.match(/(^|\n)\s*(?:[-*•]|\d+\.)\s+\S/g) || [];
+    var detailSignals = 0;
+    if (requirementMarkerRe.test(desc)) detailSignals++;
+    if (specificDetailRe.test(desc)) detailSignals++;
+    if (toolSkillRe.test(desc)) detailSignals++;
+    if (measurableScopeRe.test(desc)) detailSignals++;
+    if (bulletMatches.length >= 3) detailSignals++;
+
+    if (desc.length >= 500 && detailSignals >= 3) {
+      var q = extractQuote(descOrig, requirementMarkerRe) ||
+              extractQuote(descOrig, toolSkillRe) ||
+              descOrig.substring(0, 140).trim() + (descOrig.length > 140 ? '...' : '');
+      score += 6;
+      signals.push({ type:'green', icon:'ðŸ“‹', title:'Clear, Specific Requirements',
+        description:'The posting includes concrete responsibilities, qualifications, tools, or measurable scope.',
+        impact:'Specific requirements usually mean the team understands the role and is actively hiring for a real need.',
+        advice:'Use these details to tailor your application and ask sharper interview questions.',
+        quote: q });
+    }
+
+    // Finalize - higher = safer (Trust Score)
     // ═══════════════════════════════════════════════════════════════════════
     score = Math.max(0, Math.min(100, score));
-    var trustScore = 100 - score;
+    var trustScore = score;
     var summary, recommendation;
     if (trustScore <= 30) {
       summary = 'Multiple red flags detected. Proceed with extreme caution.';
@@ -1059,7 +1187,13 @@
       summary = 'Strong positive indicators. Likely a legitimate opportunity.';
       recommendation = 'Good signs overall. Still do your due diligence!';
     }
-    return { score: trustScore, signals: signals, summary: summary, recommendation: recommendation };
+    return {
+      score: trustScore,
+      signals: signals,
+      summary: summary,
+      recommendation: recommendation,
+      auditChecklist: buildSignalChecklist(signals, checklistOverrides, false)
+    };
   }
 
   // ─── Show Ghost Score panel (Bug #9: visual distinction for local) ────────
@@ -1081,19 +1215,66 @@
         var tfg = s.type==='red'?'#dc2626':s.type==='green'?'#16a34a':'#a16207';
         return '<div style="margin-bottom:12px;padding:10px;border-radius:8px;background:'+bg+';border-left:3px solid '+bdr+'">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
-            '<span style="font-size:16px">'+s.icon+'</span>' +
-            '<span style="font-weight:600;color:#333;font-size:13px">'+s.title+'</span>' +
-            '<span style="margin-left:auto;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;background:'+tbg+';color:'+tfg+'">'+s.type+'</span>' +
+            '<span style="font-size:16px">'+escapeHtml(s.icon || '')+'</span>' +
+            '<span style="font-weight:600;color:#333;font-size:13px">'+escapeHtml(s.title)+'</span>' +
+            '<span style="margin-left:auto;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;background:'+tbg+';color:'+tfg+'">'+escapeHtml(s.type)+'</span>' +
           '</div>' +
-          '<div style="font-size:12px;color:#555;margin-bottom:4px;padding-left:24px">'+s.description+'</div>' +
-          (s.quote ? '<div style="font-size:11px;color:#6b7280;padding:6px 10px;margin:4px 0 4px 24px;background:#f3f4f6;border-radius:4px;border-left:2px solid '+bdr+';font-style:italic">💬 "'+s.quote.replace(/</g,'&lt;')+'"</div>' : '') +
-          '<div style="font-size:11px;color:#666;padding-left:24px;margin-bottom:4px"><strong>Impact:</strong> '+s.impact+'</div>' +
-          '<div style="font-size:11px;color:#2563eb;padding-left:24px"><strong>💡 Tip:</strong> '+s.advice+'</div>' +
+          '<div style="font-size:12px;color:#555;margin-bottom:4px;padding-left:24px">'+escapeHtml(s.description)+'</div>' +
+          (s.quote ? '<div style="font-size:11px;color:#6b7280;padding:6px 10px;margin:4px 0 4px 24px;background:#f3f4f6;border-radius:4px;border-left:2px solid '+bdr+';font-style:italic">💬 "'+escapeHtml(s.quote)+'"</div>' : '') +
+          '<div style="font-size:11px;color:#666;padding-left:24px;margin-bottom:4px"><strong>Impact:</strong> '+escapeHtml(s.impact)+'</div>' +
+          '<div style="font-size:11px;color:#2563eb;padding-left:24px"><strong>💡 Tip:</strong> '+escapeHtml(s.advice)+'</div>' +
         '</div>';
       }).join('');
       signalsHtml = '<div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:16px">' +
         '<div style="font-size:14px;font-weight:600;color:#333;margin-bottom:12px">📊 Signals Detected ('+result.signals.length+')</div>' +
         '<div style="max-height:300px;overflow-y:auto">'+rows+'</div></div>';
+    }
+
+    var checklistHtml = '';
+    if (result.auditChecklist && result.auditChecklist.length) {
+      var grouped = {};
+      result.auditChecklist.forEach(function(item) {
+        var category = item.category || 'Other Signals';
+        if (!grouped[category]) grouped[category] = [];
+        grouped[category].push(item);
+      });
+      var categoryOrder = ['Red Flags', 'Yellow Flags', 'Green Flags', 'Enhanced/API Signals'];
+      var checkedCount = result.auditChecklist.filter(function(item) { return item.checked !== false; }).length;
+      var groupsHtml = categoryOrder.filter(function(category) {
+        return grouped[category] && grouped[category].length;
+      }).map(function(category) {
+        var rows = grouped[category].map(function(item) {
+          var isDetected = item.status === 'Detected';
+          var isFound = item.status === 'Found';
+          var isUnknown = item.status === 'Not enough data';
+          var statusBg = isDetected ? '#fee2e2' : isFound ? '#dcfce7' : isUnknown ? '#f3f4f6' : '#eef2ff';
+          var statusFg = isDetected ? '#b91c1c' : isFound ? '#15803d' : isUnknown ? '#6b7280' : '#3730a3';
+          var dot = item.type === 'red' ? '#ef4444' : item.type === 'green' ? '#22c55e' : '#eab308';
+          var scoreText = item.scoreImpact > 0 ? '+' + item.scoreImpact : String(item.scoreImpact || 0);
+          return '<div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid #f3f4f6">' +
+            '<span style="width:8px;height:8px;border-radius:50%;background:'+dot+';margin-top:5px"></span>' +
+            '<div style="min-width:0">' +
+              '<div style="display:flex;gap:6px;align-items:center;min-width:0">' +
+                '<span style="font-size:12px;font-weight:600;color:#374151;overflow-wrap:anywhere">'+escapeHtml(item.label)+'</span>' +
+                '<span style="font-size:10px;color:#6b7280;white-space:nowrap">'+escapeHtml(scoreText)+'</span>' +
+              '</div>' +
+              '<div style="font-size:11px;color:#6b7280;margin-top:2px;line-height:1.35">'+escapeHtml(item.checkText)+'</div>' +
+            '</div>' +
+            '<span style="padding:2px 6px;border-radius:999px;background:'+statusBg+';color:'+statusFg+';font-size:10px;font-weight:700;white-space:nowrap">'+escapeHtml(item.status)+'</span>' +
+          '</div>';
+        }).join('');
+        return '<div style="margin-bottom:12px">' +
+          '<div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:4px">'+escapeHtml(category)+'</div>' +
+          rows +
+        '</div>';
+      }).join('');
+      checklistHtml = '<div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:16px">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px">' +
+          '<div style="font-size:14px;font-weight:600;color:#333">Signal Checklist ('+checkedCount+' checked)</div>' +
+          '<div style="font-size:11px;color:#6b7280">Transparency audit</div>' +
+        '</div>' +
+        '<div style="max-height:360px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;background:#fff">'+groupsHtml+'</div>' +
+      '</div>';
     }
 
     // Bug #9: Visual distinction when using local analysis
@@ -1125,9 +1306,10 @@
             '<div style="font-size:13px;color:#666;margin-top:4px">Trust Score: '+score+' / 100</div>' +
           '</div>' +
         '</div>' +
-        (result.summary ? '<div style="font-size:14px;color:#444;margin-bottom:16px;padding:12px;background:#f9fafb;border-radius:8px;border-left:3px solid '+color+'"><strong>Summary:</strong> '+result.summary+'</div>' : '') +
+        (result.summary ? '<div style="font-size:14px;color:#444;margin-bottom:16px;padding:12px;background:#f9fafb;border-radius:8px;border-left:3px solid '+color+'"><strong>Summary:</strong> '+escapeHtml(result.summary)+'</div>' : '') +
         signalsHtml +
-        (result.recommendation ? '<div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px;border-left:3px solid '+color+'"><div style="font-size:14px;color:#444"><strong>🎯 Recommendation:</strong> '+result.recommendation+'</div></div>' : '') +
+        checklistHtml +
+        (result.recommendation ? '<div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px;border-left:3px solid '+color+'"><div style="font-size:14px;color:#444"><strong>🎯 Recommendation:</strong> '+escapeHtml(result.recommendation)+'</div></div>' : '') +
         '<div style="margin-top:24px;display:flex;gap:12px">' +
           '<button id="gj-save-btn" style="flex:1;padding:11px 20px;background:#667eea;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">💾 Save to Dashboard</button>' +
           '<button id="gj-close-btn" style="padding:11px 20px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Close</button>' +
@@ -1340,16 +1522,32 @@
       return true;
     }
     if (request.action === 'scanFromPopup') {
-      var jobData = extractJobData();
-      fetchRemoteAnalysis(jobData)
-        .catch(function() {
-          var a = calculateLocalScore(jobData);
-          return Object.assign(a, { ghostScore: a.score, source: 'local' });
-        })
-        .then(function(data) {
-          showGhostScore(data);
-          sendResponse({ success: true, data: data });
-        });
+      checkScanLimit(function(allowed, count, limit) {
+        if (!allowed) {
+          showLimitModal(count, limit);
+          sendResponse({
+            success: false,
+            error: 'Free scan limit reached',
+            limitReached: true,
+            scansUsed: count,
+            scanLimit: limit
+          });
+          return;
+        }
+
+        recordScan();
+
+        var jobData = extractJobData();
+        fetchRemoteAnalysis(jobData)
+          .catch(function() {
+            var a = calculateLocalScore(jobData);
+            return Object.assign(a, { ghostScore: a.score, source: 'local' });
+          })
+          .then(function(data) {
+            showGhostScore(data);
+            sendResponse({ success: true, data: data });
+          });
+      });
       return true;
     }
   });

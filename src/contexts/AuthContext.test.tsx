@@ -7,6 +7,7 @@ import { getEmailVerificationRedirectUrl } from "@/lib/authRedirect";
 const signUpMock = vi.fn();
 const onAuthStateChangeMock = vi.fn();
 const getSessionMock = vi.fn();
+const setSessionMock = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -20,7 +21,7 @@ vi.mock("@/integrations/supabase/client", () => ({
       signInWithPassword: vi.fn(),
       signOut: vi.fn(),
       resetPasswordForEmail: vi.fn(),
-      setSession: vi.fn(),
+      setSession: (...args: unknown[]) => setSessionMock(...args),
     },
   },
 }));
@@ -36,8 +37,11 @@ describe("AuthContext - email verification redirect", () => {
     signUpMock.mockReset();
     onAuthStateChangeMock.mockReset();
     getSessionMock.mockReset();
+    setSessionMock.mockReset();
+    window.history.replaceState({}, "", "/");
     getSessionMock.mockResolvedValue({ data: { session: null } });
     signUpMock.mockResolvedValue({ error: null });
+    setSessionMock.mockResolvedValue({ data: { session: null }, error: null });
   });
 
   it("sends signUp with emailRedirectTo pointing at /dashboard", async () => {
@@ -103,6 +107,62 @@ describe("AuthContext - email verification redirect", () => {
       expect(auth?.session).toEqual(fakeSession);
       expect(auth?.user?.id).toBe("user-1");
       expect(auth?.loading).toBe(false);
+    });
+  });
+
+  it("creates an authenticated session from an extension handoff message", async () => {
+    const fakeSession = {
+      access_token: "extension-token",
+      refresh_token: "extension-refresh",
+      user: { id: "user-2", email: "extension@example.com" },
+    };
+    setSessionMock.mockResolvedValue({ data: { session: fakeSession }, error: null });
+    window.history.replaceState({}, "", "/dashboard?extension_login=nonce-1");
+
+    let auth: ReturnType<typeof useAuth> | null = null;
+    render(
+      <AuthProvider>
+        <TestConsumer onReady={(a) => { auth = a; }} />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(onAuthStateChangeMock).toHaveBeenCalled());
+
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent("message", {
+        origin: window.location.origin,
+        source: window,
+        data: {
+          type: "GHOSTJOB_EXTENSION_SESSION",
+          accessToken: "extension-token",
+          refreshToken: "extension-refresh",
+        },
+      }));
+    });
+
+    await waitFor(() => {
+      expect(setSessionMock).toHaveBeenCalledWith({
+        access_token: "extension-token",
+        refresh_token: "extension-refresh",
+      });
+      expect(auth?.session).toEqual(fakeSession);
+      expect(window.location.search).toBe("");
+    });
+  });
+
+  it("strips legacy token query params without using them", async () => {
+    window.history.replaceState({}, "", "/dashboard?token=old-access&refresh_token=old-refresh");
+
+    render(
+      <AuthProvider>
+        <TestConsumer onReady={() => {}} />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(getSessionMock).toHaveBeenCalled();
+      expect(setSessionMock).not.toHaveBeenCalled();
+      expect(window.location.search).toBe("");
     });
   });
 });

@@ -16,15 +16,71 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+type ExtensionSessionMessage = {
+  type?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  error?: string;
+};
+
+const EXTENSION_SESSION_MESSAGE = "GHOSTJOB_EXTENSION_SESSION";
+
+function removeAuthQueryParams(paramNames: string[]) {
+  const url = new URL(window.location.href);
+  let changed = false;
+
+  paramNames.forEach((name) => {
+    if (url.searchParams.has(name)) {
+      url.searchParams.delete(name);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  }
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for token from extension on page load
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const refreshToken = params.get("refresh_token") ?? "";
+    removeAuthQueryParams(["token", "refresh_token"]);
+
+    const handleExtensionSession = (event: MessageEvent<ExtensionSessionMessage>) => {
+      if (event.origin !== window.location.origin || event.source !== window) return;
+
+      const message = event.data;
+      if (!message || message.type !== EXTENSION_SESSION_MESSAGE) return;
+
+      if (message.error) {
+        removeAuthQueryParams(["extension_login"]);
+        setLoading(false);
+        return;
+      }
+
+      if (!message.accessToken || !message.refreshToken) return;
+
+      supabase.auth
+        .setSession({
+          access_token: message.accessToken,
+          refresh_token: message.refreshToken,
+        })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Failed to set session from extension handoff:", error);
+          }
+          setSession(data?.session ?? null);
+          setLoading(false);
+        })
+        .finally(() => {
+          removeAuthQueryParams(["extension_login"]);
+        });
+    };
+
+    window.addEventListener("message", handleExtensionSession);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -33,26 +89,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    if (token) {
-      // Clean the URL
-      window.history.replaceState({}, "", window.location.pathname);
-      supabase.auth
-        .setSession({ access_token: token, refresh_token: refreshToken })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Failed to set session from token:", error);
-          }
-          setSession(data?.session ?? null);
-          setLoading(false);
-        });
-    } else {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setLoading(false);
-      });
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      window.removeEventListener("message", handleExtensionSession);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async () => {
