@@ -242,16 +242,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
         {view === "signup" && (
           <form onSubmit={handleEmailSignup} className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="signup-name">Full Name</Label>
-              <Input
-                id="signup-name"
-                type="text"
-                placeholder="Jane Doe"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
+
               <Label htmlFor="signup-email">Email</Label>
               <Input
                 id="signup-email"
