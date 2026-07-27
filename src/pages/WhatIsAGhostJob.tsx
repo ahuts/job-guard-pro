@@ -69,9 +69,21 @@ const WhatIsAGhostJob = () => {
           </h1>
 
           {/* Answer-first paragraph */}
-          <p className="text-lg text-muted-foreground leading-relaxed mb-10">
+          <p className="text-lg text-muted-foreground leading-relaxed mb-6">
             A <strong className="text-foreground">ghost job</strong> is a public job posting that isn't tied to active hiring. The role looks real — title, company, description, apply button — but no one is being seriously interviewed for it. Companies leave these listings up to build talent pipelines, signal growth, or hit recruiter activity targets, which means applicants spend hours on roles that were never going to be filled.
           </p>
+
+          <AnswerBox
+            question="Quick answer: what is a ghost job?"
+            answer="A ghost job is a live listing with little or no intent to hire behind it. The company is real; the opening effectively isn't."
+            points={[
+              "Most common causes: pipeline building, investor optics, recruiter targets, internal hires, and forgotten posts.",
+              "Strongest tells: repeated reposts, 30+ days live with no edits, vague or missing pay, generic description.",
+              "Different from a job scam — a ghost job wastes your time, a scam targets your money or identity.",
+              "Judge the pattern, not one signal: three or more flags together is the useful threshold.",
+            ]}
+          />
+
 
           <div className="prose prose-invert max-w-none space-y-10">
             <section>
