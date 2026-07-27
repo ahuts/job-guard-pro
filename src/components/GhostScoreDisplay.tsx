@@ -65,7 +65,7 @@ export function GhostScoreDisplay({ result, onSave }: GhostScoreDisplayProps) {
               {ghostScore.rating === 'low' && '✓ Likely Real'}
               {ghostScore.rating === 'medium' && '⚠ Proceed with Caution'}
               {ghostScore.rating === 'high' && '⚠ Likely Ghost Job'}
-              {ghostScore.rating === 'critical' && '✗ Almost Certainly Fake'}
+              {ghostScore.rating === 'critical' && '✗ Very Likely a Ghost Job'}
             </Badge>
             {job.salary && (
               <Badge variant="outline" className="flex items-center gap-1">
