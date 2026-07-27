@@ -46,13 +46,16 @@ const WhatIsAGhostJob = () => {
         description="A ghost job is a public listing that isn't tied to active hiring. Learn why companies post them, the most common red flags, and how ghost jobs differ from job scams."
         path="/what-is-a-ghost-job"
         type="article"
-        jsonLd={articleSchema({
-          headline: "What Is a Ghost Job? Definition, Red Flags & Examples",
-          description:
-            "A ghost job is a public listing that isn't tied to active hiring. Learn why companies post them, the most common red flags, and how ghost jobs differ from job scams.",
-          path: "/what-is-a-ghost-job",
-          datePublished: PUBLISHED,
-        })}
+        jsonLd={[
+          articleSchema({
+            headline: "What Is a Ghost Job? Definition, Red Flags & Examples",
+            description:
+              "A ghost job is a public listing that isn't tied to active hiring. Learn why companies post them, the most common red flags, and how ghost jobs differ from job scams.",
+            path: "/what-is-a-ghost-job",
+            datePublished: PUBLISHED,
+          }),
+          faqPageSchema(faqs),
+        ]}
       />
       <Navbar />
       <article className="pt-32 pb-20 md:pt-40 md:pb-28">
