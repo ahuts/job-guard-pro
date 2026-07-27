@@ -8,6 +8,7 @@ import { analyzeJob } from '@/services/jobScraper';
 import { GhostScoreDisplay } from './GhostScoreDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from './AuthDialog';
+import { track, scoreBand } from '@/lib/analytics';
 import type { AnalysisResult } from '@/services/jobScraper';
 
 export function JobScanner() {
@@ -25,6 +26,7 @@ export function JobScanner() {
     setResult(null);
 
     if (!user) {
+      track('cta_click', { cta: 'scan_job', location: 'scanner', variant: 'signed_out' });
       setAuthOpen(true);
       return;
     }
@@ -40,22 +42,31 @@ export function JobScanner() {
     }
 
     if (scansRemaining <= 0) {
-      setError("You've used all your free scans. Upgrade to Pro for unlimited scans.");
+      track('free_scan_limit_reached', { location: 'scanner' });
+      setError("You've used all 3 free scans. Go Pro for unlimited scans and saved history.");
       return;
     }
 
     setLoading(true);
+    track('scan_started', { location: 'scanner', scans_remaining: scansRemaining });
 
     try {
       const analysis = await analyzeJob(url);
       setResult(analysis);
       setScansRemaining(prev => prev - 1);
+      track('scan_completed', {
+        location: 'scanner',
+        band: scoreBand(analysis.ghostScore.score),
+        signal_count: analysis.ghostScore.signals.length,
+      });
+      track('result_viewed', { location: 'scanner', band: scoreBand(analysis.ghostScore.score) });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze job');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
