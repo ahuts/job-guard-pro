@@ -250,24 +250,30 @@ const WhatIsAGhostJob = () => {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">How does GhostJob help?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                GhostJob is a free Chrome extension that scans LinkedIn job pages for the signals above and gives you a 0–100 Trust Score before you apply. Read more about{" "}
-                <Link to="/ghost-jobs-on-linkedin" className="text-primary hover:underline">ghost jobs on LinkedIn</Link>{" "}
+                GhostJob scores any LinkedIn job page against the signals above and gives you a 0–100 Trust Score before you apply — free in your browser, or as a Chrome extension that scores listings in place. Read more about{" "}
+                <Link to="/ghost-jobs-on-linkedin" className="text-primary hover:underline">how ghost jobs show up on LinkedIn</Link>{" "}
                 or{" "}
-                <Link to="/how-trust-score-works" className="text-primary hover:underline">how the Trust Score works</Link>.
+                <Link to="/how-trust-score-works" className="text-primary hover:underline">how the Trust Score is calculated</Link>.
               </p>
             </section>
+
+            <ScanCTA location="what_is_a_ghost_job_end" />
 
             <div className="pt-4">
               <a
                 href={CHROME_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-colors text-lg shadow-md"
+                onClick={() =>
+                  track("extension_store_clicked", { location: "what_is_a_ghost_job" })
+                }
+                className="inline-flex items-center gap-2 border border-border hover:border-foreground/40 text-foreground font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 <ChromeIcon />
                 Add GhostJob to Chrome — Free
               </a>
             </div>
+
           </div>
         </div>
       </article>
