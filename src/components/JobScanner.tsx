@@ -74,10 +74,10 @@ export function JobScanner() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="w-5 h-5" />
-            Scan a Job Posting
+            Check a LinkedIn job
           </CardTitle>
           <CardDescription>
-            Paste a LinkedIn job URL to check if it's a ghost job
+            Paste a LinkedIn job URL and get a Trust Score in seconds — free, no card.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -112,12 +112,19 @@ export function JobScanner() {
             <Alert variant="destructive">
               <AlertTriangle className="w-4 h-4" />
               <AlertDescription>
-                You've used all your free scans.{' '}
-                <a href="#pricing" className="underline">Upgrade to Pro</a>{' '}
-                for unlimited scans.
+                That was your last free scan.{' '}
+                <a
+                  href="#pricing"
+                  className="underline"
+                  onClick={() => track('cta_click', { cta: 'go_pro', location: 'scan_limit' })}
+                >
+                  Go Pro for unlimited scans
+                </a>{' '}
+                and saved scan history.
               </AlertDescription>
             </Alert>
           )}
+
 
           {error && (
             <Alert variant="destructive">
