@@ -1,14 +1,44 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Ghost } from "lucide-react";
 import { ChromeIcon, CHROME_STORE_URL } from "@/components/ChromeIcon";
-import { articleSchema } from "@/lib/seo";
+import { articleSchema, faqPageSchema } from "@/lib/seo";
+import { AnswerBox, ScanCTA } from "@/components/LearnBlocks";
+import { track } from "@/lib/analytics";
 
 const PUBLISHED = "2026-04-29";
 
+const faqs = [
+  {
+    question: "Are ghost jobs illegal?",
+    answer:
+      "Not currently. California passed a law in 2024 requiring employers to disclose whether a role is actively hiring, but most states have no such requirement. The FTC has flagged deceptive job postings as a growing concern.",
+  },
+  {
+    question: "Can I report a ghost job?",
+    answer:
+      "You can report suspicious postings to the platform (LinkedIn, Indeed, etc.) and to the FTC. However, enforcement is limited — most platforms don't verify that roles are actively hiring.",
+  },
+  {
+    question: "Why doesn't LinkedIn do anything about it?",
+    answer:
+      "LinkedIn's business model benefits from more listings, not fewer. Removing ghost jobs could reduce their job posting count by an estimated 30–40%.",
+  },
+  {
+    question: "Is every job without a salary a ghost job?",
+    answer:
+      "No. Many legitimate roles don't post salary ranges. It's one signal among many — the key is looking at the pattern. No salary plus no hiring manager plus a generic description plus three reposts is likely a ghost job. No salary plus specific requirements, team details, and a real hiring manager is probably legitimate.",
+  },
+];
+
 const WhatIsAGhostJob = () => {
+  useEffect(() => {
+    track("organic_landing_view", { page: "/what-is-a-ghost-job" });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <SEO
