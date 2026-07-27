@@ -272,7 +272,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               />
             </div>
             <Button type="submit" className="w-full py-6 text-base" disabled={loading}>
-              {loading ? "Creating account…" : "Create Account"}
+              {loading ? "Creating account…" : "Create your free account"}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               Already have an account?{" "}
