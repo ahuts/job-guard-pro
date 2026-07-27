@@ -155,27 +155,21 @@ const WhatIsAGhostJob = () => {
               </ul>
             </section>
 
+            <ScanCTA location="what_is_a_ghost_job_mid" />
+
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">Common questions</h2>
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Are ghost jobs illegal?</h3>
-                  <p className="text-muted-foreground leading-relaxed">Not currently. California passed a law in 2024 requiring employers to disclose whether a role is actively hiring, but most states have no such requirement. The FTC has flagged deceptive job postings as a growing concern.</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Can I report a ghost job?</h3>
-                  <p className="text-muted-foreground leading-relaxed">You can report suspicious postings to the platform (LinkedIn, Indeed, etc.) and to the FTC. However, enforcement is limited — most platforms don't verify that roles are actively hiring.</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Why doesn't LinkedIn do anything about it?</h3>
-                  <p className="text-muted-foreground leading-relaxed">LinkedIn's business model benefits from more listings, not fewer. Removing ghost jobs could reduce their job posting count by an estimated 30–40%.</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Is every job without a salary a ghost job?</h3>
-                  <p className="text-muted-foreground leading-relaxed">No. Many legitimate roles don't post salary ranges. It's one signal among many — the key is looking at the <em>pattern</em>. No salary + no hiring manager + generic description + reposted 3× = likely ghost. No salary + specific requirements + team details + real hiring manager = probably legitimate.</p>
-                </div>
+                {faqs.map((faq) => (
+                  <div key={faq.question}>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">{faq.question}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+                  </div>
+                ))}
               </div>
             </section>
+
+
 
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">How do you spot a ghost job?</h2>
