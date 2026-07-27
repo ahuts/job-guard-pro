@@ -62,18 +62,20 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signUpWithEmail(email, password, fullName);
+    const { error } = await signUpWithEmail(email, password);
     setLoading(false);
     if (error) {
       toast({ title: "Signup failed", description: error, variant: "destructive" });
     } else {
+      track("signup_completed", { method: "email" });
       toast({
         title: "Check your email",
-        description: "We sent you a verification link. Please confirm your email to sign in.",
+        description: "We sent you a verification link. Confirm your email to unlock your 3 free scans.",
       });
       resetForm();
       setView("main");
     }
+
   };
 
   const handleOpenChange = (open: boolean) => {
