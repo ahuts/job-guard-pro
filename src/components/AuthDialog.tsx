@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ghost, Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { track } from "@/lib/analytics";
 
 interface AuthDialogProps {
   open: boolean;
@@ -26,15 +27,18 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const [view, setView] = useState<AuthView>("main");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) track("signup_modal_opened", { location: "auth_dialog" });
+  }, [open]);
 
   const resetForm = () => {
     setEmail("");
     setPassword("");
-    setFullName("");
     setLoading(false);
   };
+
 
   const handleGoogle = async () => {
     await signInWithGoogle();
