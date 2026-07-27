@@ -1,14 +1,44 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Ghost } from "lucide-react";
 import { ChromeIcon, CHROME_STORE_URL } from "@/components/ChromeIcon";
-import { articleSchema } from "@/lib/seo";
+import { articleSchema, faqPageSchema } from "@/lib/seo";
+import { AnswerBox, ScanCTA } from "@/components/LearnBlocks";
+import { track } from "@/lib/analytics";
 
 const PUBLISHED = "2026-04-29";
 
+const faqs = [
+  {
+    question: "Are ghost jobs illegal?",
+    answer:
+      "Not currently. California passed a law in 2024 requiring employers to disclose whether a role is actively hiring, but most states have no such requirement. The FTC has flagged deceptive job postings as a growing concern.",
+  },
+  {
+    question: "Can I report a ghost job?",
+    answer:
+      "You can report suspicious postings to the platform (LinkedIn, Indeed, etc.) and to the FTC. However, enforcement is limited — most platforms don't verify that roles are actively hiring.",
+  },
+  {
+    question: "Why doesn't LinkedIn do anything about it?",
+    answer:
+      "LinkedIn's business model benefits from more listings, not fewer. Removing ghost jobs could reduce their job posting count by an estimated 30–40%.",
+  },
+  {
+    question: "Is every job without a salary a ghost job?",
+    answer:
+      "No. Many legitimate roles don't post salary ranges. It's one signal among many — the key is looking at the pattern. No salary plus no hiring manager plus a generic description plus three reposts is likely a ghost job. No salary plus specific requirements, team details, and a real hiring manager is probably legitimate.",
+  },
+];
+
 const WhatIsAGhostJob = () => {
+  useEffect(() => {
+    track("organic_landing_view", { page: "/what-is-a-ghost-job" });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <SEO
@@ -16,13 +46,16 @@ const WhatIsAGhostJob = () => {
         description="A ghost job is a public listing that isn't tied to active hiring. Learn why companies post them, the most common red flags, and how ghost jobs differ from job scams."
         path="/what-is-a-ghost-job"
         type="article"
-        jsonLd={articleSchema({
-          headline: "What Is a Ghost Job? Definition, Red Flags & Examples",
-          description:
-            "A ghost job is a public listing that isn't tied to active hiring. Learn why companies post them, the most common red flags, and how ghost jobs differ from job scams.",
-          path: "/what-is-a-ghost-job",
-          datePublished: PUBLISHED,
-        })}
+        jsonLd={[
+          articleSchema({
+            headline: "What Is a Ghost Job? Definition, Red Flags & Examples",
+            description:
+              "A ghost job is a public listing that isn't tied to active hiring. Learn why companies post them, the most common red flags, and how ghost jobs differ from job scams.",
+            path: "/what-is-a-ghost-job",
+            datePublished: PUBLISHED,
+          }),
+          faqPageSchema(faqs),
+        ]}
       />
       <Navbar />
       <article className="pt-32 pb-20 md:pt-40 md:pb-28">
@@ -36,13 +69,25 @@ const WhatIsAGhostJob = () => {
           </h1>
 
           {/* Answer-first paragraph */}
-          <p className="text-lg text-muted-foreground leading-relaxed mb-10">
+          <p className="text-lg text-muted-foreground leading-relaxed mb-6">
             A <strong className="text-foreground">ghost job</strong> is a public job posting that isn't tied to active hiring. The role looks real — title, company, description, apply button — but no one is being seriously interviewed for it. Companies leave these listings up to build talent pipelines, signal growth, or hit recruiter activity targets, which means applicants spend hours on roles that were never going to be filled.
           </p>
 
+          <AnswerBox
+            question="Quick answer: what is a ghost job?"
+            answer="A ghost job is a live listing with little or no intent to hire behind it. The company is real; the opening effectively isn't."
+            points={[
+              "Most common causes: pipeline building, investor optics, recruiter targets, internal hires, and forgotten posts.",
+              "Strongest tells: repeated reposts, 30+ days live with no edits, vague or missing pay, generic description.",
+              "Different from a job scam — a ghost job wastes your time, a scam targets your money or identity.",
+              "Judge the pattern, not one signal: three or more flags together is the useful threshold.",
+            ]}
+          />
+
+
           <div className="prose prose-invert max-w-none space-y-10">
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Why companies post ghost jobs</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">Why do companies post ghost jobs?</h2>
               <ul className="space-y-2 text-muted-foreground list-disc list-inside">
                 <li><strong className="text-foreground">Pipeline building</strong> — collecting résumés for roles that may open later.</li>
                 <li><strong className="text-foreground">Investor optics</strong> — signaling growth without committing headcount.</li>
@@ -53,7 +98,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">The numbers</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How common are ghost jobs?</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Ghost jobs aren't edge cases — they're a systemic problem.
               </p>
@@ -98,7 +143,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">The impact on job seekers</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How do ghost jobs affect job seekers?</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Ghost jobs don't just waste time — they do real psychological damage.
               </p>
@@ -110,30 +155,24 @@ const WhatIsAGhostJob = () => {
               </ul>
             </section>
 
+            <ScanCTA location="what_is_a_ghost_job_mid" />
+
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">Common questions</h2>
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Are ghost jobs illegal?</h3>
-                  <p className="text-muted-foreground leading-relaxed">Not currently. California passed a law in 2024 requiring employers to disclose whether a role is actively hiring, but most states have no such requirement. The FTC has flagged deceptive job postings as a growing concern.</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Can I report a ghost job?</h3>
-                  <p className="text-muted-foreground leading-relaxed">You can report suspicious postings to the platform (LinkedIn, Indeed, etc.) and to the FTC. However, enforcement is limited — most platforms don't verify that roles are actively hiring.</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Why doesn't LinkedIn do anything about it?</h3>
-                  <p className="text-muted-foreground leading-relaxed">LinkedIn's business model benefits from more listings, not fewer. Removing ghost jobs could reduce their job posting count by an estimated 30–40%.</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">Is every job without a salary a ghost job?</h3>
-                  <p className="text-muted-foreground leading-relaxed">No. Many legitimate roles don't post salary ranges. It's one signal among many — the key is looking at the <em>pattern</em>. No salary + no hiring manager + generic description + reposted 3× = likely ghost. No salary + specific requirements + team details + real hiring manager = probably legitimate.</p>
-                </div>
+                {faqs.map((faq) => (
+                  <div key={faq.question}>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">{faq.question}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+                  </div>
+                ))}
               </div>
             </section>
 
+
+
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">How to spot a ghost job</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How do you spot a ghost job?</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Red flags are patterns, not single signals. One yellow flag doesn't mean a job is fake — but three or more should make you cautious.
               </p>
@@ -172,7 +211,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Ghost job vs job scam</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">Ghost job vs job scam: what's the difference?</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm border border-border rounded-lg overflow-hidden">
                   <thead className="bg-secondary">
@@ -209,26 +248,32 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">How GhostJob helps</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How does GhostJob help?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                GhostJob is a free Chrome extension that scans LinkedIn job pages for the signals above and gives you a 0–100 Trust Score before you apply. Read more about{" "}
-                <Link to="/ghost-jobs-on-linkedin" className="text-primary hover:underline">ghost jobs on LinkedIn</Link>{" "}
+                GhostJob scores any LinkedIn job page against the signals above and gives you a 0–100 Trust Score before you apply — free in your browser, or as a Chrome extension that scores listings in place. Read more about{" "}
+                <Link to="/ghost-jobs-on-linkedin" className="text-primary hover:underline">how ghost jobs show up on LinkedIn</Link>{" "}
                 or{" "}
-                <Link to="/how-trust-score-works" className="text-primary hover:underline">how the Trust Score works</Link>.
+                <Link to="/how-trust-score-works" className="text-primary hover:underline">how the Trust Score is calculated</Link>.
               </p>
             </section>
+
+            <ScanCTA location="what_is_a_ghost_job_end" />
 
             <div className="pt-4">
               <a
                 href={CHROME_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-colors text-lg shadow-md"
+                onClick={() =>
+                  track("extension_store_clicked", { location: "what_is_a_ghost_job" })
+                }
+                className="inline-flex items-center gap-2 border border-border hover:border-foreground/40 text-foreground font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 <ChromeIcon />
                 Add GhostJob to Chrome — Free
               </a>
             </div>
+
           </div>
         </div>
       </article>

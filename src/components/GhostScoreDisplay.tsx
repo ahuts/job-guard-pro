@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertTriangle, CheckCircle, Clock, DollarSign, Building2, Save } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { AnalysisResult } from '@/services/jobScraper';
 
 interface GhostScoreDisplayProps {
@@ -64,7 +65,7 @@ export function GhostScoreDisplay({ result, onSave }: GhostScoreDisplayProps) {
               {ghostScore.rating === 'low' && '✓ Likely Real'}
               {ghostScore.rating === 'medium' && '⚠ Proceed with Caution'}
               {ghostScore.rating === 'high' && '⚠ Likely Ghost Job'}
-              {ghostScore.rating === 'critical' && '✗ Almost Certainly Fake'}
+              {ghostScore.rating === 'critical' && '✗ Very Likely a Ghost Job'}
             </Badge>
             {job.salary && (
               <Badge variant="outline" className="flex items-center gap-1">
@@ -81,12 +82,22 @@ export function GhostScoreDisplay({ result, onSave }: GhostScoreDisplayProps) {
 
           <p className="text-sm">{ghostScore.summary}</p>
 
+          <p className="text-xs text-muted-foreground">
+            This score is an estimate based on public listing signals — not a verdict on the
+            employer.{' '}
+            <Link to="/how-trust-score-works" className="underline hover:text-foreground">
+              See how the Trust Score works
+            </Link>
+            .
+          </p>
+
           {onSave && (
             <Button onClick={onSave} variant="outline" className="w-full">
               <Save className="w-4 h-4 mr-2" />
               Save to Tracker
             </Button>
           )}
+
         </CardContent>
       </Card>
 

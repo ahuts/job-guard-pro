@@ -1,6 +1,6 @@
 const LOVABLE_EDITOR_HOST_SUFFIX = ".lovableproject.com";
 const LOVABLE_PREVIEW_HOST_SUFFIX = ".lovable.app";
-const CANONICAL_APP_ORIGIN = "https://jobghost.io";
+const CANONICAL_APP_ORIGIN = "https://www.jobghost.io";
 
 function isLovableInternalHost(hostname: string, projectId?: string) {
   return (

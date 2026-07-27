@@ -1,4 +1,4 @@
-export const SITE_ORIGIN = "https://jobghost.io";
+export const SITE_ORIGIN = "https://www.jobghost.io";
 export const SITE_NAME = "GhostJob";
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
 export const SUPPORT_EMAIL = "hello@jobghost.io";

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ghost, Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { track } from "@/lib/analytics";
 
 interface AuthDialogProps {
   open: boolean;
@@ -26,15 +27,18 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const [view, setView] = useState<AuthView>("main");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) track("signup_modal_opened", { location: "auth_dialog" });
+  }, [open]);
 
   const resetForm = () => {
     setEmail("");
     setPassword("");
-    setFullName("");
     setLoading(false);
   };
+
 
   const handleGoogle = async () => {
     await signInWithGoogle();
@@ -58,18 +62,20 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signUpWithEmail(email, password, fullName);
+    const { error } = await signUpWithEmail(email, password);
     setLoading(false);
     if (error) {
       toast({ title: "Signup failed", description: error, variant: "destructive" });
     } else {
+      track("signup_completed", { method: "email" });
       toast({
         title: "Check your email",
-        description: "We sent you a verification link. Please confirm your email to sign in.",
+        description: "We sent you a verification link. Confirm your email to unlock your 3 free scans.",
       });
       resetForm();
       setView("main");
     }
+
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -92,18 +98,19 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             )}
             <Ghost className="h-6 w-6 text-primary" />
             <DialogTitle className="text-xl">
-              {view === "main" && "Get Started with GhostJob"}
+              {view === "main" && "Create your free account"}
               {view === "login" && "Welcome Back"}
-              {view === "signup" && "Create Your Account"}
+              {view === "signup" && "Create your free account"}
               {view === "forgot" && "Reset Password"}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {view === "main" && "Sign in to get your 3 free ghost job scans. No credit card required."}
+            {view === "main" && "Get 3 free ghost job scans. No credit card required."}
             {view === "login" && "Sign in to your GhostJob account."}
-            {view === "signup" && "Create an account to start scanning ghost jobs."}
+            {view === "signup" && "Get 3 free ghost job scans. No credit card required."}
             {view === "forgot" && "Enter your email and we'll send you a reset link."}
           </DialogDescription>
+
         </DialogHeader>
 
         {view === "main" && (
@@ -134,26 +141,28 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             */}
 
             <Button
-              variant="outline"
               className="w-full py-6 text-base gap-3"
-              onClick={() => setView("login")}
+              onClick={() => setView("signup")}
             >
               <Mail className="h-5 w-5" />
-              Continue with Email
+              Create your free account — get 3 scans
             </Button>
 
             <p className="text-xs text-center text-muted-foreground pt-1">
-              Don't have an account?{" "}
-              <button onClick={() => setView("signup")} className="underline hover:text-foreground">
-                Sign up
+              Already have an account?{" "}
+              <button onClick={() => setView("login")} className="underline hover:text-foreground">
+                Sign in
               </button>
             </p>
 
             <p className="text-xs text-center text-muted-foreground">
-              By signing up, you agree to our{" "}
-              <a href="#" className="underline hover:text-foreground">Terms</a> and{" "}
-              <a href="#" className="underline hover:text-foreground">Privacy Policy</a>.
+              By creating an account, you agree to our{" "}
+              <a href="/terms" className="underline hover:text-foreground">Terms</a> and{" "}
+              <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
             </p>
+
+
+
           </div>
         )}
 
@@ -239,16 +248,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
         {view === "signup" && (
           <form onSubmit={handleEmailSignup} className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="signup-name">Full Name</Label>
-              <Input
-                id="signup-name"
-                type="text"
-                placeholder="Jane Doe"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
+
               <Label htmlFor="signup-email">Email</Label>
               <Input
                 id="signup-email"
@@ -272,7 +272,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               />
             </div>
             <Button type="submit" className="w-full py-6 text-base" disabled={loading}>
-              {loading ? "Creating account…" : "Create Account"}
+              {loading ? "Creating account…" : "Create your free account"}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               Already have an account?{" "}

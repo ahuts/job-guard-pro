@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://jobghost.io/sitemap.xml
+Sitemap: https://www.jobghost.io/sitemap.xml
