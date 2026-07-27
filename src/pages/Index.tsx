@@ -14,9 +14,14 @@ import {
   softwareApplicationSchema,
   faqPageSchema,
 } from "@/lib/seo";
+import { track } from "@/lib/analytics";
 
 const Index = () => {
   const location = useLocation();
+
+  useEffect(() => {
+    track("organic_landing_view", { page: "/" });
+  }, []);
 
   // Scroll to hash when navigating to "/#features" etc. from another route
   useEffect(() => {
@@ -30,11 +35,12 @@ const Index = () => {
     }
   }, [location]);
 
+
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="GhostJob: Ghost Job Detector for LinkedIn | Spot Fake & Stale Job Posts"
-        description="GhostJob is a free Chrome extension that scans LinkedIn job listings for repost, age, salary, urgency, and description-quality signals. Know what's real before you apply."
+        title="GhostJob — Free LinkedIn Ghost Job Checker | Scan a Listing"
+        description="Paste a LinkedIn job URL to spot reposts, stale listings, vague pay, and generic copy before you apply. Get 3 free scans — no card required."
         path="/"
         jsonLd={[
           organizationSchema,
