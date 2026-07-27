@@ -41,6 +41,7 @@ const PricingSection = () => {
   const { toast } = useToast();
 
   const handleCTA = async (tier: typeof tiers[0]) => {
+    track("cta_click", { cta: tier.cta, location: "pricing" });
     if (tier.featured) {
       if (!user) {
         setAuthOpen(true);
@@ -48,6 +49,7 @@ const PricingSection = () => {
       }
       try {
         setUpgrading(true);
+        track("checkout_started", { location: "pricing", plan: "pro" });
         await redirectToCheckout();
       } catch (err: any) {
         console.error("Checkout error:", err);
