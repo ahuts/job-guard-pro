@@ -1,14 +1,39 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Ghost } from "lucide-react";
 import { ChromeIcon, CHROME_STORE_URL } from "@/components/ChromeIcon";
-import { articleSchema } from "@/lib/seo";
+import { articleSchema, faqPageSchema } from "@/lib/seo";
+import { AnswerBox, ScanCTA } from "@/components/LearnBlocks";
+import { track } from "@/lib/analytics";
 
 const PUBLISHED = "2026-04-29";
 
+const faqs = [
+  {
+    question: "How can you tell if a LinkedIn job is a ghost job?",
+    answer:
+      "Check four things together: how long the posting has been live, whether the same role keeps reappearing every few weeks, whether the applicant count matches the posting age, and whether the description contains specific team, stack, and pay details. Three or more weak signals is the point to be cautious.",
+  },
+  {
+    question: "Is a reposted LinkedIn job always a ghost job?",
+    answer:
+      "No. Roles are legitimately reposted when a hire falls through or the requirements change. It becomes a ghost-job signal when the same role reappears every two to four weeks under slightly different titles or recruiters without the original ever closing.",
+  },
+  {
+    question: "Should I still apply if the Trust Score is borderline?",
+    answer:
+      "A borderline score of 40 to 60 means the signals are mixed, not that the role is fake. If the job matters to your search, cross-check it on the company's own careers page before spending time on a tailored application.",
+  },
+];
+
 const GhostJobsOnLinkedIn = () => {
+  useEffect(() => {
+    track("organic_landing_view", { page: "/ghost-jobs-on-linkedin" });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <SEO
