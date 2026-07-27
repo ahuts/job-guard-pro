@@ -134,26 +134,20 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             */}
 
             <Button
-              variant="outline"
               className="w-full py-6 text-base gap-3"
-              onClick={() => setView("login")}
+              onClick={() => setView("signup")}
             >
               <Mail className="h-5 w-5" />
-              Continue with Email
+              Create your free account — get 3 scans
             </Button>
 
             <p className="text-xs text-center text-muted-foreground pt-1">
-              Don't have an account?{" "}
-              <button onClick={() => setView("signup")} className="underline hover:text-foreground">
-                Sign up
+              Already have an account?{" "}
+              <button onClick={() => setView("login")} className="underline hover:text-foreground">
+                Sign in
               </button>
             </p>
 
-            <p className="text-xs text-center text-muted-foreground">
-              By signing up, you agree to our{" "}
-              <a href="#" className="underline hover:text-foreground">Terms</a> and{" "}
-              <a href="#" className="underline hover:text-foreground">Privacy Policy</a>.
-            </p>
           </div>
         )}
 
