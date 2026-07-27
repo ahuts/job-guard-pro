@@ -87,7 +87,7 @@ const WhatIsAGhostJob = () => {
 
           <div className="prose prose-invert max-w-none space-y-10">
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Why companies post ghost jobs</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">Why do companies post ghost jobs?</h2>
               <ul className="space-y-2 text-muted-foreground list-disc list-inside">
                 <li><strong className="text-foreground">Pipeline building</strong> — collecting résumés for roles that may open later.</li>
                 <li><strong className="text-foreground">Investor optics</strong> — signaling growth without committing headcount.</li>
@@ -98,7 +98,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">The numbers</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How common are ghost jobs?</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Ghost jobs aren't edge cases — they're a systemic problem.
               </p>
@@ -143,7 +143,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">The impact on job seekers</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How do ghost jobs affect job seekers?</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Ghost jobs don't just waste time — they do real psychological damage.
               </p>
@@ -178,7 +178,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">How to spot a ghost job</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How do you spot a ghost job?</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Red flags are patterns, not single signals. One yellow flag doesn't mean a job is fake — but three or more should make you cautious.
               </p>
@@ -217,7 +217,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Ghost job vs job scam</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">Ghost job vs job scam: what's the difference?</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm border border-border rounded-lg overflow-hidden">
                   <thead className="bg-secondary">
@@ -254,7 +254,7 @@ const WhatIsAGhostJob = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">How GhostJob helps</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How does GhostJob help?</h2>
               <p className="text-muted-foreground leading-relaxed">
                 GhostJob is a free Chrome extension that scans LinkedIn job pages for the signals above and gives you a 0–100 Trust Score before you apply. Read more about{" "}
                 <Link to="/ghost-jobs-on-linkedin" className="text-primary hover:underline">ghost jobs on LinkedIn</Link>{" "}
