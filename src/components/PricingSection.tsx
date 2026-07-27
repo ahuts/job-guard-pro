@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AuthDialog from "./AuthDialog";
 import { redirectToCheckout } from "@/lib/stripe";
 import { useToast } from "@/hooks/use-toast";
+import { track } from "@/lib/analytics";
 
 const tiers = [
   {
