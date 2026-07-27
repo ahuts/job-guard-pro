@@ -92,18 +92,19 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             )}
             <Ghost className="h-6 w-6 text-primary" />
             <DialogTitle className="text-xl">
-              {view === "main" && "Get Started with GhostJob"}
+              {view === "main" && "Create your free account"}
               {view === "login" && "Welcome Back"}
-              {view === "signup" && "Create Your Account"}
+              {view === "signup" && "Create your free account"}
               {view === "forgot" && "Reset Password"}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {view === "main" && "Sign in to get your 3 free ghost job scans. No credit card required."}
+            {view === "main" && "Get 3 free ghost job scans. No credit card required."}
             {view === "login" && "Sign in to your GhostJob account."}
-            {view === "signup" && "Create an account to start scanning ghost jobs."}
+            {view === "signup" && "Get 3 free ghost job scans. No credit card required."}
             {view === "forgot" && "Enter your email and we'll send you a reset link."}
           </DialogDescription>
+
         </DialogHeader>
 
         {view === "main" && (
@@ -147,6 +148,14 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                 Sign in
               </button>
             </p>
+
+            <p className="text-xs text-center text-muted-foreground">
+              By creating an account, you agree to our{" "}
+              <a href="/terms" className="underline hover:text-foreground">Terms</a> and{" "}
+              <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+            </p>
+
+
 
           </div>
         )}
