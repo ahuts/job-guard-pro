@@ -41,13 +41,16 @@ const GhostJobsOnLinkedIn = () => {
         description="LinkedIn-specific ghost-job signals: reposted listings, applicant-count anomalies, posting age, vague descriptions, and when to verify a recruiter manually."
         path="/ghost-jobs-on-linkedin"
         type="article"
-        jsonLd={articleSchema({
-          headline: "Ghost Jobs on LinkedIn: How to Spot Them Before You Apply",
-          description:
-            "LinkedIn-specific ghost-job signals: reposted listings, applicant-count anomalies, posting age, vague descriptions, and when to verify a recruiter manually.",
-          path: "/ghost-jobs-on-linkedin",
-          datePublished: PUBLISHED,
-        })}
+        jsonLd={[
+          articleSchema({
+            headline: "Ghost Jobs on LinkedIn: How to Spot Them Before You Apply",
+            description:
+              "LinkedIn-specific ghost-job signals: reposted listings, applicant-count anomalies, posting age, vague descriptions, and when to verify a recruiter manually.",
+            path: "/ghost-jobs-on-linkedin",
+            datePublished: PUBLISHED,
+          }),
+          faqPageSchema(faqs),
+        ]}
       />
       <Navbar />
       <article className="pt-32 pb-20 md:pt-40 md:pb-28">
@@ -64,37 +67,50 @@ const GhostJobsOnLinkedIn = () => {
             LinkedIn is the largest source of ghost jobs because reposting is fast, cheap, and rewarded by the platform. The most reliable LinkedIn-specific signals are <strong className="text-foreground">posting age</strong>, <strong className="text-foreground">repost frequency</strong>, <strong className="text-foreground">applicant-count behavior</strong>, and <strong className="text-foreground">description quality</strong>. Use them together — no single signal is enough on its own.
           </p>
 
+          <AnswerBox
+            question="Quick answer: how do you spot a ghost job on LinkedIn?"
+            answer="Read four signals together — posting age, repost frequency, applicant-count behaviour, and description quality. Any one alone is noise; three or more together is a real warning."
+            points={[
+              "Live 30+ days with no edits on a high-volume title.",
+              "The same role reappears every 2–4 weeks under a new title or recruiter.",
+              "Applicant count doesn't match the posting age in either direction.",
+              "No pay range, no team detail, boilerplate responsibilities.",
+            ]}
+          />
+
           <div className="prose prose-invert max-w-none space-y-10">
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">1. Posting age</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">1. How long has the posting been live?</h2>
               <p className="text-muted-foreground leading-relaxed">
                 Most genuinely active LinkedIn roles are filled or closed within 30 days. If a posting has been live for 30+ days with no edits, treat it with suspicion — especially for high-volume titles like "Software Engineer" or "Marketing Manager."
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">2. Reposted listings</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">2. Has the same role been reposted?</h2>
               <p className="text-muted-foreground leading-relaxed">
                 The single strongest LinkedIn ghost-job signal. If the same role keeps reappearing every 2–4 weeks under a slightly different title or recruiter, the company is almost certainly using it as a pipeline. GhostJob automatically detects repost patterns based on title, company, and description fingerprint.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">3. Applicant-count anomalies</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">3. Does the applicant count make sense?</h2>
               <p className="text-muted-foreground leading-relaxed">
                 Watch for postings with hundreds or thousands of applicants but no movement on the role's status, or roles that show "Be among the first 25 applicants" weeks after going live. Both patterns suggest the funnel isn't being worked.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">4. Vague descriptions</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">4. Is the description specific or boilerplate?</h2>
               <p className="text-muted-foreground leading-relaxed">
                 Active hiring managers write specific descriptions: team name, tech stack, day-one priorities. Ghost jobs lean on generic boilerplate, missing salary ranges, and copy-paste responsibilities that could apply to any company.
               </p>
             </section>
 
+            <ScanCTA location="ghost_jobs_on_linkedin_mid" />
+
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">When to verify manually</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">When should you verify a listing manually?</h2>
               <ul className="space-y-2 text-muted-foreground list-disc list-inside">
                 <li>The role is critical to your search and the Trust Score is borderline (40–60).</li>
                 <li>The company recently announced layoffs or a hiring freeze.</li>
@@ -106,7 +122,7 @@ const GhostJobsOnLinkedIn = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Get the signals automatically</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">How do you check these signals automatically?</h2>
               <p className="text-muted-foreground leading-relaxed">
                 GhostJob runs all of these checks in your browser as you read the listing — no copy/paste, no extra tab. Read about{" "}
                 <Link to="/how-trust-score-works" className="text-primary hover:underline">how the Trust Score works</Link>{" "}
@@ -115,12 +131,29 @@ const GhostJobsOnLinkedIn = () => {
               </p>
             </section>
 
+            <section>
+              <h2 className="text-2xl font-bold text-foreground mb-3">Common questions</h2>
+              <div className="space-y-6">
+                {faqs.map((faq) => (
+                  <div key={faq.question}>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">{faq.question}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <ScanCTA location="ghost_jobs_on_linkedin_end" />
+
             <div className="pt-4">
               <a
                 href={CHROME_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-colors text-lg shadow-md"
+                onClick={() =>
+                  track("extension_store_clicked", { location: "ghost_jobs_on_linkedin" })
+                }
+                className="inline-flex items-center gap-2 border border-border hover:border-foreground/40 text-foreground font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 <ChromeIcon />
                 Add GhostJob to Chrome — Free
