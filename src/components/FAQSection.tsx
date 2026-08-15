@@ -10,12 +10,12 @@ export const homepageFaqs = [
   {
     question: "How does GhostJob calculate the Trust Score?",
     answer:
-      "GhostJob analyzes 10+ signals on each LinkedIn job page — including how long the post has been live, how often it's been reposted, applicant-count behavior, salary transparency, urgency language, and description quality — then combines them into a 0–100 Trust Score. Higher scores mean the listing looks more like a real, active opening.",
+      "GhostJob starts neutral at 50 and looks for public, concrete verification: an exact employer or ATS role match, an active application destination, LinkedIn company identity, current source evidence, and a specific role description. A confirmed closed employer role is a strong contrary signal. Reposting is only a caution.",
   },
   {
     question: "What signals does GhostJob use?",
     answer:
-      "Posting age, repost frequency, applicant-count anomalies, vague or missing salary ranges, urgency and pressure phrases, generic boilerplate descriptions, recruiter activity, company hiring patterns, and several LinkedIn-specific structural signals.",
+      "Exact employer/ATS role verification, a live application destination, company identity, current source evidence, concrete role details, an explicitly closed employer role, and LinkedIn's repost label. Salary, benefits, location flexibility, culture language, and experience requirements are Job Quality details—not Trust Score factors.",
   },
   {
     question: "Does GhostJob work only on LinkedIn?",
@@ -25,7 +25,7 @@ export const homepageFaqs = [
   {
     question: "Is my LinkedIn data sent anywhere?",
     answer:
-      "No. GhostJob runs locally in your browser. We do not collect personal information, browsing history, LinkedIn account data, or messages, and we don't transmit your activity to third-party analytics or advertising networks. See our privacy policy for the full breakdown.",
+      "GhostJob sends the job details needed to check public employer and ATS sources. Scan observation history stays in extension local storage until you sign in, then it is stored only in your own account. It does not use your LinkedIn messages or account data.",
   },
   {
     question: "Can GhostJob tell if a job is a scam or just stale?",

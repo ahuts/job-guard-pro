@@ -52,9 +52,10 @@ export function track(event: AnalyticsEvent, props: AnalyticsProps = {}) {
 }
 
 /** Score band helper so we never log raw scores tied to a specific listing. */
-export function scoreBand(score: number): "low" | "medium" | "high" | "critical" {
-  if (score < 25) return "low";
-  if (score < 50) return "medium";
-  if (score < 75) return "high";
-  return "critical";
+export function scoreBand(score: number): "contradictory" | "weak" | "unverified" | "positive" | "highly_verified" {
+  if (score < 20) return "contradictory";
+  if (score < 40) return "weak";
+  if (score < 60) return "unverified";
+  if (score < 80) return "positive";
+  return "highly_verified";
 }

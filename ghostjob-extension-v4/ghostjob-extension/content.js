@@ -344,17 +344,9 @@
         showGhostScore(data);
       })
       .catch(function(err) {
-        warn('API failed, using local scoring:', err.message);
-        var analysis = calculateLocalScore(jobData);
         setLoading(false);
-        showGhostScore({
-          ghostScore:     analysis.score,
-          signals:        analysis.signals,
-          auditChecklist: analysis.auditChecklist,
-          summary:        analysis.summary,
-          recommendation: analysis.recommendation,
-          source:         'local'  // Bug #10: preserve actual source
-        });
+        warn('Trust Meter API failed:', err.message);
+        showVerificationError(err.message);
       });
     }); // end checkScanLimit
   }
@@ -425,89 +417,95 @@
   }
 
   // ─── Remote API call ──────────────────────────────────────────────────────
-  // Extension extracts job data client-side, then calls scan API for company-level signals.
-  // The old scrape-job API is no longer needed (content script handles extraction).
-  function fetchRemoteAnalysis(jobData) {
-    var analysis = calculateLocalScore(jobData);
-    return enhanceWithScanApi(analysis, jobData);
+  // The website and extension use this same API as the sole scoring authority.
+  function getFirstObservedAt(jobData) {
+    var key = (jobData.url || jobData.title + '|' + jobData.company).replace(/[.#$\[\]/]/g, '_');
+    return new Promise(function(resolve) {
+      chrome.storage.local.get(['gj_scan_observations_v2'], function(stored) {
+        var observations = stored.gj_scan_observations_v2 || {};
+        var now = new Date().toISOString();
+        var firstObservedAt = observations[key] || now;
+        observations[key] = firstObservedAt;
+        var keys = Object.keys(observations);
+        if (keys.length > 250) {
+          keys.sort(function(a, b) { return observations[a].localeCompare(observations[b]); });
+          while (keys.length > 250) delete observations[keys.shift()];
+        }
+        chrome.storage.local.set({ gj_scan_observations_v2: observations }, function() {
+          resolve(firstObservedAt);
+        });
+      });
+    });
   }
-  
-  // ─── Enhance with Scan API (company-level signals) ───────────────────────────
-  function enhanceWithScanApi(analysis, jobData) {
-    // 8-second timeout — if API doesn't respond, use local results
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 8000);
-    
-    return fetch(SCAN_API_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        url:          jobData.url,
-        title:        jobData.title,
-        company:     jobData.company,
-        location:    jobData.location,
-        description: jobData.description,
-        localScore:  analysis.score,
-        localSignals: analysis.signals
-      }),
-      signal: controller.signal
-    })
-    .then(function(res) {
-      clearTimeout(timeout);
-      if (!res.ok) throw new Error('Scan API HTTP ' + res.status);
-      return res.json();
-    })
-    .then(function(data) {
-      log('Scan API enhanced score:', data.trustScore, '(was', analysis.score + ')');
-      // Merge API signals with local, filtering out invalid ones and adding defaults
-      var apiSignals = (data.signals || []).filter(function(s) {
-        return s && s.name && s.type;
-      }).map(function(s) {
-        return {
-          type:          s.type,
-          icon:          s.icon || s.emoji || (s.type === 'red' ? '🔴' : s.type === 'yellow' ? '🟡' : '✅'),
-          title:         s.title || s.name,
-          description:   s.description || s.name,
-          impact:       s.impact || '',
-          advice:       s.advice || s.tip || '',
-          quote:        s.quote || '',
-          weight:       s.weight || 0,
-          source:       s.source || 'api'
-        };
+
+  function fetchRemoteAnalysis(jobData) {
+    return getFirstObservedAt(jobData).then(function(firstObservedAt) {
+      var controller = new AbortController();
+      var timeout = setTimeout(function() { controller.abort(); }, 8000);
+      return fetch(SCAN_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: jobData.url,
+          title: jobData.title,
+          company: jobData.company,
+          location: jobData.location,
+          description: jobData.description,
+          salary: jobData.salary,
+          applicationUrl: jobData.applicationUrl,
+          companyLinkedInUrl: jobData.companyLinkedInUrl,
+          reposted: jobData.isReposted,
+          firstObservedAt: firstObservedAt
+        }),
+        signal: controller.signal
+      }).then(function(res) {
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error('Scan API HTTP ' + res.status);
+        return res.json().then(function(data) {
+          persistObservationIfSignedIn(jobData, data, firstObservedAt);
+          return data;
+        });
+      }).catch(function(err) {
+        clearTimeout(timeout);
+        throw err;
       });
-      // Keep local signals that aren't duplicated by API
-      var localOnly = analysis.signals.filter(function(ls) {
-        return !apiSignals.some(function(as) { return as.title === ls.title; });
-      });
-      var merged = localOnly.concat(apiSignals);
-      return {
-        ghostScore:     data.trustScore !== undefined ? data.trustScore : analysis.score,
-        signals:        merged.length > 0 ? merged : analysis.signals,
-        auditChecklist: appendApiSignalChecklist(analysis.auditChecklist, merged.length > 0 ? merged : analysis.signals, data.companyData || null),
-        summary:        analysis.summary,
-        recommendation: analysis.recommendation,
-        source:         'api',
-        companyData:    data.companyData || null
-      };
-    })
-    .catch(function(err) {
-      clearTimeout(timeout);
-      // Scan API failed — return local scoring as-is
-      warn('Scan API failed, using local results:', err.message);
-      return {
-        ghostScore:     analysis.score,
-        signals:        analysis.signals,
-        auditChecklist: analysis.auditChecklist,
-        summary:        analysis.summary,
-        recommendation: analysis.recommendation,
-        source:         'local'
-      };
+    });
+  }
+
+  // Signed-out observations remain in extension storage. Once signed in, this
+  // best-effort upsert writes only to the current user's RLS-protected history.
+  function persistObservationIfSignedIn(jobData, result, firstObservedAt) {
+    chrome.storage.local.get(['gj_auth_token', 'gj_user_id'], function(stored) {
+      if (!stored.gj_auth_token || !stored.gj_user_id) return;
+      var jobKey = (jobData.url || jobData.title + '|' + jobData.company).replace(/[.#$\[\]/]/g, '_');
+      fetch(SUPABASE_URL + '/rest/v1/scan_observations?on_conflict=user_id,job_key', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + stored.gj_auth_token,
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+          user_id: stored.gj_user_id,
+          job_key: jobKey,
+          job_url: jobData.url,
+          job_title: jobData.title,
+          company_name: jobData.company,
+          company_location: jobData.location,
+          first_observed_at: firstObservedAt,
+          last_observed_at: new Date().toISOString(),
+          reposted: Boolean(jobData.isReposted),
+          careers_verification: result.careersVerification || 'unverified',
+          scoring_version: result.scoringVersion || 2
+        })
+      }).catch(function() { /* scanning remains available if history sync fails */ });
     });
   }
 
   // ─── Extract job data (Bug #4, #5, #6: multiple selectors from original) ──
   function extractJobData() {
-    var data = { url: location.href, title: '', company: '', location: '', description: '', salary: '', fullPageText: '', postedAgo: '', isReposted: false };
+    var data = { url: location.href, title: '', company: '', location: '', description: '', salary: '', fullPageText: '', postedAgo: '', isReposted: false, applicationUrl: '', companyLinkedInUrl: '' };
 
     // Title - try specific selectors then fallback
     var titleSelectors = [
@@ -532,6 +530,8 @@
       var el = document.querySelector(companySelectors[i]);
       if (el && el.textContent.trim()) { data.company = el.textContent.trim(); break; }
     }
+    var companyLink = document.querySelector('a[href*="/company/"]');
+    if (companyLink && companyLink.href) data.companyLinkedInUrl = companyLink.href;
 
     // Location - class-agnostic extraction (LinkedIn changes classes constantly)
     // Strategy: (1) specific selectors, (2) bullet-separated metadata pattern, (3) heuristic scan
@@ -680,6 +680,16 @@
       }
     }
 
+    // LinkedIn's Apply link may point to an employer-owned page or a supported ATS.
+    var links = document.querySelectorAll('a[href]');
+    for (var li = 0; li < links.length; li++) {
+      var href = links[li].href || '';
+      if (/greenhouse\.io|lever\.co|ashbyhq\.com/i.test(href)) {
+        data.applicationUrl = href;
+        break;
+      }
+    }
+
     var m = location.href.match(/\/view\/(\d+)/);
     if (m) data.jobId = m[1];
 
@@ -804,7 +814,8 @@
   }
 
   // ─── Local scoring (v4.2 - bugs fixed + 8 new signals + quotes) ────────────
-  function calculateLocalScore(jobData) {
+  // Retained only to read older locally saved payloads; v2 never calls it.
+  function calculateLegacyScoreUnused(jobData) {
     var score = 50, signals = [];
     var checklistOverrides = {};
     // Keep original-case versions for quote extraction
@@ -1196,8 +1207,9 @@
     };
   }
 
-  // ─── Show Ghost Score panel (Bug #9: visual distinction for local) ────────
-  function showGhostScore(result) {
+  // Legacy renderer retained for backward compatibility with old saved payloads.
+  // The v2 showGhostScore implementation below is the only active renderer.
+  function showLegacyGhostScoreUnused(result) {
     var old = document.getElementById(MODAL_ID);
     if (old) old.remove();
 
@@ -1326,6 +1338,75 @@
   }
 
   // ─── Save job ──────────────────────────────────────────────────────────────
+  // Replaces the legacy panel above. It intentionally consumes only the v2 API
+  // response so extension and website present the same score and evidence.
+  function showGhostScore(result) {
+    var old = document.getElementById(MODAL_ID);
+    if (old) old.remove();
+
+    var score = Number(result.trustScore);
+    if (!isFinite(score)) score = 50;
+    var presentation = {
+      highly_verified: { label: 'Highly Verified', risk: 'Low Ghost Risk', color: '#16a34a', ghost: '👻' },
+      positive: { label: 'Positive Signals', risk: 'Low–Moderate Ghost Risk', color: '#d97706', ghost: '👻' },
+      unverified: { label: 'Needs Verification', risk: 'Ghost Risk: Unclear', color: '#64748b', ghost: '👻?' },
+      weak: { label: 'Weakly Supported', risk: 'High Ghost Risk', color: '#dc2626', ghost: '👻' },
+      contradictory: { label: 'Contradictory Evidence', risk: 'Very High Ghost Risk', color: '#b91c1c', ghost: '👻!' }
+    }[result.trustBand] || { label: 'Needs Verification', risk: 'Ghost Risk: Unclear', color: '#64748b', ghost: '👻?' };
+
+    function groupRows(group, heading, icon) {
+      var evidence = (result.evidence || []).filter(function(item) { return item.group === group; });
+      if (!evidence.length) return '';
+      return '<section style="margin-top:16px"><div style="font-size:14px;font-weight:700;color:#1f2937;margin-bottom:8px">' + icon + ' ' + heading + '</div>' +
+        evidence.map(function(item) {
+          return '<div style="padding:10px 12px;margin:6px 0;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0">' +
+            '<div style="font-size:13px;font-weight:600;color:#334155">' + escapeHtml(item.title || item.label || 'Signal') + '</div>' +
+            '<div style="font-size:12px;color:#475569;margin-top:3px;line-height:1.4">' + escapeHtml(item.description || '') + '</div></div>';
+        }).join('') + '</section>';
+    }
+    var quality = (result.qualityBadges || []).map(function(item) {
+      return '<span style="display:inline-block;margin:4px 4px 0 0;padding:5px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:600">' + escapeHtml(item.label || item.title || item) + '</span>';
+    }).join('');
+
+    var overlay = document.createElement('div');
+    overlay.id = MODAL_ID;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.38);z-index:2147483646;display:flex;align-items:flex-start;justify-content:flex-end;padding:80px 20px 20px;box-sizing:border-box';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    var ghostOpacity = score < 20 ? '.45' : score < 40 ? '.62' : score < 60 ? '.78' : '1';
+    var panel = document.createElement('div');
+    panel.style.cssText = 'background:#fff;border-radius:16px 0 0 16px;width:520px;max-width:92vw;max-height:calc(100vh - 100px);overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.18);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+    panel.innerHTML = '<div style="padding:24px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:20px;font-weight:750;color:#0f172a">GhostJob Trust Meter</div><button id="gj-close-x" aria-label="Close Trust Meter" style="border:0;background:none;font-size:22px;cursor:pointer">×</button></div>' +
+      '<div style="display:flex;align-items:center;gap:16px;padding:16px;margin-top:18px;border-radius:12px;background:' + presentation.color + '12;border:1px solid ' + presentation.color + '33">' +
+        '<div aria-hidden="true" style="font-size:46px;opacity:' + ghostOpacity + ';filter:' + (score < 20 ? 'grayscale(1)' : 'none') + '">' + presentation.ghost + '</div>' +
+        '<div><div style="font-size:32px;line-height:1;font-weight:800;color:#0f172a">' + score + ' <span style="font-size:16px;color:#64748b">/ 100</span></div><div style="margin-top:7px;font-size:15px;font-weight:700;color:' + presentation.color + '">' + presentation.label + '</div><div style="margin-top:3px;font-size:13px;color:#475569">' + presentation.risk + '</div></div>' +
+      '</div>' +
+      (result.summary ? '<p style="font-size:13px;color:#475569;line-height:1.5">' + escapeHtml(result.summary) + '</p>' : '') +
+      groupRows('verified', 'Verified signals', '✓') +
+      groupRows('caution', 'Cautions', '⚠') +
+      groupRows('not_enough_data', 'Not enough data', '?') +
+      (quality ? '<section style="margin-top:16px"><div style="font-size:14px;font-weight:700;color:#1f2937">Job Quality</div><div style="font-size:12px;color:#64748b;margin-top:3px">Helpful details, not Trust Score factors.</div>' + quality + '</section>' : '') +
+      '<p style="margin-top:18px;font-size:11px;line-height:1.45;color:#64748b">This is an estimate based on available public evidence, not a verdict about an employer.</p>' +
+      '<div style="margin-top:20px;display:flex;gap:12px"><button id="gj-save-btn" style="flex:1;padding:11px;background:#4f46e5;color:#fff;border:0;border-radius:8px;font-weight:700;cursor:pointer">Save to Dashboard</button><button id="gj-close-btn" style="padding:11px 18px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:8px;font-weight:600;cursor:pointer">Close</button></div><div id="gj-save-status" style="margin-top:10px;font-size:13px;text-align:center"></div>' +
+      '</div>';
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+    document.getElementById('gj-close-x').addEventListener('click', function() { overlay.remove(); });
+    document.getElementById('gj-close-btn').addEventListener('click', function() { overlay.remove(); });
+    document.getElementById('gj-save-btn').addEventListener('click', function() { handleSaveJob(result); });
+  }
+
+  function showVerificationError(message) {
+    var old = document.getElementById(MODAL_ID);
+    if (old) old.remove();
+    var panel = document.createElement('div');
+    panel.id = MODAL_ID;
+    panel.style.cssText = 'position:fixed;right:20px;top:80px;z-index:2147483646;width:360px;padding:20px;border-radius:12px;background:#fff;border:1px solid #fecaca;box-shadow:0 12px 30px rgba(0,0,0,.18);font-family:-apple-system,BlinkMacSystemFont,sans-serif';
+    panel.innerHTML = '<div style="font-size:18px;font-weight:700;color:#991b1b">Trust Meter unavailable</div><p style="font-size:13px;line-height:1.45;color:#475569">GhostJob could not generate a Trust Meter right now. Please retry; no fallback score was shown.</p><button id="gj-error-close" style="padding:8px 12px;border:0;border-radius:6px;background:#334155;color:#fff;cursor:pointer">Close</button>';
+    document.body.appendChild(panel);
+    document.getElementById('gj-error-close').addEventListener('click', function() { panel.remove(); });
+  }
+
   function handleSaveJob(result) {
     var saveBtn   = document.getElementById('gj-save-btn');
     var statusDiv = document.getElementById('gj-save-status');
@@ -1335,9 +1416,14 @@
 
     var jobData = extractJobData();
     var payload = Object.assign({}, jobData, {
-      ghostScore: result.ghostScore,
-      signals:    result.signals,
-      summary:    result.summary,
+      trustScore: result.trustScore,
+      trustBand: result.trustBand,
+      ghostRisk: result.ghostRisk,
+      careersVerification: result.careersVerification,
+      evidence: result.evidence,
+      qualityBadges: result.qualityBadges,
+      scoringVersion: result.scoringVersion,
+      summary: result.summary,
       scannedAt:  new Date().toISOString()
     });
 
@@ -1420,12 +1506,12 @@
         return;
       }
 
-      var signals = (jobData.signals || []).map(function(s) {
+      var signals = (jobData.evidence || []).map(function(s) {
         return {
-          type: s.type,
-          title: s.title || s.name,
-          quote: s.quote || '',
-          weight: s.weight || 0
+          type: s.group || 'not_enough_data',
+          title: s.title || s.name || '',
+          description: s.description || '',
+          weight: s.points || 0
         };
       });
 
@@ -1436,7 +1522,10 @@
         company_name:    jobData.company || '',
         company_location: jobData.location || '',
         description:     (jobData.description || '').substring(0, 2000),
-        ghost_score:     jobData.ghostScore != null ? jobData.ghostScore : 50,
+        trust_score:     jobData.trustScore != null ? jobData.trustScore : null,
+        scoring_version: jobData.scoringVersion || 2,
+        ghost_risk:      jobData.ghostRisk || 'unclear',
+        careers_verification: jobData.careersVerification || 'unverified',
         signals:         signals,
         application_status: 'not_applied'
       };
@@ -1539,13 +1628,13 @@
 
         var jobData = extractJobData();
         fetchRemoteAnalysis(jobData)
-          .catch(function() {
-            var a = calculateLocalScore(jobData);
-            return Object.assign(a, { ghostScore: a.score, source: 'local' });
-          })
           .then(function(data) {
             showGhostScore(data);
             sendResponse({ success: true, data: data });
+          })
+          .catch(function(err) {
+            showVerificationError(err.message);
+            sendResponse({ success: false, error: 'Trust Meter unavailable. Please retry.' });
           });
       });
       return true;

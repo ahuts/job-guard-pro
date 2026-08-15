@@ -9,6 +9,10 @@ export interface Job {
   has_salary: boolean | null;
   description?: string;
   ghost_score: number;
+  trust_score?: number | null;
+  scoring_version?: number | null;
+  ghost_risk?: 'low' | 'low_moderate' | 'unclear' | 'high' | 'very_high' | null;
+  careers_verification?: 'verified_match' | 'active_board_no_match' | 'unverified' | 'closed_conflict' | null;
   rating: 'low' | 'medium' | 'high' | 'critical';
   signals: string[];
   application_status: 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'ghosted';

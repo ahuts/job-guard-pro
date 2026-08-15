@@ -91,12 +91,14 @@ export type Database = {
       scanned_jobs: {
         Row: {
           application_status: string
+          careers_verification: string | null
           company_location: string | null
           company_name: string
           created_at: string
           description: string | null
           follow_up_date: string | null
           ghost_score: number | null
+          ghost_risk: string | null
           has_salary: boolean | null
           id: string
           job_title: string
@@ -104,18 +106,22 @@ export type Database = {
           notes: string | null
           posted_date: string | null
           rating: string | null
+          scoring_version: number | null
           signals: Json | null
+          trust_score: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           application_status?: string
+          careers_verification?: string | null
           company_location?: string | null
           company_name: string
           created_at?: string
           description?: string | null
           follow_up_date?: string | null
           ghost_score?: number | null
+          ghost_risk?: string | null
           has_salary?: boolean | null
           id?: string
           job_title: string
@@ -123,18 +129,22 @@ export type Database = {
           notes?: string | null
           posted_date?: string | null
           rating?: string | null
+          scoring_version?: number | null
           signals?: Json | null
+          trust_score?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           application_status?: string
+          careers_verification?: string | null
           company_location?: string | null
           company_name?: string
           created_at?: string
           description?: string | null
           follow_up_date?: string | null
           ghost_score?: number | null
+          ghost_risk?: string | null
           has_salary?: boolean | null
           id?: string
           job_title?: string
@@ -142,7 +152,60 @@ export type Database = {
           notes?: string | null
           posted_date?: string | null
           rating?: string | null
+          scoring_version?: number | null
           signals?: Json | null
+          trust_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scan_observations: {
+        Row: {
+          careers_verification: string
+          company_location: string | null
+          company_name: string | null
+          created_at: string
+          first_observed_at: string
+          id: string
+          job_key: string
+          job_title: string | null
+          job_url: string | null
+          last_observed_at: string
+          reposted: boolean
+          scoring_version: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          careers_verification?: string
+          company_location?: string | null
+          company_name?: string | null
+          created_at?: string
+          first_observed_at: string
+          id?: string
+          job_key: string
+          job_title?: string | null
+          job_url?: string | null
+          last_observed_at: string
+          reposted?: boolean
+          scoring_version?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          careers_verification?: string
+          company_location?: string | null
+          company_name?: string | null
+          created_at?: string
+          first_observed_at?: string
+          id?: string
+          job_key?: string
+          job_title?: string | null
+          job_url?: string | null
+          last_observed_at?: string
+          reposted?: boolean
+          scoring_version?: number
           updated_at?: string
           user_id?: string
         }

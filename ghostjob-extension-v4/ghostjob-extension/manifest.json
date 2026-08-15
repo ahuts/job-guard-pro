@@ -2,14 +2,15 @@
   "manifest_version": 3,
   "name": "GhostJob - Ghost Job Detector",
   "version": "1.2.1",
-  "description": "Detect ghost jobs on LinkedIn with Trust Score",
+  "description": "Verify LinkedIn job postings with the GhostJob Trust Meter",
   "permissions": [
     "activeTab",
     "storage"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://jobghost.io/*"
+    "https://jobghost.io/*",
+    "https://auevehneizminspolipf.supabase.co/*"
   ],
   "action": {
     "default_popup": "popup.html",
