@@ -8,9 +8,10 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ jobs }: DashboardStatsProps) {
   const totalScanned = jobs.length;
-  const ghostJobs = jobs.filter((j) => j.ghost_score > 70).length;
+  const v2Jobs = jobs.filter((j) => j.scoring_version === 2 && j.trust_score != null);
+  const ghostJobs = v2Jobs.filter((j) => (j.trust_score ?? 50) < 40).length;
   const avgScore = totalScanned > 0
-    ? Math.round(jobs.reduce((sum, j) => sum + j.ghost_score, 0) / totalScanned)
+    ? Math.round(v2Jobs.reduce((sum, j) => sum + (j.trust_score ?? 50), 0) / (v2Jobs.length || 1))
     : 0;
   const redFlags = jobs.reduce(
     (sum, j) => sum + (j.signals?.length ?? 0),
@@ -28,9 +29,9 @@ export function DashboardStats({ jobs }: DashboardStatsProps) {
     },
     {
       title: "Avg Trust Score",
-      value: totalScanned > 0 ? `${100 - avgScore}%` : "—",
+      value: v2Jobs.length > 0 ? `${avgScore}/100` : "—",
       icon: TrendingUp,
-      description: "Average trust across all jobs",
+      description: "Average for Trust Meter v2 scans",
       color: "text-safe",
       bgColor: "bg-safe/10",
     },
@@ -46,7 +47,7 @@ export function DashboardStats({ jobs }: DashboardStatsProps) {
       title: "Ghost Jobs",
       value: ghostJobs,
       icon: Ghost,
-      description: "Likely ghost postings (score > 70)",
+      description: "v2 listings with high Ghost Risk",
       color: "text-destructive",
       bgColor: "bg-destructive/10",
     },

@@ -59,7 +59,7 @@ export function JobScannerDemo() {
             Try It Now
           </CardTitle>
           <CardDescription>
-            Paste a LinkedIn job URL to see the Ghost Score in action
+            Paste a LinkedIn job URL to see the GhostJob Trust Meter in action
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

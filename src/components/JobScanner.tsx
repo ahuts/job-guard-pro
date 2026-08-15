@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Search, AlertTriangle, XCircle } from 'lucide-react';
-import { analyzeJob } from '@/services/jobScraper';
+import { analyzeJob, recordScanObservation } from '@/services/jobScraper';
 import { GhostScoreDisplay } from './GhostScoreDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from './AuthDialog';
@@ -53,13 +53,18 @@ export function JobScanner() {
     try {
       const analysis = await analyzeJob(url);
       setResult(analysis);
+      void recordScanObservation(user.id, analysis).catch(() => {
+        // A history write must never hide a completed public-evidence scan.
+      });
       setScansRemaining(prev => prev - 1);
       track('scan_completed', {
         location: 'scanner',
-        band: scoreBand(analysis.ghostScore.score),
-        signal_count: analysis.ghostScore.signals.length,
+        band: scoreBand(analysis.trustScore.trustScore),
+        signal_count: analysis.trustScore.evidence.length,
+        careers_verification: analysis.trustScore.careersVerification,
+        scoring_version: analysis.trustScore.scoringVersion,
       });
-      track('result_viewed', { location: 'scanner', band: scoreBand(analysis.ghostScore.score) });
+      track('result_viewed', { location: 'scanner', band: scoreBand(analysis.trustScore.trustScore) });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze job');
     } finally {

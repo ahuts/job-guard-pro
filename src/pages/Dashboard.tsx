@@ -78,7 +78,7 @@ export default function Dashboard() {
             </div>
             <h3 className="text-lg font-medium mb-2">No jobs scanned yet</h3>
             <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
-              Start by scanning a job posting to see its Ghost Score and track your applications.
+              Start by scanning a job posting to see its Trust Meter and track your applications.
             </p>
             <Button onClick={() => navigate("/")}>
               <Search className="mr-2 h-4 w-4" />

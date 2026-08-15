@@ -13,10 +13,11 @@ interface JobCardProps {
 }
 
 function getScoreBadge(score: number) {
-  if (score <= 25) return { label: "Low Risk", className: "bg-safe/15 text-safe border-safe/30" };
-  if (score <= 50) return { label: "Medium Risk", className: "bg-warning/15 text-warning border-warning/30" };
-  if (score <= 75) return { label: "High Risk", className: "bg-orange-500/15 text-orange-500 border-orange-500/30" };
-  return { label: "Ghost Job", className: "bg-destructive/15 text-destructive border-destructive/30" };
+  if (score >= 80) return { label: "Highly Verified", className: "bg-safe/15 text-safe border-safe/30" };
+  if (score >= 60) return { label: "Positive Signals", className: "bg-warning/15 text-warning border-warning/30" };
+  if (score >= 40) return { label: "Needs Verification", className: "bg-muted text-muted-foreground border-border" };
+  if (score >= 20) return { label: "Weakly Supported", className: "bg-orange-500/15 text-orange-500 border-orange-500/30" };
+  return { label: "Contradictory Evidence", className: "bg-destructive/15 text-destructive border-destructive/30" };
 }
 
 function getSignalColor(signal: unknown) {
@@ -41,7 +42,9 @@ function getSignalDot(signal: unknown) {
 
 export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const badge = getScoreBadge(job.ghost_score);
+  const isV2 = job.scoring_version === 2 && job.trust_score != null;
+  const score = job.trust_score ?? 50;
+  const badge = getScoreBadge(score);
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-md">
@@ -69,7 +72,7 @@ export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
           </div>
 
           <Badge variant="outline" className={cn("shrink-0 font-semibold", badge.className)}>
-            {job.ghost_score} · {badge.label}
+            {isV2 ? `${score}/100 · ${badge.label}` : `Legacy score · ${job.ghost_score}/100`}
           </Badge>
 
           {expanded ? (
@@ -85,19 +88,20 @@ export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
             {/* Score bar */}
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Ghost Score</span>
-                <span className="font-semibold">{job.ghost_score}/100</span>
+                <span className="text-muted-foreground">{isV2 ? "GhostJob Trust Meter" : "Legacy Ghost Score"}</span>
+                <span className="font-semibold">{isV2 ? `${score}/100` : `${job.ghost_score}/100`}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2.5">
                 <div
                   className={cn(
                     "h-2.5 rounded-full transition-all",
-                    job.ghost_score <= 25 && "bg-safe",
-                    job.ghost_score > 25 && job.ghost_score <= 50 && "bg-warning",
-                    job.ghost_score > 50 && job.ghost_score <= 75 && "bg-orange-500",
-                    job.ghost_score > 75 && "bg-destructive"
+                    score >= 80 && "bg-safe",
+                    score >= 60 && score < 80 && "bg-warning",
+                    score >= 40 && score < 60 && "bg-muted-foreground",
+                    score >= 20 && score < 40 && "bg-orange-500",
+                    score < 20 && "bg-destructive"
                   )}
-                  style={{ width: `${job.ghost_score}%` }}
+                  style={{ width: `${isV2 ? score : job.ghost_score}%` }}
                 />
               </div>
             </div>

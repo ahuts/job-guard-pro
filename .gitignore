@@ -1,5 +1,9 @@
 # Extension builds
 *.zip
 
+# Local dependencies and macOS metadata sidecars
+node_modules/
+._*
+
 # Utility scripts
 grant-pro.js

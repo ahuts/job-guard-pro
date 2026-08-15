@@ -15,17 +15,17 @@ const faqs = [
   {
     question: "What is a good Trust Score?",
     answer:
-      "Anything above 80 is a high-confidence active hire and worth prioritising. 61 to 80 is probably real. 31 to 60 means mixed signals — verify before investing time. 30 or below means multiple strong ghost-job flags.",
+      "80–100 is Highly Verified; 60–79 has Positive Signals; 40–59 Needs Verification; 20–39 is Weakly Supported; and 0–19 has Contradictory Evidence. A 50 is neutral: evidence is unavailable or mixed, not negative.",
   },
   {
     question: "Does a low Trust Score mean the job is fake?",
     answer:
-      "No. A low score means the listing shows several patterns associated with jobs that aren't being actively filled. It is a probability estimate based on public signals, not proof about any employer's intent.",
+      "No. A low score means GhostJob found concrete contrary public evidence, such as an explicitly closed employer role. It is an estimate based on available public evidence, not proof about any employer's intent.",
   },
   {
     question: "Why did the score change for the same job?",
     answer:
-      "Scores use live signals such as posting age, applicant counts, and repost history. As a listing gets older or is reposted, those inputs change and the score moves with them.",
+      "Scores can change when an employer or ATS role becomes verifiable, closes, or changes. Reposting is a small caution; age alone is context, not a strong negative.",
   },
 ];
 
@@ -38,14 +38,14 @@ const HowTrustScoreWorks = () => {
     <div className="min-h-screen bg-background">
       <SEO
         title="How the GhostJob Trust Score Works"
-        description="The GhostJob Trust Score combines 10+ ghost-job signals into a single 0–100 number. See the signal categories, what each score range means, a worked example, and the limitations."
+        description="The GhostJob Trust Meter is one 0–100 score based on available public employer and ATS evidence. Learn what verification signals, cautions, and limits mean."
         path="/how-trust-score-works"
         type="article"
         jsonLd={[
           articleSchema({
             headline: "How the GhostJob Trust Score Works",
             description:
-              "The GhostJob Trust Score combines 10+ ghost-job signals into a single 0–100 number. See the signal categories, what each score range means, a worked example, and the limitations.",
+              "The GhostJob Trust Meter is one 0–100 score based on available public employer and ATS evidence. Learn what verification signals, cautions, and limits mean.",
             path: "/how-trust-score-works",
             datePublished: PUBLISHED,
           }),
@@ -60,21 +60,21 @@ const HowTrustScoreWorks = () => {
             <span>GhostJob Methodology</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-foreground mb-6 leading-tight">
-            How the GhostJob Trust Score works
+            How the GhostJob Trust Meter works
           </h1>
 
           <p className="text-lg text-muted-foreground leading-relaxed mb-10">
-            The <strong className="text-foreground">Trust Score</strong> is a 0–100 number GhostJob assigns to each LinkedIn job posting. It combines 10+ signals across four categories — listing freshness, repost behavior, salary and description quality, and recruiter activity — into a single confidence estimate. Higher scores mean the listing looks more like a real, actively-worked opening.
+            The <strong className="text-foreground">GhostJob Trust Meter</strong> is one 0–100 Trust Score for a LinkedIn job posting. It starts at 50, adds only concrete public verification, and deducts only for concrete contrary evidence. The accompanying Ghost Risk is a plain-language label, never a second score.
           </p>
 
           <AnswerBox
             question="Quick answer: how is the Trust Score calculated?"
-            answer="GhostJob reads public signals from the listing, groups them into four categories, and combines them into one 0–100 confidence number. Higher means the posting looks more like a real, actively-worked opening."
+            answer="GhostJob starts at 50, checks supported public employer and ATS sources, and adds or deducts only when concrete evidence is available. Higher means more of the positive verification boxes are checked."
             points={[
-              "Freshness — posting age, last edit, time since first seen.",
-              "Repost behaviour — duplicate titles and description fingerprints from the same company.",
-              "Description quality — pay transparency, specificity, boilerplate detection.",
-              "Recruiter and company signals — posting frequency, applicant-count behaviour, urgency language.",
+              "Exact employer or ATS role match (+25) and active application destination (+10).",
+              "Matching company identity, current source evidence, and concrete role scope (+5 each).",
+              "An explicit employer or ATS closed-role conflict (−35).",
+              "A LinkedIn repost label is a −5 caution, not proof; missing evidence remains neutral.",
             ]}
           />
 
@@ -82,10 +82,10 @@ const HowTrustScoreWorks = () => {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">What signals does the Trust Score use?</h2>
               <ul className="space-y-3 text-muted-foreground list-disc list-inside">
-                <li><strong className="text-foreground">Freshness</strong> — posting age, last-edited timestamp, time since first seen.</li>
-                <li><strong className="text-foreground">Repost behavior</strong> — duplicate detection across recent listings from the same company, including title and description fingerprints.</li>
-                <li><strong className="text-foreground">Description quality</strong> — specificity of responsibilities, presence of team or stack details, salary transparency, generic boilerplate detection.</li>
-                <li><strong className="text-foreground">Recruiter & company signals</strong> — recruiter posting frequency, applicant-count behavior, urgency language, and company hiring patterns.</li>
+                <li><strong className="text-foreground">Employer/ATS verification</strong> — a normalized exact title and compatible location or remote status on Greenhouse, Lever, Ashby, or a public employer JobPosting page.</li>
+                <li><strong className="text-foreground">Active destination</strong> — a direct live application page for that role.</li>
+                <li><strong className="text-foreground">Source and role detail</strong> — identity match, current source evidence, and concrete responsibilities, qualifications, and scope.</li>
+                <li><strong className="text-foreground">Concrete contrary evidence</strong> — an employer/ATS role explicitly shown closed while LinkedIn remains active; a repost is only a small caution.</li>
               </ul>
             </section>
 
@@ -102,24 +102,29 @@ const HowTrustScoreWorks = () => {
                   </thead>
                   <tbody className="text-muted-foreground">
                     <tr className="border-t border-border">
-                      <td className="p-3 font-medium text-foreground">0–30</td>
-                      <td className="p-3">Likely ghost job</td>
-                      <td className="p-3">Skip or deprioritize. Multiple strong red flags.</td>
+                      <td className="p-3 font-medium text-foreground">0–19</td>
+                      <td className="p-3">Contradictory Evidence · Very High Ghost Risk</td>
+                      <td className="p-3">Check the official source before spending more time.</td>
                     </tr>
                     <tr className="border-t border-border">
-                      <td className="p-3 font-medium text-foreground">31–60</td>
-                      <td className="p-3">Caution</td>
-                      <td className="p-3">Apply only if the role is a strong fit. Verify on the company careers page first.</td>
+                      <td className="p-3 font-medium text-foreground">20–39</td>
+                      <td className="p-3">Weakly Supported · High Ghost Risk</td>
+                      <td className="p-3">Verify the exact role on the employer's application source.</td>
                     </tr>
                     <tr className="border-t border-border">
-                      <td className="p-3 font-medium text-foreground">61–80</td>
-                      <td className="p-3">Probably real</td>
-                      <td className="p-3">Apply with normal effort. Watch for follow-up.</td>
+                      <td className="p-3 font-medium text-foreground">40–59</td>
+                      <td className="p-3">Needs Verification · Ghost Risk Unclear</td>
+                      <td className="p-3">Unknown evidence is neutral; check the employer source.</td>
                     </tr>
                     <tr className="border-t border-border">
-                      <td className="p-3 font-medium text-foreground">81–100</td>
-                      <td className="p-3">High-confidence active hire</td>
-                      <td className="p-3">Prioritize. Tailor your application.</td>
+                      <td className="p-3 font-medium text-foreground">60–79</td>
+                      <td className="p-3">Positive Signals · Low–Moderate Ghost Risk</td>
+                      <td className="p-3">Apply with normal care; some details may still need verification.</td>
+                    </tr>
+                    <tr className="border-t border-border">
+                      <td className="p-3 font-medium text-foreground">80–100</td>
+                      <td className="p-3">Highly Verified · Low Ghost Risk</td>
+                      <td className="p-3">Prioritize if it fits, while using your own judgment.</td>
                     </tr>
                   </tbody>
                 </table>

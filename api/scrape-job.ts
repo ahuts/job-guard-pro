@@ -15,6 +15,9 @@ interface JobData {
   employmentType: string | null;
   experienceLevel: string | null;
   url: string;
+  applicationUrl: string | null;
+  companyLinkedInUrl: string | null;
+  reposted: boolean;
 }
 
 export default async function handler(
@@ -203,6 +206,17 @@ export default async function handler(
                         html.match(/"companyName":"([^"]+)"/i) ||
                         html.match(/\u003cspan[^\u003e]*class="[^"]*company[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i);
     const company = companyMatch ? companyMatch[1].trim() : 'Unknown Company';
+    const companyHrefMatch = html.match(/href="([^\"]*\/company\/[^\"]+)"/i);
+    const companyLinkedInUrl = companyHrefMatch
+      ? new URL(companyHrefMatch[1].replace(/&amp;/g, '&'), 'https://www.linkedin.com').toString()
+      : null;
+
+    // Prefer the public external application destination. This is the source the
+    // Trust Meter uses for exact employer/ATS verification, not a guessed domain.
+    const applicationMatch = html.match(/"(?:companyApplyUrl|applyUrl|jobApplyUrl)":"([^\"]+)"/i) ||
+      html.match(/href="(https?:\/\/[^\"]*(?:greenhouse\.io|lever\.co|ashbyhq\.com)[^\"]*)"/i);
+    const applicationUrl = applicationMatch ? applicationMatch[1].replace(/\\u0026/g, '&').replace(/&amp;/g, '&') : null;
+    const reposted = /\breposted\b/i.test(html);
     
     // Location - try multiple patterns
     let location = 'Unknown Location';
@@ -369,6 +383,9 @@ export default async function handler(
       employmentType,
       experienceLevel,
       url,
+      applicationUrl,
+      companyLinkedInUrl,
+      reposted,
     };
 
     return res.status(200).json({

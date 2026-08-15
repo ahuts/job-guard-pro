@@ -1,233 +1,285 @@
-// Vercel Serverless Function: Enhanced Trust Score scan
-// Endpoint: POST /api/scan
-// Takes job data from extension, returns enhanced signals + company-level data
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import {
+  calculateTrustScore,
+  getQualityBadges,
+  hasConcreteRoleDetails,
+  type CareersVerification,
+  type TrustScoreResult,
+} from "../src/lib/trustScore";
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// Structural request/response types keep this handler independently testable;
+// Vercel supplies compatible objects at runtime.
+interface VercelRequest {
+  method?: string;
+  body: unknown;
+}
+interface VercelResponse<T> {
+  setHeader(name: string, value: string): void;
+  status(code: number): VercelResponse<T>;
+  json(value: T): VercelResponse<T>;
+  end(): VercelResponse<T>;
+}
 
 interface ScanRequest {
-  url: string;
+  url?: string;
   title: string;
   company: string;
-  location: string;
-  description: string;
-  postedAt?: string;
-  salary?: string;
-  localScore?: number;
-  localSignals?: Signal[];
+  location?: string;
+  description?: string;
+  salary?: string | null;
+  applicationUrl?: string | null;
+  companyLinkedInUrl?: string | null;
+  reposted?: boolean;
+  firstObservedAt?: string | null;
 }
 
-interface Signal {
-  type: 'red' | 'yellow' | 'green';
-  name: string;
-  quote?: string;
-  weight: number;
-  source: 'local' | 'api';
+interface CareerCheck {
+  verification: CareersVerification;
+  exactRoleMatch: boolean;
+  applicationActive: boolean;
+  companyIdentityVerified: boolean;
+  currentSourceEvidence: boolean;
+  sourceUrl?: string;
 }
 
-interface ScanResponse {
-  trustScore: number;
-  signals: Signal[];
-  companyData?: {
-    hasCareersPage: boolean | null;
-    recentLayoffs: boolean | null;
-    companySize?: string;
-    companyAge?: string;
-  };
-  source: 'api' | 'local_fallback';
+const cache = new Map<string, { expiresAt: number; value: CareerCheck }>();
+const CACHE_MS = 15 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 4_000;
+const MAX_RESPONSE_BYTES = 1_000_000;
+
+function normalise(value: string | null | undefined): string {
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Cache-Control', 's-maxage=300'); // Cache for 5 min
+function locationsCompatible(left?: string | null, right?: string | null): boolean {
+  const a = normalise(left);
+  const b = normalise(right);
+  if (!a || !b) return true;
+  if (a.includes("remote") && b.includes("remote")) return true;
+  return a === b || a.includes(b) || b.includes(a);
+}
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+function titlesMatch(left?: string | null, right?: string | null): boolean {
+  const a = normalise(left);
+  const b = normalise(right);
+  return Boolean(a && b && a === b);
+}
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { url, title, company, location, description, postedAt, salary, localScore, localSignals } = req.body as ScanRequest;
-
-  if (!url && !description) {
-    return res.status(400).json({ error: 'URL or description required' });
-  }
-
-  try {
-    const apiSignals: Signal[] = [];
-    let companyData: ScanResponse['companyData'] = null;
-
-    // === Company-level signals ===
-    // These require server-side data we can't get from the extension
-
-    // 1. Check for company careers page (async, with short timeout)
-    // Try multiple TLDs since companies use .com, .io, .org, .co, etc.
-    if (company && company !== 'Unknown Company') {
-      try {
-        const companySlug = company.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const tlds = ['.com', '.io', '.co', '.org', '.net', '.ai'];
-        let foundUrl: string | null = null;
-
-        // Race all TLDs in parallel with 3s total budget
-        const checks = tlds.map(async (tld) => {
-          const url = `https://www.${companySlug}${tld}/careers`;
-          try {
-            const res = await fetch(url, {
-              method: 'HEAD',
-              headers: { 'User-Agent': 'Mozilla/5.0' },
-              signal: AbortSignal.timeout(2500),
-            });
-            if (res.ok) return url;
-          } catch { /* skip */ }
-          return null;
-        });
-
-        const results = await Promise.allSettled(checks);
-        for (const r of results) {
-          if (r.status === 'fulfilled' && r.value) {
-            foundUrl = r.value;
-            break;
-          }
-        }
-
-        // Also try without 'www' for the first hit TLD
-        if (!foundUrl) {
-          const bareChecks = tlds.map(async (tld) => {
-            const url = `https://${companySlug}${tld}/careers`;
-            try {
-              const res = await fetch(url, {
-                method: 'HEAD',
-                headers: { 'User-Agent': 'Mozilla/5.0' },
-                signal: AbortSignal.timeout(2500),
-              });
-              if (res.ok) return url;
-            } catch { /* skip */ }
-            return null;
-          });
-          const bareResults = await Promise.allSettled(bareChecks);
-          for (const r of bareResults) {
-            if (r.status === 'fulfilled' && r.value) {
-              foundUrl = r.value;
-              break;
-            }
-          }
-        }
-
-        const hasCareersPage = foundUrl !== null;
-        if (!companyData) companyData = { hasCareersPage: null, recentLayoffs: null };
-        companyData.hasCareersPage = hasCareersPage;
-        if (hasCareersPage && foundUrl) {
-          const displayDomain = foundUrl.replace('https://', '').replace('www.', '').replace(/\/$/, '');
-          apiSignals.push({
-            type: 'green',
-            name: 'Active careers page',
-            description: 'Company has an active careers page on their website.',
-            quote: `Found careers page at ${displayDomain}`,
-            impact: 'Companies actively investing in hiring maintain visible career pages — a strong sign of real open positions.',
-            advice: 'Browse their careers page to see how many roles they have. A handful of generic postings may still be a red flag.',
-            weight: 4,
-            source: 'api',
-          });
-        }
-      } catch {
-        // Can't verify — skip, don't penalize
-        if (!companyData) companyData = { hasCareersPage: null, recentLayoffs: null };
-        companyData.hasCareersPage = null; // unknown
+function isPrivateAddress(address: string): boolean {
+  if (address === "::1" || address === "0.0.0.0") return true;
+  if (address.includes(":")) {
+    const lower = address.toLowerCase();
+    if (lower.startsWith("::ffff:") && lower.slice(7).includes(".")) return isPrivateAddress(lower.slice(7));
+    if (lower.startsWith("::ffff")) {
+      const groups = lower.split(":").filter(Boolean);
+      const high = Number.parseInt(groups.at(-2) ?? "", 16);
+      const low = Number.parseInt(groups.at(-1) ?? "", 16);
+      if (Number.isFinite(high) && Number.isFinite(low)) {
+        return isPrivateAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
       }
     }
+    return lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80") || lower.startsWith("::") || lower === "::";
+  }
+  const [first, second] = address.split(".").map(Number);
+  return first === 10 || first === 127 || first === 0 || first === 169 && second === 254 || first === 172 && second >= 16 && second <= 31 || first === 192 && second === 168;
+}
 
-    // 2. Check for recent layoffs (using public data)
-    if (company && company !== 'Unknown Company') {
-      // Future: integrate with layoffs.fyi API or similar
-      // For now, we'll check a simple heuristic
-      const descriptionLower = (description || '').toLowerCase();
-      const layoffKeywords = ['restructuring', 'downsizing', 'reducing workforce', 'eliminated positions'];
-      const hasLayoffHint = layoffKeywords.some(kw => descriptionLower.includes(kw));
-      
-      if (!companyData) companyData = { hasCareersPage: null, recentLayoffs: null };
-      companyData.recentLayoffs = hasLayoffHint ? true : null; // null = unknown
-      
-      if (hasLayoffHint) {
-        apiSignals.push({
-          type: 'red',
-          name: 'Layoff language detected',
-          description: 'Restructuring or downsizing language found in company description.',
-          quote: 'Restructuring or downsizing language found in company description',
-          impact: 'Companies undergoing layoffs may post jobs to maintain appearance or build pipelines without intent to hire.',
-          advice: 'Search for recent news about the company. If layoffs are confirmed, the posting may be a ghost job.',
-          weight: 8,
-          source: 'api',
-        });
-      }
-    }
+async function assertPublicHttps(rawUrl: string): Promise<URL> {
+  const url = new URL(rawUrl);
+  if (url.protocol !== "https:" || url.username || url.password || url.port) throw new Error("Only public HTTPS application sources are supported");
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  if (isIP(hostname) && isPrivateAddress(hostname)) throw new Error("Private network sources are not allowed");
+  if (!isIP(hostname)) {
+    const addresses = await lookup(hostname, { all: true });
+    if (!addresses.length || addresses.some((entry) => isPrivateAddress(entry.address))) throw new Error("Private network sources are not allowed");
+  }
+  return url;
+}
 
-    // 3. Repost frequency check (future: track in database)
-    // For now, if the URL contains repost indicators, add signal
-    if (url && url.toLowerCase().includes('reposted')) {
-      apiSignals.push({
-        type: 'red',
-        name: 'Reposted job listing',
-        description: 'Job URL indicates this is a reposted listing.',
-        quote: 'Job URL contains repost indicator',
-        impact: 'Reposted jobs often indicate ghost listings — companies recycle postings to appear active without actually hiring.',
-        advice: 'Check if the original posting is still active. Ask the recruiter why the role was reopened.',
-        weight: 10,
-        source: 'api',
-      });
-    }
-
-    // === Merge local + API signals ===
-    const allSignals: Signal[] = [
-      ...(localSignals || []),
-      ...apiSignals,
-    ];
-
-    // === Calculate Trust Score ===
-    // Start from local score, adjust with API signals
-    let trustScore = localScore ?? 50; // Default to middle if no local score
-
-    // Add API signal weights (positive = trust, negative = distrust)
-    for (const signal of apiSignals) {
-      if (signal.type === 'red') {
-        trustScore -= signal.weight;
-      } else if (signal.type === 'green') {
-        trustScore += signal.weight;
-      }
-    }
-
-    // Clamp to 0-100
-    trustScore = Math.max(0, Math.min(100, trustScore));
-
-    const response: ScanResponse = {
-      trustScore,
-      signals: allSignals,
-      companyData,
-      source: 'api',
-    };
-
-    return res.status(200).json(response);
-
-  } catch (error) {
-    console.error('Scan API error:', error);
-
-    // Fallback: return local score if we have it
-    if (localScore !== undefined) {
-      return res.status(200).json({
-        trustScore: localScore,
-        signals: localSignals || [],
-        source: 'local_fallback',
-      } as ScanResponse);
-    }
-
-    return res.status(500).json({
-      error: 'Scan failed and no local data provided',
+async function fetchPublic(rawUrl: string): Promise<{ response: Response; body: string; url: string }> {
+  let url = await assertPublicHttps(rawUrl);
+  for (let redirects = 0; redirects <= 3; redirects += 1) {
+    const response = await fetch(url, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: { "User-Agent": "GhostJob/2.0 public-job-verifier", Accept: "application/json,text/html;q=0.9,*/*;q=0.1" },
     });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get("location");
+      if (!location) break;
+      url = await assertPublicHttps(new URL(location, url).toString());
+      continue;
+    }
+    const body = (await response.text()).slice(0, MAX_RESPONSE_BYTES);
+    return { response, body, url: url.toString() };
+  }
+  throw new Error("Too many redirects while checking the public application source");
+}
+
+function sourceLooksLikeCompany(company: string, sourceUrl: string): boolean {
+  const companyWords = normalise(company).split(" ").filter((word) => word.length >= 3);
+  const source = normalise(sourceUrl);
+  return companyWords.some((word) => source.includes(word));
+}
+
+function companyIdentityMatches(request: ScanRequest, sourceUrl: string): boolean {
+  if (!request.companyLinkedInUrl) return false;
+  try {
+    const linkedIn = new URL(request.companyLinkedInUrl);
+    if (!/(^|\.)linkedin\.com$/.test(linkedIn.hostname)) return false;
+    const linkedInSlug = normalise(linkedIn.pathname.split("/").filter(Boolean).pop());
+    return Boolean(linkedInSlug) && (sourceLooksLikeCompany(linkedInSlug, sourceUrl) || sourceLooksLikeCompany(request.company, sourceUrl));
+  } catch {
+    return false;
   }
 }
+
+function freshDate(value?: string | null): boolean {
+  if (!value) return false;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && Date.now() - timestamp <= 30 * 24 * 60 * 60 * 1000;
+}
+
+async function checkGreenhouse(url: URL, request: ScanRequest): Promise<CareerCheck | null> {
+  if (!/(^|\.)greenhouse\.io$/.test(url.hostname)) return null;
+  const token = url.pathname.split("/").filter(Boolean)[0];
+  if (!token) return null;
+  const { response, body } = await fetchPublic(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(token)}/jobs?content=true`);
+  if (!response.ok) return null;
+  const data = JSON.parse(body) as { jobs?: Array<{ title?: string; location?: { name?: string }; absolute_url?: string; updated_at?: string }> };
+  const match = (data.jobs ?? []).find((job) => titlesMatch(job.title, request.title) && locationsCompatible(job.location?.name, request.location));
+  return {
+    verification: match ? "verified_match" : "active_board_no_match",
+    exactRoleMatch: Boolean(match),
+    applicationActive: Boolean(match),
+    companyIdentityVerified: companyIdentityMatches(request, match?.absolute_url ?? url.toString()) || companyIdentityMatches(request, token),
+    currentSourceEvidence: freshDate(match?.updated_at),
+    sourceUrl: match?.absolute_url ?? url.toString(),
+  };
+}
+
+async function checkLever(url: URL, request: ScanRequest): Promise<CareerCheck | null> {
+  if (!/(^|\.)lever\.co$/.test(url.hostname)) return null;
+  const site = url.pathname.split("/").filter(Boolean)[0];
+  if (!site) return null;
+  const { response, body } = await fetchPublic(`https://api.lever.co/v0/postings/${encodeURIComponent(site)}?mode=json`);
+  if (!response.ok) return null;
+  const jobs = JSON.parse(body) as Array<{ text?: string; categories?: { location?: string }; hostedUrl?: string; createdAt?: number }>;
+  const match = jobs.find((job) => titlesMatch(job.text, request.title) && locationsCompatible(job.categories?.location, request.location));
+  return {
+    verification: match ? "verified_match" : "active_board_no_match",
+    exactRoleMatch: Boolean(match),
+    applicationActive: Boolean(match),
+    companyIdentityVerified: companyIdentityMatches(request, match?.hostedUrl ?? url.toString()) || companyIdentityMatches(request, site),
+    currentSourceEvidence: Boolean(match?.createdAt && Date.now() - match.createdAt <= 30 * 24 * 60 * 60 * 1000),
+    sourceUrl: match?.hostedUrl ?? url.toString(),
+  };
+}
+
+async function checkAshby(url: URL, request: ScanRequest): Promise<CareerCheck | null> {
+  if (!/(^|\.)ashbyhq\.com$/.test(url.hostname)) return null;
+  const board = url.pathname.split("/").filter(Boolean)[0];
+  if (!board) return null;
+  const { response, body } = await fetchPublic(`https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(board)}`);
+  if (!response.ok) return null;
+  const data = JSON.parse(body) as { jobs?: Array<{ title?: string; location?: string; jobUrl?: string; publishedAt?: string }> };
+  const match = (data.jobs ?? []).find((job) => titlesMatch(job.title, request.title) && locationsCompatible(job.location, request.location));
+  return {
+    verification: match ? "verified_match" : "active_board_no_match",
+    exactRoleMatch: Boolean(match),
+    applicationActive: Boolean(match),
+    companyIdentityVerified: companyIdentityMatches(request, match?.jobUrl ?? url.toString()) || companyIdentityMatches(request, board),
+    currentSourceEvidence: freshDate(match?.publishedAt),
+    sourceUrl: match?.jobUrl ?? url.toString(),
+  };
+}
+
+function extractJobPosting(body: string): Array<Record<string, unknown>> {
+  const scripts = [...body.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  return scripts.flatMap((match) => {
+    try {
+      const parsed = JSON.parse(match[1]);
+      const values = Array.isArray(parsed) ? parsed : parsed?.["@graph"] ?? [parsed];
+      return values.filter((item: Record<string, unknown>) => item?.["@type"] === "JobPosting");
+    } catch {
+      return [];
+    }
+  });
+}
+
+async function checkEmployerPage(url: URL, request: ScanRequest): Promise<CareerCheck> {
+  const { response, body, url: finalUrl } = await fetchPublic(url.toString());
+  const explicitlyClosed = response.status === 410 || /job (is )?(no longer available|closed|has been filled)|position has been filled/i.test(body);
+  if (explicitlyClosed) return { verification: "closed_conflict", exactRoleMatch: false, applicationActive: false, companyIdentityVerified: false, currentSourceEvidence: false, sourceUrl: finalUrl };
+  const postings = extractJobPosting(body);
+  const match = postings.find((posting) => {
+    const title = typeof posting.title === "string" ? posting.title : "";
+    const location = typeof posting.jobLocation === "string" ? posting.jobLocation : JSON.stringify(posting.jobLocation ?? "");
+    return titlesMatch(title, request.title) && locationsCompatible(location, request.location);
+  });
+  return {
+    verification: match ? "verified_match" : "unverified",
+    exactRoleMatch: Boolean(match),
+    applicationActive: Boolean(match && response.ok),
+    companyIdentityVerified: companyIdentityMatches(request, finalUrl),
+    currentSourceEvidence: Boolean(match && response.ok),
+    sourceUrl: finalUrl,
+  };
+}
+
+async function verifyCareers(request: ScanRequest): Promise<CareerCheck> {
+  if (!request.applicationUrl) return { verification: "unverified", exactRoleMatch: false, applicationActive: false, companyIdentityVerified: false, currentSourceEvidence: false };
+  const cached = cache.get(request.applicationUrl);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  try {
+    const sourceUrl = await assertPublicHttps(request.applicationUrl);
+    const check = await checkGreenhouse(sourceUrl, request) ?? await checkLever(sourceUrl, request) ?? await checkAshby(sourceUrl, request) ?? await checkEmployerPage(sourceUrl, request);
+    cache.set(request.applicationUrl, { expiresAt: Date.now() + CACHE_MS, value: check });
+    return check;
+  } catch {
+    return { verification: "unverified", exactRoleMatch: false, applicationActive: false, companyIdentityVerified: false, currentSourceEvidence: false };
+  }
+}
+
+function isRepeatedWithoutVerification(firstObservedAt: string | null | undefined, verification: CareersVerification): boolean {
+  if (!firstObservedAt || verification === "verified_match") return false;
+  const first = Date.parse(firstObservedAt);
+  return Number.isFinite(first) && Date.now() - first >= 45 * 24 * 60 * 60 * 1000;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse<TrustScoreResult | { error: string }>) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const request = req.body as ScanRequest;
+  if (!request?.title?.trim() || !request?.company?.trim()) return res.status(400).json({ error: "Job title and company are required" });
+
+  const career = await verifyCareers(request);
+  const result = calculateTrustScore({
+    careersVerification: career.verification,
+    exactRoleMatch: career.exactRoleMatch,
+    applicationActive: career.applicationActive,
+    companyIdentityVerified: career.companyIdentityVerified,
+    currentSourceEvidence: career.currentSourceEvidence,
+    concreteRoleDetails: hasConcreteRoleDetails(request.description ?? ""),
+    reposted: Boolean(request.reposted),
+    repeatedWithoutVerification: isRepeatedWithoutVerification(request.firstObservedAt, career.verification),
+    sourceUrl: career.sourceUrl,
+    qualityBadges: getQualityBadges(request.description ?? "", request.salary),
+  });
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).json(result);
+}
+
+// Pure helpers exposed only for fixture coverage; production callers use the
+// handler above. Network provider calls remain private to this module.
+export const __testables = { titlesMatch, locationsCompatible, isPrivateAddress, assertPublicHttps };

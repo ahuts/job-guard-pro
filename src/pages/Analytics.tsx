@@ -37,17 +37,19 @@ function filterByRange(jobs: Job[], range: TimeRange): Job[] {
 }
 
 function getTrustLabel(score: number) {
-  if (score <= 30) return "Likely Ghost Job";
-  if (score <= 60) return "Proceed with Caution";
-  if (score <= 80) return "Looks Legitimate";
-  return "Excellent Posting";
+  if (score >= 80) return "Highly Verified";
+  if (score >= 60) return "Positive Signals";
+  if (score >= 40) return "Needs Verification";
+  if (score >= 20) return "Weakly Supported";
+  return "Contradictory Evidence";
 }
 
 function getTrustColor(score: number) {
-  if (score <= 30) return "hsl(0, 84%, 60%)";
-  if (score <= 60) return "hsl(38, 92%, 50%)";
-  if (score <= 80) return "hsl(160, 84%, 39%)";
-  return "hsl(142, 76%, 36%)";
+  if (score >= 80) return "hsl(142, 76%, 36%)";
+  if (score >= 60) return "hsl(38, 92%, 50%)";
+  if (score >= 40) return "hsl(215, 16%, 47%)";
+  if (score >= 20) return "hsl(25, 95%, 53%)";
+  return "hsl(0, 84%, 60%)";
 }
 
 export default function Analytics() {
@@ -55,46 +57,50 @@ export default function Analytics() {
   const [range, setRange] = useState<TimeRange>(TIME_RANGES[1]); // 30d default
 
   const jobs = useMemo(() => filterByRange(allJobs, range), [allJobs, range]);
+  const trustJobs = useMemo(() => jobs.filter((job) => job.scoring_version === 2 && job.trust_score != null), [jobs]);
 
   // === Stat cards ===
-  const totalScans = jobs.length;
-  const avgScore = totalScans > 0 ? Math.round(jobs.reduce((s, j) => s + j.ghost_score, 0) / totalScans) : 0;
-  const likelyGhostCount = jobs.filter((j) => j.ghost_score <= 30).length;
+  const totalScans = trustJobs.length;
+  const avgScore = totalScans > 0 ? Math.round(trustJobs.reduce((s, j) => s + (j.trust_score ?? 50), 0) / totalScans) : 0;
+  const likelyGhostCount = trustJobs.filter((j) => (j.trust_score ?? 50) < 40).length;
   const likelyGhostPct = totalScans > 0 ? Math.round((likelyGhostCount / totalScans) * 100) : 0;
 
   // === Score distribution ===
   const distribution = useMemo(() => {
     const buckets = [
-      { name: "0-30", range: "Likely Ghost Job", count: 0, fill: "hsl(0, 84%, 60%)" },
-      { name: "31-60", range: "Proceed with Caution", count: 0, fill: "hsl(38, 92%, 50%)" },
-      { name: "61-80", range: "Looks Legitimate", count: 0, fill: "hsl(160, 84%, 39%)" },
-      { name: "81-100", range: "Excellent Posting", count: 0, fill: "hsl(142, 76%, 36%)" },
+      { name: "0-19", range: "Contradictory", count: 0, fill: "hsl(0, 84%, 60%)" },
+      { name: "20-39", range: "Weakly Supported", count: 0, fill: "hsl(25, 95%, 53%)" },
+      { name: "40-59", range: "Needs Verification", count: 0, fill: "hsl(215, 16%, 47%)" },
+      { name: "60-79", range: "Positive Signals", count: 0, fill: "hsl(38, 92%, 50%)" },
+      { name: "80-100", range: "Highly Verified", count: 0, fill: "hsl(142, 76%, 36%)" },
     ];
-    jobs.forEach((j) => {
-      if (j.ghost_score <= 30) buckets[0].count++;
-      else if (j.ghost_score <= 60) buckets[1].count++;
-      else if (j.ghost_score <= 80) buckets[2].count++;
-      else buckets[3].count++;
+    trustJobs.forEach((j) => {
+      const score = j.trust_score ?? 50;
+      if (score < 20) buckets[0].count++;
+      else if (score < 40) buckets[1].count++;
+      else if (score < 60) buckets[2].count++;
+      else if (score < 80) buckets[3].count++;
+      else buckets[4].count++;
     });
     return buckets;
-  }, [jobs]);
+  }, [trustJobs]);
 
   // === Scans over time ===
   const scansOverTime = useMemo(() => {
     const map = new Map<string, number>();
-    jobs.forEach((j) => {
+    trustJobs.forEach((j) => {
       const day = new Date(j.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
       map.set(day, (map.get(day) || 0) + 1);
     });
     return Array.from(map.entries())
       .map(([date, count]) => ({ date, count }))
       .reverse();
-  }, [jobs]);
+  }, [trustJobs]);
 
   // === Top signals ===
   const topSignals = useMemo(() => {
     const map = new Map<string, number>();
-    jobs.forEach((j) => {
+    trustJobs.forEach((j) => {
       (j.signals || []).forEach((s: any) => {
         const label = typeof s === "string" ? s : s?.title || s?.type || "";
         if (label) map.set(label, (map.get(label) || 0) + 1);
@@ -104,12 +110,12 @@ export default function Analytics() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([signal, count]) => ({ signal, count }));
-  }, [jobs]);
+  }, [trustJobs]);
 
   // === Low-trust jobs ===
   const lowTrustJobs = useMemo(
-    () => jobs.filter((j) => j.ghost_score <= 30).sort((a, b) => a.ghost_score - b.ghost_score).slice(0, 10),
-    [jobs]
+    () => trustJobs.filter((j) => (j.trust_score ?? 50) < 40).sort((a, b) => (a.trust_score ?? 50) - (b.trust_score ?? 50)).slice(0, 10),
+    [trustJobs]
   );
 
   if (isLoading) {
@@ -153,8 +159,8 @@ export default function Analytics() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={BarChart3} label="Total Scans" value={totalScans} />
           <StatCard icon={TrendingUp} label="Avg Trust Score" value={avgScore} suffix="/100" />
-          <StatCard icon={AlertTriangle} label="Likely Ghost Jobs" value={likelyGhostCount} className="text-destructive" />
-          <StatCard icon={Activity} label="Likely Ghost Rate" value={`${likelyGhostPct}%`} />
+          <StatCard icon={AlertTriangle} label="High Ghost Risk" value={likelyGhostCount} className="text-destructive" />
+          <StatCard icon={Activity} label="High Ghost Risk Rate" value={`${likelyGhostPct}%`} />
         </div>
 
         {/* Charts Row */}
@@ -270,9 +276,9 @@ export default function Analytics() {
                       <Badge
                         variant="outline"
                         className="text-xs"
-                        style={{ borderColor: getTrustColor(job.ghost_score), color: getTrustColor(job.ghost_score) }}
+                        style={{ borderColor: getTrustColor(job.trust_score ?? 50), color: getTrustColor(job.trust_score ?? 50) }}
                       >
-                        {job.ghost_score}/100 · {getTrustLabel(job.ghost_score)}
+                        {job.trust_score}/100 · {getTrustLabel(job.trust_score ?? 50)}
                       </Badge>
                       {job.job_url && (
                         <a

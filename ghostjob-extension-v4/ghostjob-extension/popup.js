@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (contentScriptReady) {
         scanBtn.disabled = false;
-        pageStatus.innerHTML = '<strong>LinkedIn job detected! </strong>Click "Check for Ghost Job" on the page for full details, or scan here.';
+        pageStatus.innerHTML = '<strong>LinkedIn job detected! </strong>Click "Check Trust Meter" on the page for full details, or scan here.';
       } else {
         scanBtn.disabled = true;
         pageStatus.innerHTML = '<strong>Content script not loaded.</strong> Refresh the LinkedIn page and try again.';
@@ -298,16 +298,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const scoreLabel = document.getElementById('score-label');
     const scoreValue = document.getElementById('score-value');
 
-    const score = data.trustScore || data.ghostScore || data.score || 50;
-    const isLow = score < 31, isMid = score < 61;
-    const color = isLow ? '#ef4444' : isMid ? '#f59e0b' : '#22c55e';
-    const label = isLow ? '⚠️ Likely Ghost Job' : isMid ? '⚡ Proceed with Caution' : '✅ Looks Legitimate';
+    const score = Number.isFinite(data.trustScore) ? data.trustScore : 50;
+    const presentation = {
+      highly_verified: { label: 'Highly Verified', risk: 'Low Ghost Risk', color: '#16a34a' },
+      positive: { label: 'Positive Signals', risk: 'Low–Moderate Ghost Risk', color: '#d97706' },
+      unverified: { label: 'Needs Verification', risk: 'Ghost Risk: Unclear', color: '#64748b' },
+      weak: { label: 'Weakly Supported', risk: 'High Ghost Risk', color: '#dc2626' },
+      contradictory: { label: 'Contradictory Evidence', risk: 'Very High Ghost Risk', color: '#b91c1c' }
+    }[data.trustBand] || { label: 'Needs Verification', risk: 'Ghost Risk: Unclear', color: '#64748b' };
 
-    scoreCircle.style.background = color;
-    scoreCircle.textContent = score;
-    scoreLabel.textContent = label;
+    scoreCircle.style.background = presentation.color;
+    scoreCircle.textContent = `${score}/100`;
+    scoreLabel.textContent = `${presentation.label} · ${presentation.risk}`;
 
-    let detailText = `Based on ${data.signals?.length || 'multiple'} signals`;
+    let detailText = `GhostJob Trust Meter · ${data.evidence?.length || 0} evidence items`;
     if (data.summary) {
       detailText += ` • ${data.summary}`;
     }

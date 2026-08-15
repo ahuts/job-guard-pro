@@ -1,5 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
-import { JobSignals, calculateGhostScore } from '@/lib/ghostScorer';
+import type { TrustScoreResult } from "@/lib/trustScore";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface ScrapedJob {
   title: string;
@@ -11,105 +11,84 @@ export interface ScrapedJob {
   applicants: string | null;
   employmentType: string | null;
   experienceLevel: string | null;
+  url: string;
+  applicationUrl: string | null;
+  companyLinkedInUrl: string | null;
+  reposted: boolean;
 }
 
 export interface AnalysisResult {
   job: ScrapedJob;
-  signals: JobSignals;
-  ghostScore: {
-    score: number;
-    rating: 'low' | 'medium' | 'high' | 'critical';
-    signals: { name: string; weight: number; triggered: boolean; description: string }[];
-    summary: string;
-  };
+  trustScore: TrustScoreResult;
+  firstObservedAt: string;
 }
 
-// Scrape job from LinkedIn URL via Next.js API
+const OBSERVATION_KEY = "ghostjob_scan_observations_v2";
+
+function getFirstObservedAt(url: string): string {
+  if (typeof window === "undefined") return new Date().toISOString();
+  try {
+    const observations = JSON.parse(window.localStorage.getItem(OBSERVATION_KEY) ?? "{}") as Record<string, string>;
+    const key = url.match(/linkedin\.com\/jobs\/view\/(\d+)/)?.[1] ?? url;
+    if (!observations[key]) {
+      observations[key] = new Date().toISOString();
+      window.localStorage.setItem(OBSERVATION_KEY, JSON.stringify(observations));
+    }
+    return observations[key];
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
 export async function scrapeJob(url: string): Promise<ScrapedJob> {
-  const response = await fetch('/api/scrape-job', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  const response = await fetch("/api/scrape-job", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
   });
-
   const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data?.error || `Failed to scrape job: ${response.status}`);
-  }
-
-  if (!data?.success) {
-    throw new Error(data?.error || 'Failed to extract job details');
-  }
-
-  return data.data;
+  if (!response.ok || !data?.success) throw new Error(data?.error || "Failed to extract job details");
+  return data.data as ScrapedJob;
 }
 
-// Analyze job from URL
 export async function analyzeJob(url: string): Promise<AnalysisResult> {
   const job = await scrapeJob(url);
-  return buildAnalysis(job);
+  const firstObservedAt = getFirstObservedAt(job.url);
+  const response = await fetch("/api/scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url: job.url,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      description: job.description,
+      salary: job.salary,
+      applicationUrl: job.applicationUrl,
+      companyLinkedInUrl: job.companyLinkedInUrl,
+      reposted: job.reposted,
+      firstObservedAt,
+    }),
+  });
+  const trustScore = await response.json();
+  if (!response.ok) throw new Error(trustScore?.error || "Could not verify this job listing");
+  return { job, trustScore: trustScore as TrustScoreResult, firstObservedAt };
 }
 
-// Analyze from manually pasted text
-export function analyzeFromText(input: {
-  title: string;
-  company: string;
-  description: string;
-  salary?: string;
-  postedAt?: string;
-}): AnalysisResult {
-  const job: ScrapedJob = {
-    title: input.title,
-    company: input.company,
-    location: '',
-    description: input.description,
-    postedAt: input.postedAt || null,
-    salary: input.salary || null,
-    applicants: null,
-    employmentType: null,
-    experienceLevel: null,
-  };
-  return buildAnalysis(job);
-}
-
-function buildAnalysis(job: ScrapedJob): AnalysisResult {
-  const signals: JobSignals = {
-    postedDays: parsePostedDays(job.postedAt),
-    hasSalary: !!job.salary,
-    descriptionLength: job.description.split(/\s+/).length,
-    hasRepostIndicator: false,
-    companyName: job.company,
-    hasRecentLayoffs: null,
-    roleOnCareersPage: null,
-    daysSinceApplied: null,
-    receivedResponse: null,
-  };
-
-  const ghostScore = calculateGhostScore(signals);
-  return { job, signals, ghostScore };
-}
-
-function parsePostedDays(postedAt: string | null): number | null {
-  if (!postedAt) return null;
-
-  const date = new Date(postedAt);
-  if (!isNaN(date.getTime())) {
-    const days = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-    return days >= 0 ? days : null;
-  }
-
-  const text = postedAt.toLowerCase();
-  const dayMatch = text.match(/(\d+)\s+day/);
-  if (dayMatch) return parseInt(dayMatch[1], 10);
-  const weekMatch = text.match(/(\d+)\s+week/);
-  if (weekMatch) return parseInt(weekMatch[1], 10) * 7;
-  const monthMatch = text.match(/(\d+)\s+month/);
-  if (monthMatch) return parseInt(monthMatch[1], 10) * 30;
-  if (text.includes('just now') || text.includes('today')) return 0;
-  if (text.includes('yesterday')) return 1;
-
-  return null;
+export async function recordScanObservation(userId: string, analysis: AnalysisResult): Promise<void> {
+  const jobKey = analysis.job.url.match(/linkedin\.com\/jobs\/view\/(\d+)/)?.[1] ?? analysis.job.url;
+  const { error } = await supabase.from("scan_observations").upsert({
+    user_id: userId,
+    job_key: jobKey,
+    job_url: analysis.job.url,
+    job_title: analysis.job.title,
+    company_name: analysis.job.company,
+    company_location: analysis.job.location,
+    first_observed_at: analysis.firstObservedAt,
+    last_observed_at: new Date().toISOString(),
+    reposted: analysis.job.reposted,
+    careers_verification: analysis.trustScore.careersVerification,
+    scoring_version: analysis.trustScore.scoringVersion,
+  }, { onConflict: "user_id,job_key" });
+  if (error) throw error;
 }
