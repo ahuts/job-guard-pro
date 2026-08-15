@@ -1,12 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import {
-  calculateTrustScore,
-  getQualityBadges,
-  hasConcreteRoleDetails,
-  type CareersVerification,
-  type TrustScoreResult,
-} from "../src/lib/trustScore";
+import type { CareersVerification, TrustScoreResult } from "../src/lib/trustScore";
 
 // Structural request/response types keep this handler independently testable;
 // Vercel supplies compatible objects at runtime.
@@ -263,6 +257,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
   const request = req.body as ScanRequest;
   if (!request?.title?.trim() || !request?.company?.trim()) return res.status(400).json({ error: "Job title and company are required" });
 
+  // Vercel compiles this function as CommonJS while the shared frontend module
+  // is ESM. Native dynamic import keeps the scorer shared without require().
+  const { calculateTrustScore, getQualityBadges, hasConcreteRoleDetails } = await import("../src/lib/trustScore.js");
   const career = await verifyCareers(request);
   const result = calculateTrustScore({
     careersVerification: career.verification,
