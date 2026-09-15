@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-09-15T20:21:30Z",
+  "note": "Field projections of live public responses, not complete boards or a manually reviewed LinkedIn benchmark. Descriptions intentionally omitted.",
+  "greenhouse": {
+    "source": "https://boards-api.greenhouse.io/v1/boards/figma/jobs",
+    "jobs": [{"id":5426468004,"title":"Account Executive, Enterprise","location":{"name":"San Francisco, CA • New York, NY • United States"},"absolute_url":"https://boards.greenhouse.io/figma/jobs/5426468004?gh_jid=5426468004","updated_at":"2026-07-22T05:37:08-04:00","requisition_id":"1451"}]
+  },
+  "lever": {
+    "source": "https://api.lever.co/v0/postings/spreedly?mode=json",
+    "jobs": [
+      {"id":"38115545-8190-4a18-95ec-08c5b7bb4d04","text":"AI Operations Manager","categories":{"location":"Remote, United States","allLocations":["Remote, United States"]},"createdAt":1785510131840,"hostedUrl":"https://jobs.lever.co/spreedly/38115545-8190-4a18-95ec-08c5b7bb4d04","applyUrl":"https://jobs.lever.co/spreedly/38115545-8190-4a18-95ec-08c5b7bb4d04/apply"},
+      {"id":"1ec337d3-3cd4-4ff4-8628-f5e56a1f9457","text":"Controller","categories":{"location":"Remote, United States","allLocations":["Remote, United States"]},"createdAt":1788460023876,"hostedUrl":"https://jobs.lever.co/spreedly/1ec337d3-3cd4-4ff4-8628-f5e56a1f9457","applyUrl":"https://jobs.lever.co/spreedly/1ec337d3-3cd4-4ff4-8628-f5e56a1f9457/apply"}
+    ]
+  },
+  "ashby": {
+    "source": "https://api.ashbyhq.com/posting-api/job-board/linear",
+    "jobs": [
+      {"id":"d3bc1ced-3ce4-4086-a050-555055dbb1ff","title":"Senior / Staff Fullstack Engineer","location":"Europe","secondaryLocations":[],"publishedAt":"2021-04-27T20:13:45.158+00:00","isListed":true,"isRemote":true,"jobUrl":"https://jobs.ashbyhq.com/linear/d3bc1ced-3ce4-4086-a050-555055dbb1ff","applyUrl":"https://jobs.ashbyhq.com/linear/d3bc1ced-3ce4-4086-a050-555055dbb1ff/application"},
+      {"id":"cd5ae036-0223-427a-b038-ba16ef9dcb32","title":"Senior / Staff Fullstack Engineer","location":"North America","secondaryLocations":[],"publishedAt":"2021-08-18T20:48:26.891+00:00","isListed":true,"isRemote":true,"jobUrl":"https://jobs.ashbyhq.com/linear/cd5ae036-0223-427a-b038-ba16ef9dcb32","applyUrl":"https://jobs.ashbyhq.com/linear/cd5ae036-0223-427a-b038-ba16ef9dcb32/application"}
+    ]
+  }
+}

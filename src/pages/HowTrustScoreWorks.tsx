@@ -25,7 +25,7 @@ const faqs = [
   {
     question: "Why did the score change for the same job?",
     answer:
-      "Scores can change when an employer or ATS role becomes verifiable, closes, or changes. Reposting is a small caution; age alone is context, not a strong negative.",
+      "Scores can change when employer evidence becomes available or the identified role closes. In scoring v3, reposting and observation age are context only. Historical scores retain their original scoring version.",
   },
 ];
 
@@ -74,7 +74,7 @@ const HowTrustScoreWorks = () => {
               "Exact employer or ATS role match (+25) and active application destination (+10).",
               "Matching company identity, current source evidence, and concrete role scope (+5 each).",
               "An explicit employer or ATS closed-role conflict (−35).",
-              "A LinkedIn repost label is a −5 caution, not proof; missing evidence remains neutral.",
+              "In scoring v3, reposting and observation age do not deduct points; missing evidence remains neutral.",
             ]}
           />
 
@@ -85,7 +85,8 @@ const HowTrustScoreWorks = () => {
                 <li><strong className="text-foreground">Employer/ATS verification</strong> — a normalized exact title and compatible location or remote status on Greenhouse, Lever, Ashby, or a public employer JobPosting page.</li>
                 <li><strong className="text-foreground">Active destination</strong> — a direct live application page for that role.</li>
                 <li><strong className="text-foreground">Source and role detail</strong> — identity match, current source evidence, and concrete responsibilities, qualifications, and scope.</li>
-                <li><strong className="text-foreground">Concrete contrary evidence</strong> — an employer/ATS role explicitly shown closed while LinkedIn remains active; a repost is only a small caution.</li>
+                <li><strong className="text-foreground">Concrete contrary evidence</strong> — the same employer role explicitly shown closed while LinkedIn remains active. Reposts and age are non-scoring context in v3.</li>
+                <li><strong className="text-foreground">Historical scores</strong> — v2 included repost and repeated-observation deductions. Saved results keep that version; v3 removes those deductions. A score is not a percentage probability of legitimacy.</li>
               </ul>
             </section>
 

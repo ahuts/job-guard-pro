@@ -42,7 +42,7 @@ function getSignalDot(signal: unknown) {
 
 export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const isV2 = job.scoring_version === 2 && job.trust_score != null;
+  const isV2 = [2, 3].includes(job.scoring_version ?? 0) && job.trust_score != null;
   const score = job.trust_score ?? 50;
   const badge = getScoreBadge(score);
 
@@ -72,7 +72,7 @@ export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
           </div>
 
           <Badge variant="outline" className={cn("shrink-0 font-semibold", badge.className)}>
-            {isV2 ? `${score}/100 · ${badge.label}` : `Legacy score · ${job.ghost_score}/100`}
+            {isV2 ? `${score}/100 · ${badge.label} · v${job.scoring_version}` : `Legacy score · ${job.ghost_score}/100`}
           </Badge>
 
           {expanded ? (

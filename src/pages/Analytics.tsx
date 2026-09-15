@@ -57,7 +57,8 @@ export default function Analytics() {
   const [range, setRange] = useState<TimeRange>(TIME_RANGES[1]); // 30d default
 
   const jobs = useMemo(() => filterByRange(allJobs, range), [allJobs, range]);
-  const trustJobs = useMemo(() => jobs.filter((job) => job.scoring_version === 2 && job.trust_score != null), [jobs]);
+  const [scoringVersion, setScoringVersion] = useState(3);
+  const trustJobs = useMemo(() => jobs.filter((job) => job.scoring_version === scoringVersion && job.trust_score != null), [jobs, scoringVersion]);
 
   // === Stat cards ===
   const totalScans = trustJobs.length;
@@ -156,6 +157,7 @@ export default function Analytics() {
         </div>
 
         {/* Stat Cards */}
+        <label className="block text-sm">Scoring version <select className="rounded border p-2" value={scoringVersion} onChange={e => setScoringVersion(Number(e.target.value))}><option value={3}>Trust Meter v3</option><option value={2}>Trust Meter v2</option></select> Historical scores are compared within their own scoring version.</label>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={BarChart3} label="Total Scans" value={totalScans} />
           <StatCard icon={TrendingUp} label="Avg Trust Score" value={avgScore} suffix="/100" />

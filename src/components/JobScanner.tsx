@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Search, AlertTriangle, XCircle } from 'lucide-react';
-import { analyzeJob, recordScanObservation } from '@/services/jobScraper';
+import { analyzeJob, refineAnalysis, recordScanObservation, saveAnalysis } from '@/services/jobScraper';
 import { GhostScoreDisplay } from './GhostScoreDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from './AuthDialog';
@@ -19,6 +19,13 @@ export function JobScanner() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [scansRemaining, setScansRemaining] = useState(3);
   const [authOpen, setAuthOpen] = useState(false);
+  const [manual, setManual] = useState(false);
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualCompany, setManualCompany] = useState('');
+  const [manualLocation, setManualLocation] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+  const [manualEmployerUrl, setManualEmployerUrl] = useState('');
+  const [attemptId, setAttemptId] = useState(() => crypto.randomUUID());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +58,12 @@ export function JobScanner() {
     track('scan_started', { location: 'scanner', scans_remaining: scansRemaining });
 
     try {
-      const analysis = await analyzeJob(url);
+      const analysis = manual ? await refineAnalysis({ scanAttemptId: attemptId, firstObservedAt: new Date().toISOString(), job: {
+        url, title: manualTitle, company: manualCompany, location: manualLocation, description: manualDescription,
+        employerUrl: manualEmployerUrl || undefined, descriptionCoverage: manualDescription ? 'partial' : 'unavailable',
+        postedAt: null, salary: null, applicants: null, employmentType: null, experienceLevel: null,
+        applicationUrl: null, companyLinkedInUrl: null, reposted: false, promoted: false, activelyReviewing: false, applicationMethod: 'unknown',
+      } }) : await analyzeJob(url);
       setResult(analysis);
       void recordScanObservation(user.id, analysis).catch(() => {
         // A history write must never hide a completed public-evidence scan.
@@ -92,7 +104,7 @@ export function JobScanner() {
                 type="url"
                 placeholder="https://www.linkedin.com/jobs/view/..."
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => { setUrl(e.target.value); setAttemptId(crypto.randomUUID()); }}
                 className="flex-1"
                 disabled={loading}
               />
@@ -107,6 +119,14 @@ export function JobScanner() {
                 )}
               </Button>
             </div>
+            <Button type="button" variant="link" onClick={() => setManual(!manual)}>Enter job details manually</Button>
+            {manual && <div className="space-y-2">
+              <label className="block text-sm">Job title<Input required value={manualTitle} maxLength={300} onChange={e => setManualTitle(e.target.value)} /></label>
+              <label className="block text-sm">Company<Input required value={manualCompany} maxLength={300} onChange={e => setManualCompany(e.target.value)} /></label>
+              <label className="block text-sm">Location / eligibility<Input value={manualLocation} maxLength={300} onChange={e => setManualLocation(e.target.value)} /></label>
+              <label className="block text-sm">Employer or job URL<Input type="url" value={manualEmployerUrl} maxLength={2048} onChange={e => setManualEmployerUrl(e.target.value)} /></label>
+              <label className="block text-sm">Description<textarea className="block min-h-40 w-full rounded border p-2" value={manualDescription} maxLength={12000} onChange={e => setManualDescription(e.target.value)} /></label>
+            </div>}
           </form>
 
           {scansRemaining > 0 ? (
@@ -142,8 +162,9 @@ export function JobScanner() {
 
       {result && (
         <GhostScoreDisplay
+          onResultChange={setResult}
           result={result}
-          onSave={() => console.log('Save job', result)}
+          onSave={async () => { if (!user) throw new Error('Sign in to save this job.'); await saveAnalysis(user.id, result); }}
         />
       )}
 

@@ -1,9 +1,9 @@
-// GhostJob Popup Script v1.2.1
+// GhostJob Popup Script v1.3.0
 // Handles scanning from the extension popup + Supabase auth
 
 const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
-const DASHBOARD_URL = 'https://jobghost.io/dashboard';
+const DASHBOARD_URL = 'https://www.jobghost.io/dashboard';
 
 function createHandoffNonce() {
   const bytes = new Uint8Array(16);
