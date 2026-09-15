@@ -13,6 +13,9 @@ import type { AnalysisResult } from '@/services/jobScraper';
 
 export function JobScanner() {
   const { user } = useAuth();
+  // Preview-only verification aid. This is disabled unless a Vercel Preview
+  // build explicitly supplies the flag, and anonymous scans are never saved.
+  const allowPreviewAnonymousScan = import.meta.env.VITE_GHOSTJOB_PREVIEW_ALLOW_ANONYMOUS_SCAN === 'true';
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +35,7 @@ export function JobScanner() {
     setError('');
     setResult(null);
 
-    if (!user) {
+    if (!user && !allowPreviewAnonymousScan) {
       track('cta_click', { cta: 'scan_job', location: 'scanner', variant: 'signed_out' });
       setAuthOpen(true);
       return;
@@ -65,9 +68,11 @@ export function JobScanner() {
         applicationUrl: null, companyLinkedInUrl: null, reposted: false, promoted: false, activelyReviewing: false, applicationMethod: 'unknown',
       } }) : await analyzeJob(url);
       setResult(analysis);
-      void recordScanObservation(user.id, analysis).catch(() => {
-        // A history write must never hide a completed public-evidence scan.
-      });
+      if (user) {
+        void recordScanObservation(user.id, analysis).catch(() => {
+          // A history write must never hide a completed public-evidence scan.
+        });
+      }
       setScansRemaining(prev => prev - 1);
       track('scan_completed', {
         location: 'scanner',
