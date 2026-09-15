@@ -13,7 +13,7 @@ import type { AnalysisResult } from '@/services/jobScraper';
 
 export function JobScanner() {
   const { user } = useAuth();
-  // Preview-only verification aid. This is disabled unless a Vercel Preview
+  // Preview-only validation aid. This is disabled unless a Vercel Preview
   // build explicitly supplies the flag, and anonymous scans are never saved.
   const allowPreviewAnonymousScan = import.meta.env.VITE_GHOSTJOB_PREVIEW_ALLOW_ANONYMOUS_SCAN === 'true';
   const [url, setUrl] = useState('');
