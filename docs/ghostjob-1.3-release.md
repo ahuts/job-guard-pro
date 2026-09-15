@@ -17,6 +17,11 @@ projections were captured for parser regression tests. The live 50-case review,
 real Redis concurrency test, signed-in Chrome pilot, and Lovable schema query
 remain release gates; they are not claimed as completed by those tests.
 
+A public-source smoke check on 2026-09-15 found Spreedly's AI Operations Manager
+role through its employer website and Lever board, and independently confirmed
+the application form in approximately three seconds. The source date did not
+earn freshness points. This is one live case, not completion of the benchmark.
+
 ## Required server configuration
 
 | Variable | Default / purpose |

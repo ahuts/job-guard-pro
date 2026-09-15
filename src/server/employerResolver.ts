@@ -124,16 +124,19 @@ export async function resolveEmployer(input: ResolverInput, options: {
 }): Promise<Resolution> {
   const fetcher = options.fetcher ?? publicFetch;
   const checks: SourceCheck[] = [];
+  const requestPages = new Map<string, PublicPage>();
   const visited = new Set<string>();
   const queue: Array<{ url: string; trusted: boolean; board?: boolean }> = [];
   let ownerHost = '', boardFound = false, unavailable = false;
   const checkedAt = new Date().toISOString();
   const result: Resolution = { score: { careersVerification: 'unverified' }, verification: { outcome: 'identity_unresolved', reason: 'Could not establish the employer website from available sources.', checkedAt, sources: checks } };
   async function load(raw: string): Promise<PublicPage> {
+    if (requestPages.has(raw)) return { ...requestPages.get(raw)!, cached: true };
     const key = `gj:source:${hash(raw)}`;
     const cached = options.fetcher ? null : await cacheGet<PublicPage>(key);
-    if (cached) return { ...cached, cached: true };
+    if (cached) { requestPages.set(raw, cached); return { ...cached, cached: true }; }
     const page = await fetcher(raw, options.deadline);
+    requestPages.set(raw, page);
     if (!options.fetcher) await cachePut(key, page, page.status >= 200 && page.status < 300 ? 900 : 120).catch(() => {});
     return page;
   }
@@ -175,6 +178,7 @@ export async function resolveEmployer(input: ResolverInput, options: {
       let trusted = candidate.trusted && (Boolean(p) || new URL(page.url).hostname === new URL(candidate.url).hostname);
       if (!p && identity(page, input)) {
         trusted = true; ownerHost = new URL(page.url).hostname;
+        check.reason = 'Employer identity confirmed from public source information.';
         result.score.companyIdentityVerified = true;
         if (!options.fetcher) await cachePut(discoveryKey, page.url, 86400).catch(() => {});
       }
@@ -214,6 +218,7 @@ export async function resolveEmployer(input: ResolverInput, options: {
       const rolePage = match.url === page.url ? page : await load(publicUrl(match.url).href);
       const exactClosed = match.closed || (Boolean(input.requisitionId && match.id === input.requisitionId) && explicitlyClosed(rolePage.body, input.title));
       if (exactClosed) {
+        check.url = rolePage.url; check.checkedAt = rolePage.checkedAt; check.cached = rolePage.cached; check.reason = 'The identified employer role explicitly reports it is closed.';
         result.score = { careersVerification: 'closed_conflict', companyIdentityVerified: true, sourceUrl: rolePage.url };
         result.verification = { ...result.verification, outcome: 'closed', reason: 'The identified employer role explicitly reports it is closed.', sourceUrl: rolePage.url, checkedAt: rolePage.checkedAt };
         return result;
@@ -230,6 +235,7 @@ export async function resolveEmployer(input: ResolverInput, options: {
         }
       } else applicationActive = /<form\b/i.test(rolePage.body) && /submit application|upload resume|upload cv/i.test(rolePage.body);
       check.status = 'matched'; check.reason = 'Employer relationship, exact title, and location matched.';
+      check.url = rolePage.url; check.checkedAt = rolePage.checkedAt; check.cached = rolePage.cached;
       result.score = { careersVerification: 'verified_match', exactRoleMatch: true, companyIdentityVerified: true, applicationActive, currentSourceEvidence: isFresh(match.date), sourceUrl: rolePage.url };
       result.verification = { ...result.verification, outcome: 'matched', reason: check.reason, sourceUrl: rolePage.url, checkedAt: rolePage.checkedAt };
       return result;
