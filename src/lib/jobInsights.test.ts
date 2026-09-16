@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getJobInsights, getSuggestedQuestions } from "./jobInsights";
+import { getJobInsights, getJobQualityChecklist, getSuggestedQuestions } from "./jobInsights";
 
 describe("getJobInsights", () => {
   const detailedPosting = {
@@ -28,5 +28,26 @@ describe("getJobInsights", () => {
     const questions = getSuggestedQuestions({ description: "A short role description." }, false);
     expect(questions).toContain("Can you confirm this role is currently open on the company careers site?");
     expect(questions.some((question) => question.includes("salary range"))).toBe(true);
+  });
+
+  it("reports job quality and clarity as neutral disclosure checks", () => {
+    const checklist = getJobQualityChecklist({
+      description: "You will build Python services. Requirements include SQL. This is a remote role with health insurance.",
+      salary: "$120,000 - $145,000",
+      location: "Remote, United States",
+      employmentType: "Full-time",
+      postedAt: "2 weeks ago",
+      applicationMethod: "linkedin_apply",
+      descriptionCoverage: "complete",
+    });
+    expect(checklist).toHaveLength(12);
+    expect(checklist.find((item) => item.id === "compensation")?.status).toBe("found");
+    expect(checklist.find((item) => item.id === "team-reporting")?.status).toBe("not_listed");
+    expect(checklist.find((item) => item.id === "hiring-contact")?.detail).toContain("does not affect Trust Score");
+  });
+
+  it("uses unknown rather than a negative omission when job details are unavailable", () => {
+    const checklist = getJobQualityChecklist({ descriptionCoverage: "unavailable" });
+    expect(checklist.every((item) => item.status === "unknown")).toBe(true);
   });
 });

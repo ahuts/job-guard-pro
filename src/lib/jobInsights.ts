@@ -10,6 +10,21 @@ export interface JobInsight {
   sourceUrl?: string;
 }
 
+export type JobQualityCheckStatus = "found" | "not_listed" | "unknown";
+
+/**
+ * A disclosure-quality check is deliberately separate from Trust Evidence.
+ * It answers “what useful job details are available?” without treating a
+ * normal omission as evidence the employer is ghosting applicants.
+ */
+export interface JobQualityCheck {
+  id: string;
+  label: string;
+  status: JobQualityCheckStatus;
+  detail: string;
+  excerpt?: string;
+}
+
 export interface JobInsightInput {
   description?: string | null;
   salary?: string | null;
@@ -23,6 +38,7 @@ export interface JobInsightInput {
   activelyReviewing?: boolean;
   applicationUrl?: string | null;
   applicationMethod?: "linkedin_easy_apply" | "linkedin_apply" | "external_apply" | "unknown";
+  descriptionCoverage?: DescriptionCoverage;
 }
 
 const compact = (value: string) => value.replace(/\s+/g, " ").trim();
@@ -86,6 +102,48 @@ export function getJobInsights(input: JobInsightInput): JobInsight[] {
   if (input.applicants) push("applicants", "posting", "Applicant count", input.applicants);
 
   return insights;
+}
+
+export function getJobQualityChecklist(input: JobInsightInput): JobQualityCheck[] {
+  const description = compact(input.description ?? "");
+  const hasDescription = description.length > 0 && input.descriptionCoverage !== "unavailable";
+  const location = compact(input.location ?? "");
+  const hasLocation = Boolean(location) && !/^unknown(?: location)?$/i.test(location);
+  const salary = compact(input.salary ?? "");
+  const skills = extractSkills(description);
+  const workArrangement = /\b(remote|hybrid|on[- ]site|work from home|wfh|flexible work)\b/i;
+  const reporting = /\breport(?:ing)? to\b|\bmanager\b|\bsupervisor\b|\bteam of\b|\bjoin (?:our )?team\b/i;
+  const contact = /\bhiring manager\b|\breach out to\b|\bcontact\b.{0,50}\b(?:at|via|@)\b|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+  const benefits = /health insurance|401\(?k\)?|dental|vision|benefits package|parental leave|paid time off|\bpto\b/i;
+  const employment = /\b(full[- ]time|part[- ]time|contract(?:or)?|temporary|internship|apprenticeship)\b/i;
+  const responsibilities = /responsibilit|what you'?ll do|you will|you'll|day to day|responsible for|\bown\b|\bdeliver\b/i;
+  const qualifications = /requirements?|qualifications?|must have|preferred|nice to have|experience with/i;
+  const applicationKnown = Boolean(input.applicationUrl) || (input.applicationMethod && input.applicationMethod !== "unknown");
+  const check = (id: string, label: string, found: boolean, foundDetail: string, missingDetail: string, pattern?: RegExp): JobQualityCheck => {
+    const excerpt = pattern ? description.split(/\n+|(?<=[.!?])\s+/).map(compact).find(line => pattern.test(line))?.slice(0, 400) : undefined;
+    if (found) return { id, label, status: "found", detail: excerpt || foundDetail, excerpt };
+    if (!hasDescription) return { id, label, status: "unknown", detail: "Job details were unavailable, so GhostJob could not check this item." };
+    return { id, label, status: "not_listed", detail: `${missingDetail} This does not affect Trust Score.` };
+  };
+
+  return [
+    check("compensation", "Compensation", Boolean(salary) || /\$\d[\d,]*|\b\d{2,3}k\b|salary|compensation/i.test(description), "A salary amount, range, or compensation detail is listed.", "Compensation was not listed in the scanned job details.", /\$\d[\d,]*|\b\d{2,3}k\b|salary|compensation/i),
+    hasLocation
+      ? { id: "location", label: "Location", status: "found", detail: location }
+      : hasDescription
+        ? { id: "location", label: "Location", status: "not_listed", detail: "A specific location was not listed in the scanned job details. This does not affect Trust Score." }
+        : { id: "location", label: "Location", status: "unknown", detail: "Job details were unavailable, so GhostJob could not check this item." },
+    check("work-arrangement", "Work setup", workArrangement.test(description) || workArrangement.test(location), "A remote, hybrid, on-site, or flexible-work detail is listed.", "Work setup was not listed in the scanned job details.", workArrangement),
+    check("team-reporting", "Team or reporting line", reporting.test(description), "The posting gives team or reporting context.", "A team or reporting line was not listed in the scanned job details.", reporting),
+    check("hiring-contact", "Hiring contact", contact.test(description), "The posting includes a hiring contact or contact route.", "A hiring contact or contact route was not listed in the scanned job details.", contact),
+    check("benefits", "Benefits", benefits.test(description), "The posting names at least one benefit.", "Benefits were not listed in the scanned job details.", benefits),
+    check("employment-type", "Employment type", Boolean(input.employmentType) || employment.test(description), input.employmentType || "The posting identifies an employment type.", "Employment type was not listed in the scanned job details.", employment),
+    check("responsibilities", "Responsibilities", responsibilities.test(description), "The posting describes work the role is expected to own or deliver.", "Responsibilities were not clearly listed in the scanned job details.", responsibilities),
+    check("qualifications", "Qualifications", qualifications.test(description), "The posting includes required or preferred qualifications.", "Qualifications were not clearly listed in the scanned job details.", qualifications),
+    check("skills-tools", "Skills and tools", skills.length > 0, skills.length ? `Mentioned: ${skills.join(", ")}.` : "Skills or tools are listed.", "Specific skills or tools were not listed in the scanned job details."),
+    check("application-path", "Application path", applicationKnown, input.applicationUrl ? "A direct application destination is available." : "LinkedIn identifies an application method.", "An application path was not identified in the scanned job details."),
+    check("posting-age", "Posting age", Boolean(input.postedAt), input.postedAt || "LinkedIn displays a posting age.", "A visible posting age was not available in the scanned job details."),
+  ];
 }
 
 export function getSuggestedQuestions(input: JobInsightInput, employerRoleVerified: boolean): string[] {

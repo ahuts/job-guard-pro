@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Building2, CheckCircle2, CircleHelp, Ghost, Save, TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { EvidenceGroup } from "@/lib/trustScore";
-import type { DescriptionCoverage, JobInsightGroup } from "@/lib/jobInsights";
+import type { DescriptionCoverage, JobInsightGroup, JobQualityCheckStatus } from "@/lib/jobInsights";
 import type { AnalysisResult } from "@/services/jobScraper";
 import { refineAnalysis } from '@/services/jobScraper';
 import { useEffect, useState } from 'react';
@@ -47,6 +47,12 @@ const coverageLabel: Record<DescriptionCoverage, string> = {
   unavailable: "Job details unavailable",
 };
 
+const qualityCheckPresentation: Record<JobQualityCheckStatus, { label: string; className: string; icon: string }> = {
+  found: { label: "Found", className: "border-emerald-200 bg-emerald-50 text-emerald-800", icon: "✓" },
+  not_listed: { label: "Not listed", className: "border-amber-200 bg-amber-50 text-amber-800", icon: "–" },
+  unknown: { label: "Unknown", className: "border-slate-200 bg-slate-50 text-slate-700", icon: "?" },
+};
+
 export function GhostScoreDisplay({ result, onSave, onResultChange }: GhostScoreDisplayProps) {
   const [current, setCurrent] = useState(result);
   const [editing, setEditing] = useState(false);
@@ -57,6 +63,8 @@ export function GhostScoreDisplay({ result, onSave, onResultChange }: GhostScore
   const [draft, setDraft] = useState(result.job);
   useEffect(() => { setCurrent(result); setDraft(result.job); }, [result]);
   const { job, trustScore } = current;
+  const qualityChecklist = trustScore.jobQualityChecklist ?? [];
+  const foundQualityDetails = qualityChecklist.filter((item) => item.status === "found").length;
   async function recheck(mode: 'standard' | 'deep') {
     setBusy(true); setError('');
     try {
@@ -118,6 +126,31 @@ export function GhostScoreDisplay({ result, onSave, onResultChange }: GhostScore
           {saveMessage && <p role="status" className="text-sm">{saveMessage}</p>}
         </CardContent>
       </Card>
+
+      {qualityChecklist.length > 0 && <Card>
+        <CardHeader>
+          <CardTitle>Job Quality &amp; Clarity</CardTitle>
+          <p className="text-sm text-muted-foreground">{foundQualityDetails} of {qualityChecklist.length} useful details found. These checks make the posting easier to evaluate; they never change Trust Score.</p>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="single" collapsible className="w-full" defaultValue="quality-checklist">
+            <AccordionItem value="quality-checklist">
+              <AccordionTrigger className="text-left">Review posting details ({qualityChecklist.length})</AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2">
+                  {qualityChecklist.map((item) => {
+                    const status = qualityCheckPresentation[item.status];
+                    return <li key={item.id} className="rounded-md border p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2"><strong>{item.label}</strong><Badge variant="outline" className={status.className}><span aria-hidden="true" className="mr-1 font-bold">{status.icon}</span>{status.label}</Badge></div>
+                      <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
+                    </li>;
+                  })}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
+      </Card>}
 
       <Card>
         <CardHeader><CardTitle>Trust Meter evidence</CardTitle></CardHeader>

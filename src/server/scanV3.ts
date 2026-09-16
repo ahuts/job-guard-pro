@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { calculateTrustScore, getQualityBadges, hasConcreteRoleDetails } from '../lib/trustScore.js';
-import { getJobInsights, getSuggestedQuestions } from '../lib/jobInsights.js';
+import { getJobInsights, getJobQualityChecklist, getSuggestedQuestions } from '../lib/jobInsights.js';
 import { resolveEmployer } from './employerResolver.js';
 import { cacheGet, cachePut, hash, reserveSearch, storeConfigured } from './searchStore.js';
 
@@ -90,6 +90,7 @@ export async function scanV3(body: unknown, authorization?: string) {
   result.coverageDetails = { status: result.descriptionCoverage, truncated: input.coverageDetails?.truncated ?? false, analyzedCharacters: input.description?.length ?? 0, reason: input.coverageDetails?.reason };
   result.verification = { ...resolution.verification, deepSearch: deepState };
   result.jobInsights = getJobInsights(input).map(i => ({ ...i, sourceUrl: input.url ?? undefined }));
+  result.jobQualityChecklist = getJobQualityChecklist(input);
   result.suggestedQuestions = getSuggestedQuestions(input, resolution.score.careersVerification === 'verified_match');
   result.scanAttemptId = input.scanAttemptId;
   if (input.scanMode === 'deep') await cachePut(resultKey, result, 86400);

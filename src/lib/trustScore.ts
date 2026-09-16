@@ -1,4 +1,4 @@
-import type { DescriptionCoverage, JobInsight } from "./jobInsights";
+import type { DescriptionCoverage, JobInsight, JobQualityCheck } from "./jobInsights";
 import type { CoverageDetails, VerificationDetails } from './verification';
 
 export type TrustBand = "highly_verified" | "positive" | "unverified" | "weak" | "contradictory";
@@ -48,6 +48,7 @@ export interface TrustScoreResult {
   summary: string;
   descriptionCoverage: DescriptionCoverage;
   jobInsights: JobInsight[];
+  jobQualityChecklist: JobQualityCheck[];
   suggestedQuestions: string[];
 }
 
@@ -140,6 +141,7 @@ export function calculateTrustScore(input: TrustScoreInput): TrustScoreResult {
     summary: presentation.summary,
     descriptionCoverage: "partial",
     jobInsights: [],
+    jobQualityChecklist: [],
     suggestedQuestions: [],
   };
 }

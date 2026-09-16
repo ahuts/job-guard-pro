@@ -14,7 +14,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.1-preview';
+  const VERSION  = '1.3.2-preview';
   // This unpacked pilot must not write scan observations or saved jobs to the
   // live Lovable Cloud database while it is exercising the Preview API.
   const PREVIEW_BUILD = true;
@@ -1526,6 +1526,12 @@
     var coverage = result.descriptionCoverage;
     var coverageLabel = { expanded: 'Expanded full job details', complete: 'Analyzed full job details', partial: 'Partial job details available', unavailable: 'Job details unavailable' }[coverage] || 'Coverage unavailable';
     var coverageColor = coverage === 'expanded' || coverage === 'complete' ? '#15803d' : coverage === 'partial' ? '#a16207' : '#64748b';
+    var qualityChecklist = result.jobQualityChecklist || [];
+    var foundQualityDetails = qualityChecklist.filter(function(item) { return item.status === 'found'; }).length;
+    var qualityChecklistHtml = qualityChecklist.length ? '<section style="margin-top:18px;padding:14px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0"><div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><div style="font-size:14px;font-weight:800;color:#1f2937">Job Quality &amp; Clarity</div><div style="font-size:11px;font-weight:800;color:#475569">' + foundQualityDetails + ' of ' + qualityChecklist.length + ' found</div></div><div style="font-size:12px;color:#64748b;line-height:1.45;margin-top:4px">Helpful posting details only—these checks never change Trust Score.</div><div style="margin-top:9px;border:1px solid #e2e8f0;border-radius:10px;padding:2px 12px;background:#fff">' + qualityChecklist.map(function(item) {
+      var styles = item.status === 'found' ? { label: 'Found', icon: '✓', background: '#dcfce7', color: '#15803d' } : item.status === 'not_listed' ? { label: 'Not listed', icon: '–', background: '#fef3c7', color: '#a16207' } : { label: 'Unknown', icon: '?', background: '#f1f5f9', color: '#475569' };
+      return '<div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:8px;align-items:start;padding:9px 0;border-bottom:1px solid #eef2f7"><span aria-hidden="true" style="width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:' + styles.background + ';color:' + styles.color + ';font-size:12px;font-weight:800">' + styles.icon + '</span><div><div style="font-size:12px;font-weight:750;color:#334155;line-height:1.35">' + escapeHtml(item.label) + '</div><div style="font-size:11px;color:#64748b;line-height:1.4;margin-top:2px">' + escapeHtml(item.detail || '') + '</div></div><span style="padding:3px 6px;border-radius:999px;background:' + styles.background + ';color:' + styles.color + ';font-size:10px;font-weight:800;white-space:nowrap">' + styles.label + '</span></div>';
+    }).join('') + '</div></section>' : '';
     var insightGroups = [
       { id: 'role', label: 'Role Snapshot', icon: '📋' },
       { id: 'quality', label: 'Job Quality', icon: '✨' },
@@ -1562,6 +1568,7 @@
       groupRows('verified', 'Verified signals', '✓', '#22c55e') +
       groupRows('caution', 'Cautions', '⚠', '#f59e0b') +
       groupRows('unverified', 'Not enough data', '?', '#94a3b8') +
+      qualityChecklistHtml +
       insightsHtml +
       (quality ? '<section style="margin-top:16px"><div style="font-size:14px;font-weight:700;color:#1f2937">Job Quality</div><div style="font-size:12px;color:#64748b;margin-top:3px">Helpful details, not Trust Score factors.</div>' + quality + '</section>' : '') +
       questionsHtml +

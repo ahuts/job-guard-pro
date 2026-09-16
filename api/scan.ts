@@ -280,7 +280,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
   // Vercel compiles this function as CommonJS while the shared frontend module
   // is ESM. Native dynamic import keeps the scorer shared without require().
   const { calculateTrustScore, getQualityBadges, hasConcreteRoleDetails } = await import("../src/lib/trustScore.js");
-  const { getJobInsights, getSuggestedQuestions } = await import("../src/lib/jobInsights.js");
+  const { getJobInsights, getJobQualityChecklist, getSuggestedQuestions } = await import("../src/lib/jobInsights.js");
   const career = await verifyCareers(request);
   const result = calculateTrustScore({
     careersVerification: career.verification,
@@ -308,6 +308,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
     activelyReviewing: request.activelyReviewing,
     applicationUrl: request.applicationUrl,
     applicationMethod: request.applicationMethod,
+    descriptionCoverage: result.descriptionCoverage,
+  });
+  result.jobQualityChecklist = getJobQualityChecklist({
+    description: request.description,
+    salary: request.salary,
+    location: request.location,
+    employmentType: request.employmentType,
+    experienceLevel: request.experienceLevel,
+    postedAt: request.postedAt,
+    applicants: request.applicants,
+    reposted: request.reposted,
+    promoted: request.promoted,
+    activelyReviewing: request.activelyReviewing,
+    applicationUrl: request.applicationUrl,
+    applicationMethod: request.applicationMethod,
+    descriptionCoverage: result.descriptionCoverage,
   });
   result.suggestedQuestions = getSuggestedQuestions({
     description: request.description,
