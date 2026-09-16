@@ -14,7 +14,10 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.0';
+  const VERSION  = '1.3.1-preview';
+  // This unpacked pilot must not write scan observations or saved jobs to the
+  // live Lovable Cloud database while it is exercising the Preview API.
+  const PREVIEW_BUILD = true;
 
   function log(...a)  { console.log('[GhostJob v' + VERSION + ']', ...a); }
   function warn(...a) { console.warn('[GhostJob v' + VERSION + ']', ...a); }
@@ -487,6 +490,7 @@
   // Signed-out observations remain in extension storage. Once signed in, this
   // best-effort upsert writes only to the current user's RLS-protected history.
   function persistObservationIfSignedIn(jobData, result, firstObservedAt) {
+    if (PREVIEW_BUILD) return;
     chrome.storage.local.get(['gj_auth_token', 'gj_user_id'], function(stored) {
       if (!stored.gj_auth_token || !stored.gj_user_id) return;
       var jobKey = (jobData.url || jobData.title + '|' + jobData.company).replace(/[.#$\[\]/]/g, '_');
@@ -1562,13 +1566,13 @@
       (quality ? '<section style="margin-top:16px"><div style="font-size:14px;font-weight:700;color:#1f2937">Job Quality</div><div style="font-size:12px;color:#64748b;margin-top:3px">Helpful details, not Trust Score factors.</div>' + quality + '</section>' : '') +
       questionsHtml +
       '<p style="margin-top:18px;font-size:11px;line-height:1.45;color:#64748b">This is an estimate based on available public evidence, not a verdict about an employer.</p>' +
-      '<div style="margin-top:20px;display:flex;gap:12px"><button id="gj-save-btn" style="flex:1;padding:11px;background:#4f46e5;color:#fff;border:0;border-radius:8px;font-weight:700;cursor:pointer">Save to Dashboard</button><button id="gj-close-btn" style="padding:11px 18px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:8px;font-weight:600;cursor:pointer">Close</button></div><div id="gj-save-status" style="margin-top:10px;font-size:13px;text-align:center"></div>' +
+      '<div style="margin-top:20px;display:flex;gap:12px"><button id="gj-save-btn"' + (PREVIEW_BUILD ? ' disabled title="Preview scans are not saved"' : '') + ' style="flex:1;padding:11px;background:' + (PREVIEW_BUILD ? '#94a3b8' : '#4f46e5') + ';color:#fff;border:0;border-radius:8px;font-weight:700;cursor:' + (PREVIEW_BUILD ? 'not-allowed' : 'pointer') + '">' + (PREVIEW_BUILD ? 'Preview scan — not saved' : 'Save to Dashboard') + '</button><button id="gj-close-btn" style="padding:11px 18px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:8px;font-weight:600;cursor:pointer">Close</button></div><div id="gj-save-status" style="margin-top:10px;font-size:13px;text-align:center">' + (PREVIEW_BUILD ? 'Preview mode: your scan is not saved to the live dashboard.' : '') + '</div>' +
       '</div>';
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
     document.getElementById('gj-close-x').addEventListener('click', function() { overlay.remove(); });
     document.getElementById('gj-close-btn').addEventListener('click', function() { overlay.remove(); });
-    document.getElementById('gj-save-btn').addEventListener('click', function() { handleSaveJob(result); });
+    if (!PREVIEW_BUILD) document.getElementById('gj-save-btn').addEventListener('click', function() { handleSaveJob(result); });
     addVerificationActions(panel, result);
   }
 
@@ -1663,6 +1667,11 @@
     var saveBtn   = document.getElementById('gj-save-btn');
     var statusDiv = document.getElementById('gj-save-status');
     if (!saveBtn || !statusDiv) return;
+    if (PREVIEW_BUILD) {
+      statusDiv.textContent = 'Preview scans are not saved to the live dashboard.';
+      statusDiv.style.color = '#64748b';
+      return;
+    }
     saveBtn.disabled = true;
     saveBtn.textContent = '💾 Saving...';
 

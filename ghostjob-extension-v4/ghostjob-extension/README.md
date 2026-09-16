@@ -1,13 +1,12 @@
-# GhostJob Chrome Extension
+# GhostJob Chrome Extension — Preview Pilot
 
 👻 Detect Ghost Jobs on LinkedIn
 
 ## What It Does
 
-Scans LinkedIn job postings and gives you a **Ghost Score** (0-100) based on:
-- Job description quality
-- Company signals  
-- Posting patterns
+Scans LinkedIn job postings and displays the GhostJob **Trust Meter**. This
+unpacked pilot uses the v3 Preview API and does not save scans to the live
+dashboard or database.
 
 ## Installation
 
@@ -19,17 +18,18 @@ Download this folder: `ghostjob-extension/`
 2. Enable **Developer mode** (toggle top-right)
 3. Click **Load unpacked**
 4. Select `ghostjob-extension/` folder
-5. Extension appears in toolbar! 🎉
+5. Select this exact `ghostjob-extension/` folder. Chrome should display
+   **GhostJob - Ghost Job Detector (Preview) 1.3.1**.
 
 ### 3. Use It
 1. Go to any LinkedIn job posting
-2. Click 🔍 **"Check for Ghost Job"** button
-3. See your Ghost Score instantly!
+2. Click **"Scan for Ghost Job"**.
+3. Confirm the result says **Scoring v3** and includes a verification finding.
 
 ## Features
 
 ✅ One-click scan on any LinkedIn job
-✅ 0-100 Ghost Score with analysis
+✅ 0-100 Trust Meter with evidence, employer verification, and a full job audit
 ✅ Works directly in browser (no copy/paste)
 ✅ Beautiful gradient UI
 ✅ Real-time results
@@ -47,16 +47,19 @@ Download this folder: `ghostjob-extension/`
 
 ## API Endpoint
 
-Posts to: `https://jobghost-gamma.vercel.app/api/scrape-job`
+Posts to the v3 Preview API:
 
-Response: `{ success: true, data: { title, company, ghostScore, ... } }`
+`https://jobghost-git-agent-ghostjob-04b415-hutsellaaron-8599s-projects.vercel.app/api/scan`
+
+Response includes `scoringVersion: 3`, Trust Meter evidence, verification
+findings, and non-scoring job insights.
 
 ## Development
 
 To modify:
 1. Edit files
 2. Go to `chrome://extensions/`
-3. Click refresh icon on GhostJob extension
+3. Click refresh icon on the **Preview** GhostJob extension
 4. Test on LinkedIn
 
 ## Chrome Web Store
