@@ -19,7 +19,7 @@ Download this folder: `ghostjob-extension/`
 3. Click **Load unpacked**
 4. Select `ghostjob-extension/` folder
 5. Select this exact `ghostjob-extension/` folder. Chrome should display
-   **GhostJob - Ghost Job Detector (Preview) 1.3.2**.
+   **GhostJob - Ghost Job Detector (Preview) 1.3.3**.
 
 ### 3. Use It
 1. Go to any LinkedIn job posting

@@ -50,4 +50,21 @@ describe("getJobInsights", () => {
     const checklist = getJobQualityChecklist({ descriptionCoverage: "unavailable" });
     expect(checklist.every((item) => item.status === "unknown")).toBe(true);
   });
+
+  it("keeps the correct description section and header employment type", () => {
+    const description = [
+      "Primary Responsibilities",
+      "• Build AI roadmaps and partner with health-plan leaders.",
+      "Required Qualifications",
+      "• 7+ years of technology leadership and 3+ years of strategy experience.",
+      "The salary for this role is $112,700 - $193,200 annually based on full-time employment.",
+    ].join("\n");
+    const insights = getJobInsights({ description, employmentType: "Full-time" });
+    expect(insights.find(item => item.id === "qualifications")?.detail).toContain("Required Qualifications");
+    expect(insights.find(item => item.id === "qualifications")?.detail).not.toContain("Primary Responsibilities");
+
+    const checklist = getJobQualityChecklist({ description, employmentType: "Full-time", descriptionCoverage: "complete" });
+    expect(checklist.find(item => item.id === "employment-type")?.detail).toBe("Full-time");
+    expect(checklist.find(item => item.id === "qualifications")?.detail).toContain("Required Qualifications");
+  });
 });

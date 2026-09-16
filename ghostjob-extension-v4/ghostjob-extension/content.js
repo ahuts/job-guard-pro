@@ -14,7 +14,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.2-preview';
+  const VERSION  = '1.3.3-preview';
   // This unpacked pilot must not write scan observations or saved jobs to the
   // live Lovable Cloud database while it is exercising the Preview API.
   const PREVIEW_BUILD = true;
@@ -601,8 +601,37 @@
       }
     }
 
-    // Location - class-agnostic extraction (LinkedIn changes classes constantly)
-    // Strategy: (1) specific selectors, (2) bullet-separated metadata pattern, (3) heuristic scan
+    // Find the compact active-job header before reading its metadata. The
+    // primary job page also contains employee cards and similar jobs, whose
+    // metadata must never be mistaken for the selected job's facts.
+    function compactText(node) {
+      return (node && (node.innerText || node.textContent) || '').replace(/\s+/g, ' ').trim();
+    }
+    function looksLikeLocation(value) {
+      var text = (value || '').replace(/\s+/g, ' ').trim();
+      if (!text || /^(?:\d+(?:st|nd|rd|th)\+?|\d+\s+(?:applicants?|people clicked apply))$/i.test(text)) return false;
+      return /\b(?:remote|hybrid|on[- ]?site|work from home)\b/i.test(text) ||
+        /\b[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,4},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b/.test(text) ||
+        /\b(?:United States|United Kingdom|Canada|Australia)\b/i.test(text);
+    }
+    function findJobHeader() {
+      var needles = [data.title, data.company].filter(Boolean);
+      var elements = scope.querySelectorAll('h1,h2,h3,a,span,div,p');
+      for (var ei = 0; ei < elements.length; ei++) {
+        var candidateText = compactText(elements[ei]);
+        if (!needles.some(function(needle) { return candidateText === needle; })) continue;
+        for (var depth = 0, parent = elements[ei]; parent && parent !== scope && depth < 9; parent = parent.parentElement, depth++) {
+          var text = compactText(parent);
+          if (data.title && text.indexOf(data.title) !== -1 && text.length < 1800 &&
+              ((data.company && text.indexOf(data.company) !== -1) || /\bapply\b|\b\d+\s+(?:day|week|month)s? ago\b/i.test(text))) return parent;
+        }
+      }
+      return null;
+    }
+    var jobHeader = findJobHeader();
+    var headerText = compactText(jobHeader);
+
+    // Location - class-agnostic extraction, scoped to the active job header.
     var locationSelectors = [
       '[data-testid="job-location"]',
       '.job-details-jobs-unified-top-card__workplace-type',
@@ -610,82 +639,46 @@
       '.top-card-layout__metadata-item'
     ];
     for (var i = 0; i < locationSelectors.length; i++) {
-      var el = scope.querySelector(locationSelectors[i]);
-      if (el && el.textContent.trim()) {
-        data.location = el.textContent.trim();
+      var el = (jobHeader || scope).querySelector(locationSelectors[i]);
+      if (el && looksLikeLocation(el.textContent)) {
+        data.location = el.textContent.replace(/\s+/g, ' ').trim();
         break;
       }
     }
-    // Fallback 1: LinkedIn's bullet-separated metadata pattern
-    // Pattern: <p>...<span>Ogden, UT</span> · <span>2 months ago</span> · <span>100 applicants</span></p>
-    // The first <span> in a ·-separated <p> that isn't a date/applicant count is the location
+    // LinkedIn may combine city/state and age into one accessible header node,
+    // such as "Overland Park, KS · 4 days ago".
     if (!data.location) {
-      var paragraphs = scope.querySelectorAll('p');
-      for (var pi = 0; pi < paragraphs.length; pi++) {
-        var p = paragraphs[pi];
-        var ptext = p.textContent;
-        if (ptext.indexOf('\u00b7') === -1 && ptext.indexOf('\u2022') === -1 && ptext.indexOf('\u00b7') === -1) continue;
-        var spans = p.querySelectorAll('span');
-        for (var si = 0; si < spans.length; si++) {
-          var st = spans[si].textContent.trim();
-          if (st === '\u00b7' || st === '\u2022' || st === '') continue;
-          if (/^\d+ (second|minute|hour|day|week|month|year)s? ago$/i.test(st)) continue;
-          if (/^over?\s+\d+\s+applicant/i.test(st)) continue;
-          if (/^\d+\s+applicant/i.test(st)) continue;
-          if (st.length > 1 && st.length < 100) {
-            data.location = st;
-            break;
-          }
-        }
-        if (data.location) break;
-      }
+      var locationMatch = headerText.match(/\b([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,4},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}))\b/);
+      if (locationMatch) data.location = locationMatch[1];
     }
-    // Fallback 2: walk up from company link and scan for location-like text
+    // Remote/hybrid may be a separate header link without a city.
     if (!data.location) {
-      var companyEl = scope.querySelector('a[href*="/company/"]');
-      if (companyEl) {
-        var card = companyEl.closest('[class*="top-card"], [class*="topcard"], [class*="unified-top-card"], [class*="job-details"]');
-        if (card) {
-          var allSpans = card.querySelectorAll('span, p');
-          for (var j = 0; j < allSpans.length; j++) {
-            var t = allSpans[j].textContent.trim();
-            if (t.length > 2 && t.length < 80 && t !== data.company && t !== data.title) {
-              if (/,\s*[A-Z]{2}(\s\d{5})?$|,\s*[A-Z][a-z]+|Remote|Hybrid|On[- ]?site|WFH/i.test(t)) {
-                data.location = t;
-                break;
-              }
-            }
-          }
-        }
+      var locationNodes = (jobHeader || scope).querySelectorAll('a,span,p,div');
+      for (var li = 0; li < locationNodes.length; li++) {
+        var locationText = compactText(locationNodes[li]);
+        if (locationText.length < 100 && looksLikeLocation(locationText)) { data.location = locationText; break; }
       }
     }
 
-    // Listing age & repost detection — class-agnostic (scan spans in metadata area)
-    // LinkedIn shows "Reposted X days ago" or "Posted X days ago" in <span> elements
-    var postedSpans = scope.querySelectorAll('span');
-    for (var psi = 0; psi < postedSpans.length; psi++) {
-      var ptxt = postedSpans[psi].textContent.trim();
-      // Match "Reposted X days/weeks ago" or "Posted X days/weeks ago"
-      var repostMatch = ptxt.match(/^Reposted\s+(\d+)\s+(day|week|month)s?\s+ago$/i);
-      var postedMatch = ptxt.match(/^Posted\s+(\d+)\s+(day|week|month)s?\s+ago$/i);
-      if (repostMatch) {
-        data.isReposted = true;
-        data.postedAgo = ptxt;
-        break;
-      } else if (postedMatch) {
-        data.postedAgo = ptxt;
-        // Don't break — keep looking in case a "Reposted" span appears later
-      }
+    // Read date, applicant activity, and employment type only from the active
+    // job's header. A broad page search can pick these from similar jobs.
+    var postedMatch = headerText.match(/\b((?:reposted|posted)\s+)?(\d+)\s+(day|week|month|hour)s?\s+ago\b/i);
+    if (postedMatch) {
+      data.isReposted = /^reposted/i.test(postedMatch[0]);
+      data.postedAgo = postedMatch[0].replace(/^\w/, function(letter) { return letter.toUpperCase(); });
     }
-    var pageText = scope.innerText || scope.textContent || '';
-    var applicantMatch = pageText.match(/(?:over\s+)?([\d,]+)\s+applicants?/i);
+    var applicantMatch = headerText.match(/(?:over\s+)?([\d,]+)\s+(?:applicants?|people clicked apply)/i);
     if (applicantMatch) data.applicants = applicantMatch[0].trim();
-    var employmentMatch = pageText.match(/\b(Full-time|Part-time|Contract|Temporary|Internship)\b/i);
-    if (employmentMatch) data.employmentType = employmentMatch[1];
-    var experienceMatch = pageText.match(/\b(Entry level|Associate|Mid-Senior level|Director|Executive)\b/i);
+    var headerNodes = (jobHeader || scope).querySelectorAll('a,span,p,div');
+    for (var hi = 0; hi < headerNodes.length; hi++) {
+      var headerValue = compactText(headerNodes[hi]);
+      var employmentMatch = headerValue.match(/^(Full-time|Part-time|Contract|Temporary|Internship|Apprenticeship|Seasonal|Freelance)$/i);
+      if (employmentMatch) { data.employmentType = employmentMatch[1]; break; }
+    }
+    var experienceMatch = headerText.match(/\b(Entry level|Associate|Mid-Senior level|Director|Executive)\b/i);
     if (experienceMatch) data.experienceLevel = experienceMatch[1];
-    data.promoted = /promoted by hirer/i.test(pageText);
-    data.activelyReviewing = /actively reviewing applicants/i.test(pageText);
+    data.promoted = /promoted by hirer/i.test(headerText);
+    data.activelyReviewing = /actively reviewing applicants/i.test(headerText);
 
     // Salary — class-agnostic extraction (like location)
     // Strategy: (1) specific selectors, (2) scan page for salary patterns in spans, (3) regex on full page text

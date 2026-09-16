@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GhostJob - Ghost Job Detector (Preview)",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Preview build: verify LinkedIn job postings with the GhostJob Trust Meter",
   "permissions": [
     "activeTab",
