@@ -1,3 +1,6 @@
+import type { DescriptionCoverage, JobInsight, JobQualityCheck } from "./jobInsights";
+import type { CoverageDetails, VerificationDetails } from './verification';
+
 export type TrustBand = "highly_verified" | "positive" | "unverified" | "weak" | "contradictory";
 export type GhostRisk = "low" | "low_moderate" | "unclear" | "high" | "very_high";
 export type CareersVerification = "verified_match" | "active_board_no_match" | "unverified" | "closed_conflict";
@@ -18,6 +21,7 @@ export interface QualityBadge {
 }
 
 export interface TrustScoreInput {
+  scoringVersion?: 2 | 3;
   careersVerification: CareersVerification;
   exactRoleMatch?: boolean;
   applicationActive?: boolean;
@@ -37,8 +41,15 @@ export interface TrustScoreResult {
   careersVerification: CareersVerification;
   evidence: TrustEvidence[];
   qualityBadges: QualityBadge[];
-  scoringVersion: 2;
+  scoringVersion: 2 | 3;
+  coverageDetails?: CoverageDetails;
+  verification?: VerificationDetails;
+  scanAttemptId?: string;
   summary: string;
+  descriptionCoverage: DescriptionCoverage;
+  jobInsights: JobInsight[];
+  jobQualityChecklist: JobQualityCheck[];
+  suggestedQuestions: string[];
 }
 
 const bands: Array<{ min: number; trustBand: TrustBand; ghostRisk: GhostRisk; summary: string }> = [
@@ -78,6 +89,11 @@ export function getQualityBadges(description: string, salary?: string | null): Q
 }
 
 export function calculateTrustScore(input: TrustScoreInput): TrustScoreResult {
+  const version = input.scoringVersion ?? 2;
+  // v3 never awards live-role evidence when the same role is explicitly closed.
+  if (version === 3 && input.careersVerification === 'closed_conflict') {
+    input = { ...input, exactRoleMatch: false, applicationActive: false, currentSourceEvidence: false };
+  }
   let score = 50;
   const evidence: TrustEvidence[] = [];
   const add = (item: TrustEvidence) => {
@@ -103,8 +119,8 @@ export function calculateTrustScore(input: TrustScoreInput): TrustScoreResult {
   if (input.currentSourceEvidence) add({ id: "current-source", group: "verified", label: "Current source evidence", points: 5, description: "The public source includes current posting or update evidence.", sourceUrl: input.sourceUrl });
   if (input.concreteRoleDetails) add({ id: "concrete-details", group: "verified", label: "Concrete role details", points: 5, description: "The listing includes specific responsibilities, qualifications, and scope." });
 
-  if (input.reposted) add({ id: "reposted", group: "caution", label: "LinkedIn marks this listing reposted", points: -5, description: "A repost is a caution to investigate, not proof that the role is a ghost job." });
-  if (input.repeatedWithoutVerification) add({ id: "repeated-unverified", group: "caution", label: "Repeated without employer verification", points: -20, description: "This user has observed the listing for 45+ days without a verified active employer role." });
+  if (input.reposted) add({ id: "reposted", group: "caution", label: "LinkedIn marks this listing reposted", points: version === 3 ? 0 : -5, description: "A repost is context, not proof that the role is a ghost job." });
+  if (input.repeatedWithoutVerification) add({ id: "repeated-unverified", group: "caution", label: "Observed for 45+ days", points: version === 3 ? 0 : -20, description: "This user's observation history does not establish the employer's hiring intent." });
 
   if (input.careersVerification === "active_board_no_match") {
     evidence.push({ id: "active-board-no-match", group: "unverified", label: "Employer board is active, but this role was not verified", points: 0, description: "Title or timing differences are common, so this does not lower the Trust Score.", sourceUrl: input.sourceUrl });
@@ -121,7 +137,11 @@ export function calculateTrustScore(input: TrustScoreInput): TrustScoreResult {
     careersVerification: input.careersVerification,
     evidence,
     qualityBadges: input.qualityBadges ?? [],
-    scoringVersion: 2,
+    scoringVersion: version,
     summary: presentation.summary,
+    descriptionCoverage: "partial",
+    jobInsights: [],
+    jobQualityChecklist: [],
+    suggestedQuestions: [],
   };
 }

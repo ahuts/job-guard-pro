@@ -3,6 +3,7 @@
 
 # Local dependencies and macOS metadata sidecars
 node_modules/
+dist/
 ._*
 
 # Utility scripts

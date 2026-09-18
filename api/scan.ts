@@ -1,14 +1,16 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import type { CareersVerification, TrustScoreResult } from "../src/lib/trustScore";
+import type { DescriptionCoverage } from "../src/lib/jobInsights";
 
 // Structural request/response types keep this handler independently testable;
 // Vercel supplies compatible objects at runtime.
-interface VercelRequest {
+export interface VercelRequest {
   method?: string;
   body: unknown;
+  headers?: Record<string, string | string[] | undefined>;
 }
-interface VercelResponse<T> {
+export interface VercelResponse<T = unknown> {
   setHeader(name: string, value: string): void;
   status(code: number): VercelResponse<T>;
   json(value: T): VercelResponse<T>;
@@ -25,6 +27,14 @@ interface ScanRequest {
   applicationUrl?: string | null;
   companyLinkedInUrl?: string | null;
   reposted?: boolean;
+  postedAt?: string | null;
+  applicants?: string | null;
+  employmentType?: string | null;
+  experienceLevel?: string | null;
+  promoted?: boolean;
+  activelyReviewing?: boolean;
+  applicationMethod?: "linkedin_easy_apply" | "linkedin_apply" | "external_apply" | "unknown";
+  descriptionCoverage?: DescriptionCoverage;
   firstObservedAt?: string | null;
 }
 
@@ -97,23 +107,9 @@ async function assertPublicHttps(rawUrl: string): Promise<URL> {
 }
 
 async function fetchPublic(rawUrl: string): Promise<{ response: Response; body: string; url: string }> {
-  let url = await assertPublicHttps(rawUrl);
-  for (let redirects = 0; redirects <= 3; redirects += 1) {
-    const response = await fetch(url, {
-      redirect: "manual",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "User-Agent": "GhostJob/2.0 public-job-verifier", Accept: "application/json,text/html;q=0.9,*/*;q=0.1" },
-    });
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get("location");
-      if (!location) break;
-      url = await assertPublicHttps(new URL(location, url).toString());
-      continue;
-    }
-    const body = (await response.text()).slice(0, MAX_RESPONSE_BYTES);
-    return { response, body, url: url.toString() };
-  }
-  throw new Error("Too many redirects while checking the public application source");
+  const { publicFetch } = await import('../src/server/publicFetch.js');
+  const page = await publicFetch(rawUrl);
+  return { response: { ok: page.status >= 200 && page.status < 300, status: page.status } as Response, body: page.body, url: page.url };
 }
 
 function sourceLooksLikeCompany(company: string, sourceUrl: string): boolean {
@@ -229,12 +225,14 @@ async function checkEmployerPage(url: URL, request: ScanRequest): Promise<Career
 
 async function verifyCareers(request: ScanRequest): Promise<CareerCheck> {
   if (!request.applicationUrl) return { verification: "unverified", exactRoleMatch: false, applicationActive: false, companyIdentityVerified: false, currentSourceEvidence: false };
-  const cached = cache.get(request.applicationUrl);
+  const cacheKey = JSON.stringify([request.applicationUrl, request.title, request.company, request.location, request.companyLinkedInUrl]);
+  const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   try {
     const sourceUrl = await assertPublicHttps(request.applicationUrl);
     const check = await checkGreenhouse(sourceUrl, request) ?? await checkLever(sourceUrl, request) ?? await checkAshby(sourceUrl, request) ?? await checkEmployerPage(sourceUrl, request);
-    cache.set(request.applicationUrl, { expiresAt: Date.now() + CACHE_MS, value: check });
+    if (cache.size > 500) cache.clear();
+    cache.set(cacheKey, { expiresAt: Date.now() + CACHE_MS, value: check });
     return check;
   } catch {
     return { verification: "unverified", exactRoleMatch: false, applicationActive: false, companyIdentityVerified: false, currentSourceEvidence: false };
@@ -247,12 +245,34 @@ function isRepeatedWithoutVerification(firstObservedAt: string | null | undefine
   return Number.isFinite(first) && Date.now() - first >= 45 * 24 * 60 * 60 * 1000;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse<TrustScoreResult | { error: string }>) {
+export default async function handler(req: VercelRequest, res: VercelResponse<TrustScoreResult | { error: string } | { scoringVersion: 2 | 3 }>) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method === 'GET') {
+    const { verifiedUser, v3Allowed } = await import('../src/server/scanV3.js');
+    const auth = req.headers?.authorization;
+    const user = await verifiedUser(typeof auth === 'string' ? auth : undefined);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json({ scoringVersion: v3Allowed(user) ? 3 : 2 });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const { scanSchema, scanV3 } = await import('../src/server/scanV3.js');
+  const validated = scanSchema.safeParse(req.body);
+  if (!validated.success) return res.status(400).json({ error: 'Job title and company are required; scan fields must have valid types and lengths.' });
+  if (validated.data.scoringVersion === 3) {
+    try {
+      const authorization = req.headers?.authorization;
+      const result = await scanV3(validated.data, typeof authorization === 'string' ? authorization : undefined);
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).json(result);
+    } catch (error) {
+      const status = error && typeof error === 'object' && 'status' in error ? Number(error.status) : 503;
+      return res.status(status).json({ error: error instanceof Error ? error.message : 'Verification temporarily unavailable' });
+    }
+  }
 
   const request = req.body as ScanRequest;
   if (!request?.title?.trim() || !request?.company?.trim()) return res.status(400).json({ error: "Job title and company are required" });
@@ -260,6 +280,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
   // Vercel compiles this function as CommonJS while the shared frontend module
   // is ESM. Native dynamic import keeps the scorer shared without require().
   const { calculateTrustScore, getQualityBadges, hasConcreteRoleDetails } = await import("../src/lib/trustScore.js");
+  const { getJobInsights, getJobQualityChecklist, getSuggestedQuestions } = await import("../src/lib/jobInsights.js");
   const career = await verifyCareers(request);
   const result = calculateTrustScore({
     careersVerification: career.verification,
@@ -273,6 +294,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
     sourceUrl: career.sourceUrl,
     qualityBadges: getQualityBadges(request.description ?? "", request.salary),
   });
+  result.descriptionCoverage = request.descriptionCoverage ?? ((request.description?.trim().length ?? 0) > 0 ? "partial" : "unavailable");
+  result.jobInsights = getJobInsights({
+    description: request.description,
+    salary: request.salary,
+    location: request.location,
+    employmentType: request.employmentType,
+    experienceLevel: request.experienceLevel,
+    postedAt: request.postedAt,
+    applicants: request.applicants,
+    reposted: request.reposted,
+    promoted: request.promoted,
+    activelyReviewing: request.activelyReviewing,
+    applicationUrl: request.applicationUrl,
+    applicationMethod: request.applicationMethod,
+    descriptionCoverage: result.descriptionCoverage,
+  });
+  result.jobQualityChecklist = getJobQualityChecklist({
+    description: request.description,
+    salary: request.salary,
+    location: request.location,
+    employmentType: request.employmentType,
+    experienceLevel: request.experienceLevel,
+    postedAt: request.postedAt,
+    applicants: request.applicants,
+    reposted: request.reposted,
+    promoted: request.promoted,
+    activelyReviewing: request.activelyReviewing,
+    applicationUrl: request.applicationUrl,
+    applicationMethod: request.applicationMethod,
+    descriptionCoverage: result.descriptionCoverage,
+  });
+  result.suggestedQuestions = getSuggestedQuestions({
+    description: request.description,
+    salary: request.salary,
+  }, career.verification === "verified_match");
   res.setHeader("Cache-Control", "no-store");
   return res.status(200).json(result);
 }

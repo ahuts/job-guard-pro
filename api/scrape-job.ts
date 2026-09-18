@@ -2,9 +2,11 @@
 // Endpoint: POST /api/scrape-job
 // LinkedIn returns HTML - we parse it with regex
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './scan';
 
 interface JobData {
+  employerUrl?: string;
+  requisitionId?: string;
   title: string;
   company: string;
   location: string;
@@ -18,6 +20,10 @@ interface JobData {
   applicationUrl: string | null;
   companyLinkedInUrl: string | null;
   reposted: boolean;
+  promoted: boolean;
+  activelyReviewing: boolean;
+  applicationMethod: "linkedin_easy_apply" | "linkedin_apply" | "external_apply" | "unknown";
+  descriptionCoverage: "partial" | "unavailable";
 }
 
 export default async function handler(
@@ -28,9 +34,9 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url } = req.body;
+  const { url } = (req.body ?? {}) as { url?: string };
 
-  if (!url) {
+  if (typeof url !== 'string' || !url || url.length > 2048) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
@@ -49,6 +55,7 @@ export default async function handler(
     const apiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
     
     const apiResponse = await fetch(apiUrl, {
+      signal: AbortSignal.timeout(8000),
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -215,8 +222,14 @@ export default async function handler(
     // Trust Meter uses for exact employer/ATS verification, not a guessed domain.
     const applicationMatch = html.match(/"(?:companyApplyUrl|applyUrl|jobApplyUrl)":"([^\"]+)"/i) ||
       html.match(/href="(https?:\/\/[^\"]*(?:greenhouse\.io|lever\.co|ashbyhq\.com)[^\"]*)"/i);
-    const applicationUrl = applicationMatch ? applicationMatch[1].replace(/\\u0026/g, '&').replace(/&amp;/g, '&') : null;
+    const { links: sourceLinks } = await import('../src/server/employerResolver.js');
+    const candidates = sourceLinks(html, 'https://www.linkedin.com');
+    const externalApply = candidates.find(l => /apply/i.test(l.label) && !/(^|\.)linkedin\.com$/.test(new URL(l.url).hostname));
+    const employerUrl = candidates.find(l => /company website|visit website|careers/i.test(l.label) && !/(^|\.)linkedin\.com$/.test(new URL(l.url).hostname))?.url;
+    const applicationUrl = applicationMatch ? applicationMatch[1].replace(/\\u0026/g, '&').replace(/&amp;/g, '&') : externalApply?.url ?? null;
     const reposted = /\breposted\b/i.test(html);
+    const promoted = /promoted by hirer/i.test(html);
+    const activelyReviewing = /actively reviewing applicants/i.test(html);
     
     // Location - try multiple patterns
     let location = 'Unknown Location';
@@ -349,8 +362,9 @@ export default async function handler(
     if (descMatch) {
       // Strip HTML tags
       description = descMatch[1]
+        .replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, '\n')
         .replace(/\u003c[^\u003e]+\u003e/g, ' ')
-        .replace(/\s+/g, ' ')
+        .replace(/[\t ]+/g, ' ')
         .trim();
     }
     
@@ -369,10 +383,19 @@ export default async function handler(
     // Applicants
     const applicantsMatch = html.match(/(\d+)\s*applicants/i);
     const applicants = applicantsMatch ? applicantsMatch[1] : null;
+    const applicationMethod = /easy apply/i.test(html)
+      ? "linkedin_easy_apply"
+      : applicationUrl
+        ? "external_apply"
+        : /\bapply\b/i.test(html)
+          ? "linkedin_apply"
+          : "unknown";
 
     console.log(`Parsed - Title: ${title}, Company: ${company}, Location: ${location}`);
 
     const jobData: JobData = {
+      employerUrl,
+      requisitionId: description.match(/(?:requisition|job)\s*(?:id|number|#)\s*[:#]?\s*([a-z0-9][a-z0-9_-]{2,80})/i)?.[1],
       title,
       company,
       location,
@@ -386,6 +409,10 @@ export default async function handler(
       applicationUrl,
       companyLinkedInUrl,
       reposted,
+      promoted,
+      activelyReviewing,
+      applicationMethod,
+      descriptionCoverage: description ? "partial" : "unavailable",
     };
 
     return res.status(200).json({

@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "GhostJob - Ghost Job Detector",
-  "version": "1.2.1",
-  "description": "Verify LinkedIn job postings with the GhostJob Trust Meter",
+  "name": "GhostJob - Ghost Job Detector (Preview)",
+  "version": "1.3.3",
+  "description": "Preview build: verify LinkedIn job postings with the GhostJob Trust Meter",
   "permissions": [
     "activeTab",
     "storage"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://jobghost.io/*",
+    "https://www.jobghost.io/*",
+    "https://jobghost-git-agent-ghostjob-04b415-hutsellaaron-8599s-projects.vercel.app/*",
     "https://auevehneizminspolipf.supabase.co/*"
   ],
   "action": {
@@ -31,12 +32,12 @@
         "https://www.linkedin.com/jobs/view/*",
         "https://www.linkedin.com/jobs/*"
       ],
-      "js": ["content.js"],
+      "js": ["job-context.js", "content.js"],
       "run_at": "document_idle"
     },
     {
       "matches": [
-        "https://jobghost.io/*"
+        "https://www.jobghost.io/*"
       ],
       "js": ["dashboard-auth-bridge.js"],
       "run_at": "document_idle"
