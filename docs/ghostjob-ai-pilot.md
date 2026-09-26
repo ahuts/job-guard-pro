@@ -14,7 +14,7 @@ findings additionally require native verification and compatible location.
 Model comparisons and caution flags never change the Trust Score. Public evidence
 does not establish private hiring intent or authenticate a recruiter. Jev receives
 the original listing and selected employer evidence, independently of OpenAI's
-conclusion. Its four typed judgments stay private in Redis for 30 days.
+conclusion. Its four typed judgments stay in private Supabase storage for 30 days.
 
 Pinned providers: `gpt-5.4-mini-2026-03-17` and `jev-1.13.0`. OpenAI responses use
 `store: false`; provider retention rules still apply. No automatic paid retries.
@@ -29,12 +29,14 @@ to allow authentication, budget settlement and cold-start overhead.
 2. Create a dedicated OpenAI project/key and a TypeSafe key. Enter secrets directly
    into that project's **Preview** environment. Do not put keys in chat, frontend
    variables, the tracked `.env`, Git, screenshots or extension files.
-3. Configure managed Redis credentials and the verified account UUIDs in
-   `GHOSTJOB_V3_PILOT_USERS`. `.env.ai.example` lists all switches and names.
+3. Configure the existing database's **server-only** `SUPABASE_SERVICE_ROLE_KEY`
+   in Vercel Preview and the verified account UUIDs in `GHOSTJOB_V3_PILOT_USERS`.
+   `.env.ai.example` lists all switches and names. No Redis service is required.
 4. In the **actual** Lovable Cloud project `auevehneizminspolipf`, capture
    `ghostjob-1.3-schema-preflight.sql` output and policy definitions. Review
-   `ghostjob-ai-schema-review.sql` against those definitions, apply only there,
-   and verify constraints, column, policies and retained row counts.
+   `ghostjob-ai-schema-review.sql` against those definitions. Review and apply
+   `ghostjob-ai-storage-review.sql` in the same actual database. Verify constraints,
+   column, policies, private RPC permissions and retained row counts.
 5. Set `GHOSTJOB_V3_ENABLED`, `GHOSTJOB_V3_SCHEMA_READY`,
    `GHOSTJOB_INVESTIGATION_SCHEMA_READY`, `GHOSTJOB_OPENAI_INVESTIGATION_ENABLED`
    to `true` only after the prerequisites above. Keep rollout `pilot`. Set
@@ -45,10 +47,10 @@ to allow authentication, budget settlement and cold-start overhead.
    repeat it, correct its description, save it and reload its tracker details.
 
 The Vercel connector denied access to this project's scope. Authenticated Chrome
-confirmed the jobghost preview settings contain the existing v3/Auth variables but
-no OpenAI, TypeSafe or Redis variables. A dedicated OpenAI project, GhostJob Pilot,
-was created; API key creation remains a separate credential step. The Supabase
-connector denied access to the configured Lovable database. Schema compatibility
+previously confirmed the jobghost preview settings and GitHub linkage. A dedicated
+OpenAI project, GhostJob Pilot, was created; the user subsequently obtained OpenAI
+and TypeSafe keys. Their live configuration has not been reverified. The Supabase
+connector still denies access to the configured Lovable database. Schema compatibility
 is not inferred from local files. A different Supabase project named GhostJob is not a substitute.
 
 The preview initially redirected direct `/api/scan` requests to Vercel login.
@@ -60,13 +62,20 @@ is distributed inside the extension.
 
 ## Dollar budget, cache and failure behavior
 
-All OpenAI search/token and Jev token work uses one atomic microdollar ledger.
+All OpenAI search/token and Jev token work uses one atomic Supabase microdollar ledger.
 Default/maximum pilot ceiling: **$25 per UTC calendar month**. Reserve **$1** before
 dispatch (conservative against the pinned model's context/tool/token limits), then
 settle using reported usage. Unknown costs, uncertain failures and cache failures
 retain the reservation. Missing storage disables paid work. Accounting uses standard
 USD rates, conservatively ignoring cached-input discounts; taxes, currency conversion
 and unrelated use of provider accounts are outside this application ledger.
+Existing provider spending safeguards remain separate from this shared application
+ceiling. Atomic database RPCs serialize reservation and settlement using one row
+lock; server timestamps determine the UTC month and per-account minute bucket.
+Budget/cache tables reside in `ghostjob_private` with RLS enabled. Public RPCs
+use SECURITY INVOKER and grant execution only to `service_role`; anonymous and
+signed-in frontend clients cannot invoke them or read Jev records. Expired cache
+values are ignored on reads and removed on writes. No new hosted service is added.
 
 The same account/content/analysis version deduplicates for 24 hours even if a client
 changes its attempt ID or scan mode. There is a five-starts/minute/account ceiling.
@@ -93,11 +102,17 @@ satisfy this requirement. No manually reviewed corpus was present in the reposit
 
 Pilot acceptance still requires live credentials, verified database support, real
 scan/save/retry checks, and zero false exact-match findings on the holdout set.
-Local verification passed: 96 full-suite tests, followed by 27 targeted tests
-including a new deduplication case; app/server type checks, targeted lint,
-extension syntax checks, and production build. The build reports existing large
-bundle and outdated Browserslist warnings. Live Redis concurrency and database
-round trips remain pending their actual credentials/access.
+The initial implementation passed 96 full-suite tests and a subsequent retry
+regression. The Supabase replacement additionally executes its SQL in a local
+PostgreSQL engine via the pinned development-only PGlite dependency. Its tests
+cover budget ceilings, queued requests, duplicate reservations, idempotent
+settlement, original-month accounting, rate limits, cache expiry and role access.
+PGlite uses one connection; live multi-connection contention and production database
+round trips still require actual database access. No test fixture satisfies the
+manually reviewed benchmark gate.
+After the storage replacement: all 104 tests, app/server type checks, targeted
+lint and production build passed. The build retains its existing bundle-size
+and Browserslist warnings. The live database migration has not been applied.
 Jev remains in evaluation mode. Public rollout, publishing the extension and replacing
 the main score are outside this release.
 

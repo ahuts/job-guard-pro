@@ -17,7 +17,7 @@ function comparison(): ModelComparison {
   ] })), cautionFlags: [] };
 }
 function enabled() {
-  for (const [key, value] of Object.entries({ GHOSTJOB_OPENAI_INVESTIGATION_ENABLED: 'true', GHOSTJOB_INVESTIGATION_SCHEMA_READY: 'true', GHOSTJOB_V3_PILOT_USERS: 'pilot', OPENAI_API_KEY: 'test', UPSTASH_REDIS_REST_URL: 'https://redis.example', UPSTASH_REDIS_REST_TOKEN: 'test' })) vi.stubEnv(key, value);
+  for (const [key, value] of Object.entries({ GHOSTJOB_OPENAI_INVESTIGATION_ENABLED: 'true', GHOSTJOB_INVESTIGATION_SCHEMA_READY: 'true', GHOSTJOB_V3_PILOT_USERS: 'pilot', OPENAI_API_KEY: 'test', SUPABASE_URL: 'https://db.example', SUPABASE_SERVICE_ROLE_KEY: 'test' })) vi.stubEnv(key, value);
 }
 function openaiResponse(value: unknown, extra: unknown[] = []) {
   return new Response(JSON.stringify({ model: OPENAI_MODEL, status: 'completed', usage: { input_tokens: 1000, output_tokens: 100 }, output: [...extra, { type: 'message', content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }), { status: 200 });
