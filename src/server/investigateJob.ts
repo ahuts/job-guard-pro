@@ -9,6 +9,14 @@ export interface InvestigationInput extends ResolverInput {
   description?: string; employmentType?: string | null; descriptionCoverage?: string;
   coverageDetails?: { truncated?: boolean }; scanAttemptId?: string; scanMode?: string;
 }
+export function investigationFingerprint(input: InvestigationInput) {
+  // Only corrected comparison evidence invalidates the paid investigation.
+  // Attempt IDs, scan mode, local observation dates and presentation metadata do not.
+  return hash([{ title: input.title, company: input.company, location: input.location ?? '', url: input.url ?? '',
+    companyLinkedInUrl: input.companyLinkedInUrl ?? '', employerUrl: input.employerUrl ?? '', applicationUrl: input.applicationUrl ?? '',
+    requisitionId: input.requisitionId ?? '', description: input.description ?? '', employmentType: input.employmentType ?? '',
+    descriptionCoverage: input.descriptionCoverage ?? '', truncated: Boolean(input.coverageDetails?.truncated) }, INVESTIGATION_VERSION]);
+}
 export function investigationAccess(userId: string | null): Investigation['status'] | 'available' {
   if (process.env.GHOSTJOB_OPENAI_INVESTIGATION_ENABLED !== 'true' || process.env.GHOSTJOB_INVESTIGATION_SCHEMA_READY !== 'true' || !process.env.OPENAI_API_KEY || !storeConfigured()) return 'disabled';
   if (!userId) return 'sign_in_required';
@@ -94,8 +102,7 @@ export interface InvestigationDependencies {
 export async function investigateJob(input: InvestigationInput, userId: string | null, deadline: number, deps: InvestigationDependencies = {}): Promise<InvestigationRun> {
   const resolver = deps.resolver ?? resolveEmployer, get = deps.get ?? cacheGet, put = deps.put ?? cachePut;
   const access = investigationAccess(userId);
-  const { scanAttemptId: _attempt, scanMode: _mode, ...fingerprintInput } = input;
-  const fingerprint = hash([fingerprintInput, INVESTIGATION_VERSION]);
+  const fingerprint = investigationFingerprint(input);
   const keys = investigationKeys(userId ?? '', fingerprint);
   if (access === 'available') {
     const cached = await get<InvestigationRun>(keys.resultKey, deadline);

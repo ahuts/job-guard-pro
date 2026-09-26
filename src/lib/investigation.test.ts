@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { investigationSchema } from './investigation';
-import { evidenceState, investigateJob, investigationAccess, validateComparison, type InvestigationInput } from '../server/investigateJob';
+import { evidenceState, investigateJob, investigationAccess, investigationFingerprint, validateComparison, type InvestigationInput } from '../server/investigateJob';
 import { comparePostings, discoverOfficialSources, evaluateJev, newMeter, OPENAI_MODEL, type ModelComparison } from '../server/investigationProviders';
 import { openaiCost, jevCost } from '../server/investigationBudget';
 import { resolveEmployer, type EmployerCandidate, type Resolution } from '../server/employerResolver';
@@ -100,6 +100,10 @@ describe('provider boundaries', () => {
   });
 });
 describe('automatic investigation controls', () => {
+  it('deduplicates attempt changes while invalidating corrected descriptions', () => {
+    expect(investigationFingerprint({ ...input, scanAttemptId: 'new-attempt', scanMode: 'deep' })).toBe(investigationFingerprint(input));
+    expect(investigationFingerprint({ ...input, description: `${description} Changed qualification.` })).not.toBe(investigationFingerprint(input));
+  });
   it('requires explicit pilot membership even when native scoring rolls out publicly', () => {
     enabled(); vi.stubEnv('GHOSTJOB_V3_ROLLOUT', 'public');
     expect(investigationAccess('pilot')).toBe('available'); expect(investigationAccess('other')).toBe('not_eligible'); expect(investigationAccess(null)).toBe('sign_in_required');

@@ -1,8 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { z } from 'zod';
 import { scanSchema, v3Allowed } from '../src/server/scanV3';
-import { investigateJob, investigationAccess } from '../src/server/investigateJob';
-import { INVESTIGATION_VERSION } from '../src/server/investigationBudget';
+import { investigateJob, investigationAccess, investigationFingerprint } from '../src/server/investigateJob';
 import { cacheGet, hash } from '../src/server/searchStore';
 import { matchFindings } from '../src/lib/investigation';
 
@@ -35,8 +34,7 @@ for (const c of cases) {
   const started = Date.now();
   let metrics = { costMicroUsd: 0, usageUncertain: false, cached: false, latencyMs: 0 };
   const result = await investigateJob({ ...c.input, title: c.input.title!, company: c.input.company!, url: c.input.url ?? undefined }, userId, Date.now() + 30_000, { onMetrics: value => { metrics = value; } });
-  const { scanAttemptId: _attempt, scanMode: _mode, ...fingerprintInput } = c.input;
-  const fingerprint = hash([fingerprintInput, INVESTIGATION_VERSION]);
+  const fingerprint = investigationFingerprint({ ...c.input, title: c.input.title!, company: c.input.company!, url: c.input.url ?? undefined });
   const jev = await cacheGet<{ evaluation?: { answers: Record<string, { choice: string; confidence: number }>; latencyMs: number; usage: { input_tokens: number; output_tokens: number } } }>(`gj:jev-evaluation:${hash([userId, fingerprint])}`);
   const native = result.resolution.verification.outcome === 'matched' ? 'matched' : result.resolution.verification.outcome === 'closed' ? 'closed' : 'unverified';
   results.push({ id: c.id, split: c.split, category: c.category, reviewedAt: c.reviewedAt, evidenceUrl: c.evidenceUrl,
