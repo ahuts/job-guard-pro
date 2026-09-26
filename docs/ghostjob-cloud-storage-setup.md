@@ -48,8 +48,10 @@ OpenAI and TypeSafe credentials stay in Vercel Preview. No Redis is introduced.
    Sign in to the pilot preview, then open `/dashboard/storage-check` and click
    **Test storage connection**. This preview-only endpoint verifies the signed-in
    account against the server pilot allowlist, writes/reads one temporary cache
-   value (60-second TTL), and checks that a public client cannot invoke the private
-   cache RPC. It never calls AI providers, changes a scan allowance, writes customer
+   value (60-second TTL), and checks that anonymous and authenticated clients cannot
+   invoke the private cache RPC. It requires an actual PostgreSQL permission-denied
+   error; an invalid token/key response alone does not pass. It never calls AI
+   providers, changes a scan allowance, writes customer
    records or reserves paid budget. Its response exposes no keys or account data.
    Unavailable functions, bad signatures, missing secrets or failed storage calls
    must prevent paid work. A missing key must never be worked around by granting
@@ -70,6 +72,14 @@ the server setting, then redeploy the preview. A different valid anonymous key c
 also work; a fingerprint difference alone does not establish that it is invalid.
 The diagnostic distinguishes Supabase's invalid-key response from an expired
 session and never displays provider error text or credential values.
+
+Live diagnostic checkpoint: the signed preview request stopped at invalid server
+authentication configuration before any storage write. The preview database URL
+matches the target. The current public client key in `.env` was separately verified
+against `/auth/v1/settings` (200); anonymous invocation of the private cache RPC
+returned 401 with PostgreSQL permission-denied code 42501. The preview anonymous
+key needs replacement before the signed round trip can be verified. No AI was
+enabled or invoked by these diagnostics.
 
 Sources: [Lovable Cloud credential access](https://supabase.com/docs/guides/troubleshooting/identify-lovable-cloud-or-supabase-backend),
 [signed function authentication](https://supabase.com/docs/guides/functions/auth),

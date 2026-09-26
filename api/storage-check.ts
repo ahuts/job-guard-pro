@@ -32,12 +32,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const base = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
     const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     if (!base || !anonKey) throw new Error('Missing public connection');
-    const denied = await fetch(new URL('/rest/v1/rpc/ghostjob_cache_get', base), {
-      method: 'POST', headers: { apikey: anonKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_key: key }), signal: AbortSignal.timeout(Math.max(1, Math.min(1500, deadline - Date.now()))),
-    });
-    if (![401, 403].includes(denied.status)) throw new Error('Public RPC denial not confirmed');
-    return res.status(200).json({ status: 'passed', signedWrite: true, signedRead: true, publicRpcDenied: true, providerCalls: 0 });
+    const anonymousHeaders: Record<string, string> = { apikey: anonKey, 'Content-Type': 'application/json' };
+    if (anonKey.split('.').length === 3) anonymousHeaders.Authorization = `Bearer ${anonKey}`;
+    const denials = await Promise.all([anonymousHeaders, { apikey: anonKey, Authorization: authorization as string, 'Content-Type': 'application/json' }].map(async headers => {
+      const response = await fetch(new URL('/rest/v1/rpc/ghostjob_cache_get', base), {
+        method: 'POST', headers, body: JSON.stringify({ p_key: key }),
+        signal: AbortSignal.timeout(Math.max(1, Math.min(1500, deadline - Date.now()))),
+      });
+      const body = await response.json();
+      // Invalid JWT/API-key errors do not prove that database permissions deny access.
+      return [401, 403].includes(response.status) && body?.code === '42501';
+    }));
+    if (!denials.every(Boolean)) throw new Error('Private RPC denial not confirmed');
+    return res.status(200).json({ status: 'passed', signedWrite: true, signedRead: true, publicRpcDenied: true, authenticatedRpcDenied: true, providerCalls: 0 });
   } catch {
     return res.status(503).json({ status: 'storage_check_failed' });
   }

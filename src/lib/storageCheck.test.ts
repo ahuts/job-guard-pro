@@ -58,13 +58,13 @@ describe('preview storage diagnostic', () => {
       if (name === 'ghostjob_cache_put') { value = args.p_value; expect(args.p_ttl_seconds).toBe(60); return true; }
       return value;
     });
-    const fetcher = vi.fn(async (_input: URL | RequestInfo, _init?: RequestInit) => new Response(null, { status: 403 })); vi.stubGlobal('fetch', fetcher);
+    const fetcher = vi.fn(async (_input: URL | RequestInfo, _init?: RequestInit) => Response.json({ code: '42501' }, { status: 403 })); vi.stubGlobal('fetch', fetcher);
     const result = await call();
     expect(result.status).toBe(200);
-    expect(result.payload).toEqual({ status: 'passed', signedWrite: true, signedRead: true, publicRpcDenied: true, providerCalls: 0 });
+    expect(result.payload).toEqual({ status: 'passed', signedWrite: true, signedRead: true, publicRpcDenied: true, authenticatedRpcDenied: true, providerCalls: 0 });
     expect(mocks.storageRpc.mock.calls.map(call => call[0])).toEqual(['ghostjob_cache_put', 'ghostjob_cache_get']);
     expect(result.headers['Cache-Control']).toBe('no-store');
-    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(2);
     expect(String(fetcher.mock.calls[0]?.[0])).not.toContain('openai');
   });
   it('does not pass if a read differs or the public RPC is exposed', async () => {
@@ -82,6 +82,15 @@ describe('preview storage diagnostic', () => {
     mocks.storageRpc.mockRejectedValue(new Error('secret credential raw user text'));
     expect((await call()).payload).toEqual({ status: 'storage_check_failed' });
     expect(mocks.storageRpc.mock.calls.every(call => call[0] === 'ghostjob_cache_put')).toBe(true);
+  });
+  it('never mistakes invalid authentication for a successful private permission check', async () => {
+    let value: unknown;
+    mocks.storageRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'ghostjob_cache_put') { value = args.p_value; return true; }
+      return value;
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'PGRST301' }, { status: 401 })));
+    expect((await call()).payload).toEqual({ status: 'storage_check_failed' });
   });
   it('requires POST to prevent a page visit from mutating storage', async () => {
     expect((await call('GET')).status).toBe(405); expect(mocks.storageRpc).not.toHaveBeenCalled();

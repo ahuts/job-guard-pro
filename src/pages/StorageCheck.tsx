@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const messages: Record<string, string> = {
-  passed: 'Passed: signed write and read succeeded, and public access to the private RPC was denied.',
+  passed: 'Passed: signed write and read succeeded, and anonymous and signed-in client access to the private RPC was denied.',
   not_configured: 'The signing secret is missing from this preview deployment. Save it in Vercel Preview, then redeploy.',
   not_eligible: 'This signed-in account is not on the server pilot allowlist.',
   sign_in_required: 'Please sign in again before testing.',
