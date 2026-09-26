@@ -51,6 +51,12 @@ was created; API key creation remains a separate credential step. The Supabase
 connector denied access to the configured Lovable database. Schema compatibility
 is not inferred from local files. A different Supabase project named GhostJob is not a substitute.
 
+The preview also has Vercel Authentication enabled: a direct `/api/scan` request
+redirects to Vercel login. Extension requests cannot consume that login page as
+an API response. A protection exception for only the extension's preview domain
+is prepared but has not been applied; this access change needs confirmation.
+Never distribute an automation-bypass secret inside the extension.
+
 ## Dollar budget, cache and failure behavior
 
 All OpenAI search/token and Jev token work uses one atomic microdollar ledger.
@@ -86,6 +92,11 @@ satisfy this requirement. No manually reviewed corpus was present in the reposit
 
 Pilot acceptance still requires live credentials, verified database support, real
 scan/save/retry checks, and zero false exact-match findings on the holdout set.
+Local verification passed: 96 full-suite tests, followed by 27 targeted tests
+including a new deduplication case; app/server type checks, targeted lint,
+extension syntax checks, and production build. The build reports existing large
+bundle and outdated Browserslist warnings. Live Redis concurrency and database
+round trips remain pending their actual credentials/access.
 Jev remains in evaluation mode. Public rollout, publishing the extension and replacing
 the main score are outside this release.
 
