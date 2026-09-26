@@ -22,16 +22,20 @@ export const scanSchema = z.object({
   firstObservedAt: z.string().max(100).nullish(),
 });
 export class ScanError extends Error { constructor(public status: number, message: string) { super(message); } }
-export async function verifiedUser(authorization?: string): Promise<string | null> {
-  if (!authorization?.startsWith('Bearer ')) return null;
+export type AuthFailure = 'not_configured' | 'configuration_invalid' | 'session_invalid' | 'provider_unavailable';
+export async function verifiedUser(authorization?: string, onFailure?: (reason: AuthFailure) => void): Promise<string | null> {
+  if (!authorization?.startsWith('Bearer ')) { onFailure?.('session_invalid'); return null; }
   const base = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!base || !key) return null;
-  const client = createClient(base, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(3000) }) } });
+  if (!base || !key) { onFailure?.('not_configured'); return null; }
   try {
+    const client = createClient(base, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(3000) }) } });
     const { data, error } = await client.auth.getUser(authorization.slice(7));
-    return !error && data.user && !data.user.is_anonymous ? data.user.id : null;
-  } catch { return null; }
+    if (!error && data.user && !data.user.is_anonymous) return data.user.id;
+    // Only fixed classifications leave this helper; never expose provider error text.
+    onFailure?.(error && /invalid api key|no api key/i.test(error.message) ? 'configuration_invalid' : error && (error.status ?? 0) >= 500 ? 'provider_unavailable' : 'session_invalid');
+    return null;
+  } catch { onFailure?.('provider_unavailable'); return null; }
 }
 export function v3Allowed(userId: string | null): boolean {
   if (process.env.GHOSTJOB_V3_ENABLED !== 'true' || process.env.GHOSTJOB_V3_SCHEMA_READY !== 'true') return false;

@@ -9,6 +9,7 @@ const messages: Record<string, string> = {
   not_configured: 'The signing secret is missing from this preview deployment. Save it in Vercel Preview, then redeploy.',
   not_eligible: 'This signed-in account is not on the server pilot allowlist.',
   sign_in_required: 'Please sign in again before testing.',
+  auth_configuration_invalid: 'The preview server’s Supabase authentication configuration is missing or invalid. Check SUPABASE_URL and SUPABASE_ANON_KEY in Vercel Preview; the anonymous key must match this GhostJob database.',
   storage_check_failed: 'Storage verification failed. Check that both services have the same signing secret, the storage SQL is installed, and the Cloud function is deployed.',
   unavailable: 'This check is available only on the pilot preview.',
 };

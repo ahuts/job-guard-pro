@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from './scan';
+import type { AuthFailure } from '../src/server/scanV3';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
@@ -10,8 +11,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Use the same dynamic-loading boundary as the existing scan handler.
   const { verifiedUser } = await import('../src/server/scanV3.js');
   const authorization = req.headers?.authorization;
-  const user = await verifiedUser(typeof authorization === 'string' ? authorization : undefined);
-  if (!user) return res.status(401).json({ status: 'sign_in_required' });
+  const authState: { failure?: AuthFailure } = {};
+  const user = await verifiedUser(typeof authorization === 'string' ? authorization : undefined, reason => { authState.failure = reason; });
+  if (!user) {
+    const configuration = authState.failure === 'configuration_invalid' || authState.failure === 'not_configured';
+    return res.status(configuration ? 503 : 401).json({ status: configuration ? 'auth_configuration_invalid' : 'sign_in_required' });
+  }
   const pilots = (process.env.GHOSTJOB_V3_PILOT_USERS || '').split(',').map(value => value.trim()).filter(Boolean);
   if (!pilots.includes(user)) return res.status(403).json({ status: 'not_eligible' });
   if ((process.env.GHOSTJOB_STORAGE_BRIDGE_SECRET?.length || 0) < 32) return res.status(503).json({ status: 'not_configured' });

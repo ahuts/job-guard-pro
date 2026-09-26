@@ -46,6 +46,12 @@ describe('preview storage diagnostic', () => {
     vi.stubEnv('GHOSTJOB_STORAGE_BRIDGE_SECRET', ''); vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'legacy');
     expect((await call()).payload).toEqual({ status: 'not_configured' }); expect(mocks.storageRpc).not.toHaveBeenCalled();
   });
+  it('identifies invalid authentication configuration before any storage write', async () => {
+    mocks.verifiedUser.mockImplementation(async (_authorization: string, failed: (reason: string) => void) => { failed('configuration_invalid'); return null; });
+    expect((await call()).payload).toEqual({ status: 'auth_configuration_invalid' });
+    expect(mocks.storageRpc).not.toHaveBeenCalled();
+    mocks.verifiedUser.mockReset();
+  });
   it('verifies a temporary signed round trip and public denial while AI is disabled', async () => {
     let value: unknown;
     mocks.storageRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {

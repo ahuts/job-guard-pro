@@ -62,6 +62,15 @@ HTTP probes confirmed unsigned POST 401 and OPTIONS 405. The Vercel bridge relea
 `111267d` is deployed successfully. The signed round trip still needs the preview
 storage diagnostic; unsigned probes alone do not prove matching secrets or RPC access.
 
+If the diagnostic reports invalid authentication configuration, check Vercel
+Preview's `SUPABASE_URL` and `SUPABASE_ANON_KEY`. The public anonymous key must be
+valid for the current database; the checked-in `.env` contains the client value
+under `VITE_SUPABASE_PUBLISHABLE_KEY`. Copy only the value, without quotes, into
+the server setting, then redeploy the preview. A different valid anonymous key can
+also work; a fingerprint difference alone does not establish that it is invalid.
+The diagnostic distinguishes Supabase's invalid-key response from an expired
+session and never displays provider error text or credential values.
+
 Sources: [Lovable Cloud credential access](https://supabase.com/docs/guides/troubleshooting/identify-lovable-cloud-or-supabase-backend),
 [signed function authentication](https://supabase.com/docs/guides/functions/auth),
 [built-in function secrets](https://supabase.com/docs/guides/functions/secrets).
