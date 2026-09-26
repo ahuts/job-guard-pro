@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from './scan';
-import { verifiedUser } from '../src/server/scanV3.js';
-import { storageRpc } from '../src/server/searchStore.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
   // This diagnostic is unavailable on production, regardless of rollout flags.
   if (process.env.VERCEL_ENV !== 'preview') return res.status(404).json({ status: 'unavailable' });
   if (req.method !== 'POST') return res.status(405).json({ status: 'method_not_allowed' });
+  // Vercel compiles API entries as CommonJS; shared server modules are ESM.
+  // Use the same dynamic-loading boundary as the existing scan handler.
+  const { verifiedUser } = await import('../src/server/scanV3.js');
   const authorization = req.headers?.authorization;
   const user = await verifiedUser(typeof authorization === 'string' ? authorization : undefined);
   if (!user) return res.status(401).json({ status: 'sign_in_required' });
@@ -18,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const key = `gj:storage-check:${randomUUID()}`;
   const value = { nonce: randomUUID() };
   try {
+    const { storageRpc } = await import('../src/server/searchStore.js');
     if (await storageRpc('ghostjob_cache_put', { p_key: key, p_value: value, p_ttl_seconds: 60 }, deadline) !== true) throw new Error('Write failed');
     const read = await storageRpc<{ nonce?: unknown } | null>('ghostjob_cache_get', { p_key: key }, deadline);
     if (read?.nonce !== value.nonce) throw new Error('Read failed');
