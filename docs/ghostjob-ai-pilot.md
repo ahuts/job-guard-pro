@@ -51,11 +51,12 @@ was created; API key creation remains a separate credential step. The Supabase
 connector denied access to the configured Lovable database. Schema compatibility
 is not inferred from local files. A different Supabase project named GhostJob is not a substitute.
 
-The preview also has Vercel Authentication enabled: a direct `/api/scan` request
-redirects to Vercel login. Extension requests cannot consume that login page as
-an API response. A protection exception for only the extension's preview domain
-is prepared but has not been applied; this access change needs confirmation.
-Never distribute an automation-bypass secret inside the extension.
+The preview initially redirected direct `/api/scan` requests to Vercel login.
+After explicit user confirmation, a protection exception was applied only to the
+extension's exact preview domain. Vercel Authentication remains enabled for the
+project's other protected deployments. The preview API now returns JSON with
+`scoringVersion: 3` and `investigationEnabled: false`. No automation-bypass secret
+is distributed inside the extension.
 
 ## Dollar budget, cache and failure behavior
 
