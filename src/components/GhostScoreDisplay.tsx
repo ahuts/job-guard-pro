@@ -12,6 +12,7 @@ import { refineAnalysis } from '@/services/jobScraper';
 import { useEffect, useState } from 'react';
 import { verificationLabels } from '@/lib/verification';
 import { SUPPORT_EMAIL } from '@/lib/seo';
+import { InvestigationDetails } from '@/components/InvestigationDetails';
 
 interface GhostScoreDisplayProps {
   result: AnalysisResult;
@@ -109,6 +110,7 @@ export function GhostScoreDisplay({ result, onSave, onResultChange }: GhostScore
             {trustScore.verification.outcome !== 'matched' && trustScore.verification.outcome !== 'closed' && <Button disabled={busy || trustScore.verification.deepSearch === 'disabled'} onClick={() => recheck('deep')}>{busy ? 'Checking…' : 'Search more sources'}</Button>}
             <p className="text-xs">Deeper checks use separate search capacity and do not use another scan allowance. A completed no-match check is a result.</p>
           </section>}
+          {trustScore.investigation ? <InvestigationDetails value={trustScore.investigation} /> : null}
           <details><summary className="cursor-pointer">View analyzed description</summary><p className="text-xs">Website scans may include only publicly accessible LinkedIn content. {trustScore.coverageDetails?.truncated ? 'Analysis capped at 12,000 characters.' : ''}</p><pre className="max-h-64 overflow-auto whitespace-pre-wrap text-sm">{job.description.slice(0, 12000)}</pre></details>
           <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setEditing(!editing)}>Review details / Provide employer URL</Button><Button variant="outline" asChild><a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('GhostJob verification mismatch')}&body=${encodeURIComponent(`Please describe the mismatch:\n\nJob: ${job.url}\nScoring version: ${trustScore.scoringVersion}\nFinding: ${trustScore.verification?.outcome ?? 'unavailable'}`)}`}>Report a mismatch</a></Button></div>
           {editing && <form className="space-y-3" onSubmit={e => { e.preventDefault(); void recheck('standard'); }}>

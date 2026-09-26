@@ -39,7 +39,7 @@ describe('shared scan API compatibility', () => {
   it('advertises v2 to non-pilot website users while v3 is restricted', async () => {
     vi.stubEnv('GHOSTJOB_V3_ENABLED', 'true'); vi.stubEnv('GHOSTJOB_V3_SCHEMA_READY', 'true'); vi.stubEnv('GHOSTJOB_V3_ROLLOUT', 'pilot');
     const result = await call({}, 'GET');
-    expect(result.payload).toEqual({ scoringVersion: 2 });
+    expect(result.payload).toEqual({ scoringVersion: 2, investigationEnabled: false });
     expect(result.headers['Cache-Control']).toBe('no-store');
   });
 });

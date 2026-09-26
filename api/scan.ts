@@ -245,7 +245,7 @@ function isRepeatedWithoutVerification(firstObservedAt: string | null | undefine
   return Number.isFinite(first) && Date.now() - first >= 45 * 24 * 60 * 60 * 1000;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse<TrustScoreResult | { error: string } | { scoringVersion: 2 | 3 }>) {
+export default async function handler(req: VercelRequest, res: VercelResponse<TrustScoreResult | { error: string } | { scoringVersion: 2 | 3; investigationEnabled: boolean }>) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -255,7 +255,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
     const auth = req.headers?.authorization;
     const user = await verifiedUser(typeof auth === 'string' ? auth : undefined);
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json({ scoringVersion: v3Allowed(user) ? 3 : 2 });
+    const { investigationAccess } = await import('../src/server/investigateJob.js');
+    return res.status(200).json({ scoringVersion: v3Allowed(user) ? 3 : 2, investigationEnabled: v3Allowed(user) && investigationAccess(user) === 'available' });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 

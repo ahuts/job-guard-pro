@@ -8,10 +8,14 @@ export interface ResolverInput {
   companyLinkedInUrl?: string | null; employerUrl?: string | null;
   applicationUrl?: string | null; requisitionId?: string | null;
 }
-export interface Resolution { score: TrustScoreInput; verification: VerificationDetails }
+export interface EmployerCandidate {
+  id: string; url: string; title: string; company?: string; locations: string[];
+  requisitionId?: string; employmentType?: string; text: string; checkedAt: string; identitySourceUrl: string;
+}
+export interface Resolution { score: TrustScoreInput; verification: VerificationDetails; candidates?: EmployerCandidate[] }
 export interface Posting {
   title: string; company?: string; locations: string[]; url: string;
-  applyUrl?: string; date?: string; id?: string; closed?: boolean;
+  applyUrl?: string; date?: string; id?: string; requisitionId?: string; closed?: boolean; description?: string; employmentType?: string;
 }
 export const normalize = (s: string) => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
 const companyKey = (s: string) => normalize(s).replace(/\b(inc|incorporated|llc|ltd|limited|corp|corporation)\b/g, '').trim();
@@ -78,13 +82,14 @@ export function providerPostings(kind: string, data: any): Posting[] {
   if (!Array.isArray(rows)) throw new Error('Incomplete provider response');
   if (data.next || data.nextPage || data.hasMore || (typeof data.meta?.total === 'number' && data.meta.total > rows.length)) throw new Error('Provider response requires additional pages');
   return rows.map((j: any) => kind === 'greenhouse' ? {
-    title: j.title ?? '', locations: (j.location?.name ?? '').split(/\s*[•;]\s*/), url: j.absolute_url ?? '', date: j.updated_at, id: String(j.requisition_id ?? j.id ?? ''),
+    title: j.title ?? '', locations: (j.location?.name ?? '').split(/\s*[•;]\s*/), url: j.absolute_url ?? '', date: j.updated_at, id: String(j.requisition_id ?? j.id ?? ''), requisitionId: j.requisition_id ? String(j.requisition_id) : undefined, description: j.content,
   } : kind === 'lever' ? {
     title: j.text ?? '', locations: j.categories?.allLocations ?? [j.categories?.location ?? ''], url: j.hostedUrl ?? '', applyUrl: j.applyUrl,
     date: typeof j.createdAt === 'number' && Number.isFinite(j.createdAt) ? new Date(j.createdAt).toISOString() : undefined, id: j.id,
+    description: [j.descriptionPlain, ...(j.lists ?? []).map((l: any) => `${l.text ?? ''} ${text(l.content ?? '')}`), j.additionalPlain].filter(Boolean).join('\n'), employmentType: j.categories?.commitment,
   } : {
     title: j.title ?? '', locations: [j.location ?? '', ...(j.secondaryLocations ?? []).map((l: any) => l.location ?? '')].map(l => j.isRemote && !/remote/i.test(l) ? `Remote ${l}` : l),
-    url: j.jobUrl ?? '', applyUrl: j.applyUrl, date: j.publishedAt, id: j.id,
+    url: j.jobUrl ?? '', applyUrl: j.applyUrl, date: j.publishedAt, id: j.id, description: j.descriptionPlain ?? j.descriptionHtml, employmentType: j.employmentType,
   }).filter((j: Posting) => j.title && j.url);
 }
 export function structuredPostings(html: string, base: string): Posting[] {
@@ -96,7 +101,7 @@ export function structuredPostings(html: string, base: string): Posting[] {
       for (const country of [s.applicantLocationRequirements ?? []].flat()) locations.push(`Remote ${country.name ?? ''}`);
     }
     return { title: s.title ?? '', company: s.hiringOrganization?.name, locations, url: base,
-      date: s.datePosted, id: typeof s.identifier === 'string' ? s.identifier : s.identifier?.value,
+      date: s.datePosted, id: typeof s.identifier === 'string' ? s.identifier : s.identifier?.value, requisitionId: typeof s.identifier === 'string' ? s.identifier : s.identifier?.value, description: s.description, employmentType: [s.employmentType ?? []].flat().join(', '),
       // Expiry metadata alone may be stale; explicit visible closure is required.
       closed: jobSchemas.length === 1 && explicitlyClosed(html, s.title ?? ''),
     };
@@ -120,24 +125,25 @@ function identity(page: PublicPage, input: ResolverInput): boolean {
 }
 export async function resolveEmployer(input: ResolverInput, options: {
   deadline: number; search?: (query: string) => Promise<string[]>;
-  fetcher?: typeof publicFetch;
+  fetcher?: typeof publicFetch; collectCandidates?: boolean; discoveryUrls?: string[];
 }): Promise<Resolution> {
   const fetcher = options.fetcher ?? publicFetch;
   const checks: SourceCheck[] = [];
   const requestPages = new Map<string, PublicPage>();
   const visited = new Set<string>();
   const queue: Array<{ url: string; trusted: boolean; board?: boolean }> = [];
-  let ownerHost = '', boardFound = false, unavailable = false;
+  let ownerHost = '', identitySourceUrl = '', boardFound = false, unavailable = false;
   const checkedAt = new Date().toISOString();
   const result: Resolution = { score: { careersVerification: 'unverified' }, verification: { outcome: 'identity_unresolved', reason: 'Could not establish the employer website from available sources.', checkedAt, sources: checks } };
+  if (options.collectCandidates) result.candidates = [];
   async function load(raw: string): Promise<PublicPage> {
     if (requestPages.has(raw)) return { ...requestPages.get(raw)!, cached: true };
     const key = `gj:source:${hash(raw)}`;
-    const cached = options.fetcher ? null : await cacheGet<PublicPage>(key);
+    const cached = options.fetcher ? null : await cacheGet<PublicPage>(key, options.deadline);
     if (cached) { requestPages.set(raw, cached); return { ...cached, cached: true }; }
     const page = await fetcher(raw, options.deadline);
     requestPages.set(raw, page);
-    if (!options.fetcher) await cachePut(key, page, page.status >= 200 && page.status < 300 ? 900 : 120).catch(() => {});
+    if (!options.fetcher) await cachePut(key, page, page.status >= 200 && page.status < 300 ? 900 : 120, options.deadline).catch(() => {});
     return page;
   }
   function enqueue(url: string, trusted = false, board = false) {
@@ -146,9 +152,10 @@ export async function resolveEmployer(input: ResolverInput, options: {
     if (!visited.has(normalized + ':' + trusted) && !queue.some(q => q.url === normalized && q.trusted === trusted)) queue.push({ url: normalized, trusted, board });
     } catch { /* supplied URLs are candidates, never trust assertions */ }
   }
+  for (const url of (options.discoveryUrls ?? []).slice(0, 5)) enqueue(url);
   for (const url of [input.employerUrl, input.applicationUrl]) if (url) enqueue(url);
   const discoveryKey = `gj:employer:${hash([companyKey(input.company), input.companyLinkedInUrl ?? ''])}`;
-  const discovered = options.fetcher ? null : await cacheGet<string>(discoveryKey);
+  const discovered = options.fetcher ? null : await cacheGet<string>(discoveryKey, options.deadline);
   if (discovered) enqueue(discovered);
   let searchCalls = 0;
   async function search() {
@@ -177,10 +184,10 @@ export async function resolveEmployer(input: ResolverInput, options: {
       // redirects on ordinary pages must establish their own identity.
       let trusted = candidate.trusted && (Boolean(p) || new URL(page.url).hostname === new URL(candidate.url).hostname);
       if (!p && identity(page, input)) {
-        trusted = true; ownerHost = new URL(page.url).hostname;
+        trusted = true; ownerHost = new URL(page.url).hostname; identitySourceUrl = page.url;
         check.reason = 'Employer identity confirmed from public source information.';
         result.score.companyIdentityVerified = true;
-        if (!options.fetcher) await cachePut(discoveryKey, page.url, 86400).catch(() => {});
+        if (!options.fetcher) await cachePut(discoveryKey, page.url, 86400, options.deadline).catch(() => {});
       }
       let postings = p ? providerPostings(p.kind, JSON.parse(page.body)) : structuredPostings(page.body, page.url);
       const foundLinks = p ? [] : links(page.body, page.url);
@@ -202,12 +209,38 @@ export async function resolveEmployer(input: ResolverInput, options: {
         if (!postings.length && trusted && input.requisitionId && text(page.body).includes(input.requisitionId)) {
           const heading = text(page.body.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? '');
           const location = input.location && text(page.body).includes(input.location) ? input.location : '';
-          postings = [{ title: heading, locations: [location], url: page.url, id: input.requisitionId,
+          postings = [{ title: heading, locations: [location], url: page.url, id: input.requisitionId, requisitionId: input.requisitionId,
             closed: explicitlyClosed(page.body, input.title) }];
         }
       }
       if (trusted && (p || candidate.board)) { boardFound = true; result.verification.sourceUrl = candidate.url; }
       if (!trusted) continue;
+      if (options.collectCandidates && identitySourceUrl && result.candidates!.length < 3) {
+        const tokens = normalize(input.title).split(' ').filter(t => t.length > 2);
+        const rank = (j: Posting) => (input.requisitionId && j.id === input.requisitionId ? 100 : 0) +
+          (titlesMatchV3(j.title, input.title) ? 30 : 0) + (locationsMatch(input.location ?? '', j.locations) ? 10 : 0) +
+          tokens.filter(t => normalize(j.title).split(' ').includes(t)).length;
+        const ranked = postings.filter(j => (!j.company || companyMatches(j.company, input.company)) && rank(j) > 0)
+          .sort((a, b) => rank(b) - rank(a));
+        for (const posting of ranked) {
+          if (result.candidates!.length >= 3 || Date.now() >= options.deadline) break;
+          if (result.candidates!.some(j => j.url === posting.url)) continue;
+          try {
+            const roleUrl = publicUrl(posting.url), roleProvider = provider(roleUrl.href);
+            // A feed cannot confer ownership on an arbitrary external URL.
+            const relationship = p ? roleProvider?.kind === p.kind && roleProvider.board === p.board : roleUrl.hostname === new URL(page.url).hostname;
+            if (!relationship) continue;
+            const rolePage = posting.url === page.url ? page : await load(roleUrl.href);
+            if (rolePage.status < 200 || rolePage.status >= 300 || rolePage.url !== roleUrl.href) continue;
+            const roleDescription = structuredPostings(rolePage.body, rolePage.url).find(j => titlesMatchV3(j.title, posting.title))?.description;
+            const roleText = text(roleDescription || posting.description || rolePage.body).slice(0, 10_000);
+            if (!roleText) continue;
+            result.candidates!.push({ id: `employer-${hash(rolePage.url).slice(0, 16)}`, url: rolePage.url, title: posting.title,
+              company: posting.company ?? input.company, locations: posting.locations, requisitionId: posting.requisitionId,
+              employmentType: posting.employmentType, text: roleText, checkedAt: rolePage.checkedAt, identitySourceUrl });
+          } catch { /* Candidate inaccessible: neutral, keep native checks running. */ }
+        }
+      }
       const matches = postings.filter(j => (!j.company || companyMatches(j.company, input.company)) && titlesMatchV3(j.title, input.title) && locationsMatch(input.location ?? '', j.locations) && (!input.requisitionId || !j.id || String(j.id) === input.requisitionId));
       if (matches.length !== 1) {
         if (postings.some(j => titlesMatchV3(j.title, input.title))) { check.status = 'possible_match'; check.reason = 'Title found, but location, requisition, or uniqueness was not confirmed.'; }
@@ -216,6 +249,7 @@ export async function resolveEmployer(input: ResolverInput, options: {
       const match = matches[0];
       // Verify role URLs from provider feeds before exposing them to a client.
       const rolePage = match.url === page.url ? page : await load(publicUrl(match.url).href);
+      if (rolePage.status < 200 || rolePage.status >= 300 || new URL(rolePage.url).pathname.replace(/\/$/, '') !== new URL(match.url).pathname.replace(/\/$/, '')) { check.reason = 'Role destination unavailable or redirected; no verification awarded.'; unavailable = true; continue; }
       const exactClosed = match.closed || (Boolean(input.requisitionId && match.id === input.requisitionId) && explicitlyClosed(rolePage.body, input.title));
       if (exactClosed) {
         check.url = rolePage.url; check.checkedAt = rolePage.checkedAt; check.cached = rolePage.cached; check.reason = 'The identified employer role explicitly reports it is closed.';
@@ -223,7 +257,6 @@ export async function resolveEmployer(input: ResolverInput, options: {
         result.verification = { ...result.verification, outcome: 'closed', reason: 'The identified employer role explicitly reports it is closed.', sourceUrl: rolePage.url, checkedAt: rolePage.checkedAt };
         return result;
       }
-      if (rolePage.status < 200 || rolePage.status >= 300 || new URL(rolePage.url).pathname.replace(/\/$/, '') !== new URL(match.url).pathname.replace(/\/$/, '')) { check.reason = 'Role destination unavailable or redirected; no verification awarded.'; unavailable = true; continue; }
       let applicationActive = false;
       const apply = match.applyUrl || links(rolePage.body, rolePage.url).find(l => /^apply(?: now| for this (?:job|position))?$/i.test(l.label))?.url;
       if (apply) {

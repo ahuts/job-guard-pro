@@ -14,7 +14,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.3-preview';
+  const VERSION  = '1.3.4-preview';
   // This unpacked pilot must not write scan observations or saved jobs to the
   // live Lovable Cloud database while it is exercising the Preview API.
   const PREVIEW_BUILD = true;
@@ -1596,6 +1596,30 @@
       if (finding.sourceUrl && /^https:\/\//.test(finding.sourceUrl)) { var source = document.createElement('a'); source.href = finding.sourceUrl; source.target = '_blank'; source.rel = 'noopener noreferrer'; source.textContent = finding.outcome === 'matched' ? 'View employer posting ↗' : 'View employer source ↗'; box.appendChild(source); }
       var checked = document.createElement('p'); checked.textContent = 'Checked ' + new Date(finding.checkedAt).toLocaleString() + ' · Scoring v' + result.scoringVersion; box.appendChild(checked);
     }
+    if (result.investigation && result.investigation.version === 1) {
+      var investigation = result.investigation;
+      var investigationBox = document.createElement('section');
+      investigationBox.setAttribute('aria-label', 'Posting investigation');
+      investigationBox.style.cssText = 'margin:14px 0;padding:12px;border:1px solid #e2e8f0;border-radius:8px';
+      var investigationHeading = document.createElement('h3'); investigationHeading.textContent = 'Posting investigation'; investigationBox.appendChild(investigationHeading);
+      var matchLabels = { exact_match: 'Exact employer posting confirmed', probable_match: 'Possible employer posting match', different_role: 'The compared posting appears to be a different role', insufficient_evidence: 'Not enough evidence to compare the role' };
+      var investigationMessage = document.createElement('p'); investigationMessage.textContent = investigation.status === 'completed' ? (matchLabels[investigation.finding] || matchLabels.insufficient_evidence) : investigation.reason; investigationBox.appendChild(investigationMessage);
+      function sourceLink(raw, label, parent) {
+        try { var url = new URL(raw); if (url.protocol !== 'https:' || url.username || url.password) return; var link = document.createElement('a'); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = label; parent.appendChild(link); } catch (_) { /* Invalid source link is not displayed. */ }
+      }
+      if (investigation.sourceUrl) sourceLink(investigation.sourceUrl, 'View compared employer posting ↗', investigationBox);
+      function appendExcerpts(excerpts, parent) {
+        (excerpts || []).forEach(function(excerpt) { var quote = document.createElement('blockquote'); quote.textContent = '“' + excerpt.quote + '”'; parent.appendChild(quote); sourceLink(excerpt.sourceUrl, excerpt.sourceId === 'linkedin' ? 'LinkedIn listing ↗' : 'Employer posting ↗', parent); });
+      }
+      var comparisonDetails = document.createElement('details'); var comparisonTitle = document.createElement('summary'); comparisonTitle.textContent = 'Compare responsibilities and qualifications'; comparisonDetails.appendChild(comparisonTitle);
+      var dimensionLabels = { responsibilities: 'Responsibilities', required_qualifications: 'Required qualifications', preferred_qualifications: 'Preferred qualifications', seniority: 'Seniority', location: 'Location eligibility', employment_type: 'Employment type', requisition_id: 'Requisition ID' };
+      (investigation.dimensions || []).forEach(function(dimension) { var row = document.createElement('p'); row.textContent = (dimensionLabels[dimension.dimension] || dimension.dimension) + ': ' + (dimension.finding === 'aligned' ? 'Aligned' : dimension.finding === 'conflicting' ? 'Difference found' : 'Not enough evidence'); comparisonDetails.appendChild(row); appendExcerpts(dimension.excerpts, comparisonDetails); });
+      if ((investigation.dimensions || []).length) investigationBox.appendChild(comparisonDetails);
+      (investigation.cautionFlags || []).forEach(function(flag) { var caution = document.createElement('p'); caution.textContent = flag.label; investigationBox.appendChild(caution); appendExcerpts(flag.excerpts, investigationBox); });
+      var investigationTime = document.createElement('p'); investigationTime.textContent = 'Checked ' + new Date(investigation.checkedAt).toLocaleString(); investigationBox.appendChild(investigationTime);
+      (investigation.limitations || []).forEach(function(text) { var limit = document.createElement('p'); limit.style.fontSize = '11px'; limit.textContent = text; investigationBox.appendChild(limit); });
+      box.appendChild(investigationBox);
+    }
     var details = document.createElement('details');
     var summary = document.createElement('summary'); summary.textContent = 'View analyzed description'; details.appendChild(summary);
     var description = document.createElement('pre'); description.style.cssText = 'white-space:pre-wrap;max-height:220px;overflow:auto;font-family:inherit'; description.textContent = lastScannedJob ? lastScannedJob.description : 'Description unavailable'; details.appendChild(description);
@@ -1613,7 +1637,7 @@
         try { var next = await fetchRemoteAnalysis(lastScannedJob, 'deep'); showGhostScore(next); }
         catch (error) { message.textContent = error.message; deep.disabled = false; deep.textContent = 'Retry deeper check'; }
       });
-      if (finding.deepSearch === 'disabled') { deep.disabled = true; deep.title = 'Deeper search is not enabled yet.'; }
+      if (finding.deepSearch === 'disabled' && !(result.investigation && result.investigation.status === 'in_progress')) { deep.disabled = true; deep.title = 'Automatic investigation is unavailable for this scan.'; }
     }
     var message = document.createElement('p'); message.setAttribute('role', 'status'); message.textContent = 'Deeper checks use separate search capacity and do not use another scan allowance. A completed no-match check is a result.'; box.appendChild(message);
     action('Report a mismatch', function() {

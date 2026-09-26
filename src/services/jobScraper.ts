@@ -81,7 +81,7 @@ export async function refineAnalysis(previous: { job: ScrapedJob; firstObservedA
   const response = await fetch("/api/scan", {
     method: "POST",
     headers,
-    signal: AbortSignal.timeout(35000),
+    signal: AbortSignal.timeout(45000),
     body: JSON.stringify({
       scoringVersion, scanMode: mode, scanAttemptId,
       employerUrl: job.employerUrl || undefined, requisitionId: job.requisitionId || undefined,
@@ -141,6 +141,7 @@ export async function saveAnalysis(userId: string, analysis: AnalysisResult): Pr
     trust_score: trustScore.trustScore, scoring_version: trustScore.scoringVersion,
     ghost_risk: trustScore.ghostRisk, careers_verification: trustScore.careersVerification,
     signals: trustScore.evidence.map(e => ({ type: e.group, title: e.label, description: e.description, weight: e.points })),
+    ...(trustScore.investigation && trustScore.investigation.status !== 'disabled' ? { investigation: JSON.parse(JSON.stringify(trustScore.investigation)) } : {}),
     application_status: 'not_applied',
   });
   if (error) throw error;

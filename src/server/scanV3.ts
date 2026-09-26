@@ -2,8 +2,7 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { calculateTrustScore, getQualityBadges, hasConcreteRoleDetails } from '../lib/trustScore.js';
 import { getJobInsights, getJobQualityChecklist, getSuggestedQuestions } from '../lib/jobInsights.js';
-import { resolveEmployer } from './employerResolver.js';
-import { cacheGet, cachePut, hash, reserveSearch, storeConfigured } from './searchStore.js';
+import { investigateJob } from './investigateJob.js';
 
 const url = z.preprocess(v => v === '' ? undefined : v, z.string().url().max(2048).refine(v => new URL(v).protocol === 'https:', 'HTTPS required').nullish());
 export const scanSchema = z.object({
@@ -45,42 +44,9 @@ export async function scanV3(body: unknown, authorization?: string) {
   const input = parsed.data;
   const userId = await verifiedUser(authorization);
   if (!v3Allowed(userId)) throw new ScanError(503, 'GhostJob 1.3 is not enabled for this account yet. The production pilot requires a compatible database and server release.');
-  const deepConfigured = process.env.GHOSTJOB_DEEP_SEARCH_ENABLED === 'true' && Boolean(process.env.BRAVE_SEARCH_API_KEY) && storeConfigured();
-  const fingerprint = hash(input);
-  const resultKey = `gj:deep-result:${hash([userId, input.scanAttemptId, fingerprint])}`;
-  let search: ((query: string) => Promise<string[]>) | undefined;
-  let deepState: 'available' | 'sign_in_required' | 'disabled' | 'limited' | 'completed' = !deepConfigured ? 'disabled' : !userId ? 'sign_in_required' : 'available';
-  const deadline = Date.now() + (input.scanMode === 'deep' ? 23000 : 8500);
-  if (input.scanMode === 'deep') {
-    if (!userId) throw new ScanError(401, 'Sign in to search more sources.');
-    if (!deepConfigured) throw new ScanError(503, 'Deeper search is currently unavailable. Your existing result is unchanged.');
-    if (!input.scanAttemptId) throw new ScanError(400, 'A scan attempt identifier is required.');
-    const cached = await cacheGet<ReturnType<typeof calculateTrustScore> & { failedStatus?: number; error?: string }>(resultKey);
-    if (cached?.failedStatus) throw new ScanError(cached.failedStatus, cached.error || 'The prior search failed. No additional query was charged.');
-    if (cached) return cached;
-    let reservation: number;
-    try { reservation = await reserveSearch(userId, input.scanAttemptId, fingerprint); } catch { throw new ScanError(503, 'Search budget service unavailable. No search was started.'); }
-    if (reservation === 0) throw new ScanError(409, 'This deeper check has already started. Retry shortly to retrieve its result; no additional search will be charged.');
-    if (reservation < 0) throw new ScanError(429, 'Search capacity reached. Your existing result is unchanged.');
-    let count = 0;
-    search = async query => {
-      if (++count > 2 || Date.now() >= deadline) return [];
-      const endpoint = new URL('https://api.search.brave.com/res/v1/web/search');
-      endpoint.searchParams.set('q', query); endpoint.searchParams.set('count', '5');
-      try {
-        const response = await fetch(endpoint, { headers: { 'X-Subscription-Token': process.env.BRAVE_SEARCH_API_KEY!, Accept: 'application/json' }, signal: AbortSignal.timeout(Math.max(1, Math.min(4000, deadline - Date.now()))) });
-        if (!response.ok) throw new Error('Provider unavailable');
-        const data = await response.json();
-        return (data.web?.results ?? []).slice(0, 5).map((r: { url: string }) => r.url);
-      } catch {
-        const error = 'Search provider unavailable. No scan allowance was consumed; this attempt will not trigger another paid query.';
-        await cachePut(resultKey, { failedStatus: 502, error }, 86400).catch(() => {});
-        throw new ScanError(502, error);
-      }
-    };
-    deepState = 'completed';
-  }
-  const resolution = await resolveEmployer({ ...input, title: input.title!, company: input.company!, url: input.url ?? undefined }, { deadline, search });
+  if (input.scanMode === 'deep' && !userId) throw new ScanError(401, 'Sign in to search more sources.');
+  const deadline = Date.now() + 30_000;
+  const { resolution, investigation } = await investigateJob({ ...input, title: input.title!, company: input.company!, url: input.url ?? undefined }, userId, deadline);
   const result = calculateTrustScore({ ...resolution.score, scoringVersion: 3,
     concreteRoleDetails: hasConcreteRoleDetails(input.description ?? ''), reposted: input.reposted,
     repeatedWithoutVerification: Boolean(input.firstObservedAt && Date.now() - Date.parse(input.firstObservedAt) >= 45 * 86400000),
@@ -88,12 +54,12 @@ export async function scanV3(body: unknown, authorization?: string) {
   });
   result.descriptionCoverage = input.descriptionCoverage ?? (input.description ? 'partial' : 'unavailable');
   result.coverageDetails = { status: result.descriptionCoverage, truncated: input.coverageDetails?.truncated ?? false, analyzedCharacters: input.description?.length ?? 0, reason: input.coverageDetails?.reason };
-  result.verification = { ...resolution.verification, deepSearch: deepState };
+  result.verification = { ...resolution.verification, deepSearch: investigation.status === 'completed' ? 'completed' : investigation.status === 'sign_in_required' ? 'sign_in_required' : investigation.status === 'budget_exhausted' ? 'limited' : 'disabled' };
+  result.investigation = investigation;
   result.jobInsights = getJobInsights(input).map(i => ({ ...i, sourceUrl: input.url ?? undefined }));
   result.jobQualityChecklist = getJobQualityChecklist(input);
   result.suggestedQuestions = getSuggestedQuestions(input, resolution.score.careersVerification === 'verified_match');
   result.scanAttemptId = input.scanAttemptId;
-  if (input.scanMode === 'deep') await cachePut(resultKey, result, 86400);
   // No descriptions, account IDs, or URLs in operational metrics.
   console.info('ghostjob_scan', { version: 3, mode: input.scanMode, outcome: result.verification.outcome, sources: result.verification.sources.length });
   return result;

@@ -145,7 +145,7 @@ export function getJobQualityChecklist(input: JobInsightInput): JobQualityCheck[
   const qualifications = /requirements?|qualifications?|must have|preferred|nice to have|experience with/i;
   const responsibilitiesExcerpt = sectionExcerpt(input.description ?? "", /^(?:primary |key )?responsibilities\b|^what you'?ll do\b/i);
   const qualificationsExcerpt = sectionExcerpt(input.description ?? "", /^(?:required |preferred )?qualifications\b|^requirements\b|^what you bring\b/i);
-  const applicationKnown = Boolean(input.applicationUrl) || (input.applicationMethod && input.applicationMethod !== "unknown");
+  const applicationKnown = Boolean(input.applicationUrl) || Boolean(input.applicationMethod && input.applicationMethod !== "unknown");
   const check = (id: string, label: string, found: boolean, foundDetail: string, missingDetail: string, pattern?: RegExp): JobQualityCheck => {
     const excerpt = pattern ? description.split(/\n+|(?<=[.!?])\s+/).map(compact).find(line => pattern.test(line))?.slice(0, 400) : undefined;
     if (found) return { id, label, status: "found", detail: excerpt || foundDetail, excerpt };

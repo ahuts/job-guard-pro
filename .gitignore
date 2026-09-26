@@ -8,3 +8,9 @@ dist/
 
 # Utility scripts
 grant-pro.js
+
+# Server-only secrets and private benchmark evidence
+.env.local
+.env.*.local
+.vercel/
+private-benchmarks/

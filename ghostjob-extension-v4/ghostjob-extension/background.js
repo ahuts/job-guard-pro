@@ -2,7 +2,7 @@
 // This unpacked pilot build intentionally targets the 1.3 Preview deployment.
 // Production remains on its own endpoint until the pilot is approved.
 const SCAN_API_URL = "https://jobghost-git-agent-ghostjob-04b415-hutsellaaron-8599s-projects.vercel.app/api/scan";
-const SCAN_TIMEOUT_MS = 35_000;
+const SCAN_TIMEOUT_MS = 45_000;
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   (async () => {

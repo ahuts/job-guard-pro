@@ -101,6 +101,7 @@ export type Database = {
           ghost_risk: string | null
           has_salary: boolean | null
           id: string
+          investigation: Json | null
           job_title: string
           job_url: string | null
           notes: string | null
@@ -113,6 +114,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          investigation?: Json | null
           application_status?: string
           careers_verification?: string | null
           company_location?: string | null
@@ -136,6 +138,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          investigation?: Json | null
           application_status?: string
           careers_verification?: string | null
           company_location?: string | null

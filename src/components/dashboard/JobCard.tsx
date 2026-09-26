@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Trash2, MapPin, Calendar, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Job } from "@/types";
+import { InvestigationDetails } from "@/components/InvestigationDetails";
 
 interface JobCardProps {
   job: Job;
@@ -107,12 +108,14 @@ export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
             </div>
 
             {/* Signals */}
+            {job.investigation ? <InvestigationDetails value={job.investigation} /> : null}
             {job.signals && job.signals.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">Detected Signals</p>
                 <ul className="space-y-1.5">
-                  {job.signals.map((signal: any, i: number) => {
-                    const label = typeof signal === 'string' ? signal : (signal?.title || signal?.type || JSON.stringify(signal));
+                  {job.signals.map((signal: unknown, i: number) => {
+                    const record = signal && typeof signal === 'object' ? signal as Record<string, unknown> : {};
+                    const label = typeof signal === 'string' ? signal : String(record.title || record.type || JSON.stringify(signal));
                     return (
                       <li
                         key={i}

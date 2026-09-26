@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { redis, reserveSearch, RESERVE_SEARCH } from '../server/searchStore';
+import { redis } from '../server/searchStore';
+import { reserveInvestigation, RESERVE_INVESTIGATION, SETTLE_INVESTIGATION, investigationKeys, monthlyBudgetMicroUsd } from '../server/investigationBudget';
 import { scanV3, verifiedUser } from '../server/scanV3';
 
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
@@ -14,16 +15,24 @@ describe('paid discovery controls', () => {
   it('uses one atomic reservation for budget, rate limit and retry identity', async () => {
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://redis.example'); vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test');
     const fetch = vi.fn(async (_url: unknown, _init: { body: string }) => ({ ok: true, json: async () => ({ result: 1 }) })); vi.stubGlobal('fetch', fetch);
-    expect(await reserveSearch('user-a', 'attempt-123', 'fingerprint')).toBe(1);
+    expect((await reserveInvestigation('user-a', 'fingerprint')).status).toBe(1);
     const command = JSON.parse(fetch.mock.calls[0][1].body);
-    expect(command.slice(0, 3)).toEqual(['EVAL', RESERVE_SEARCH, 3]);
+    expect(command.slice(0, 3)).toEqual(['EVAL', RESERVE_INVESTIGATION, 3]);
     expect(command[3]).not.toContain('user-a');
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it('caps the budget at the approved ceiling and binds retries to account and content', () => {
+    vi.stubEnv('GHOSTJOB_AI_MONTHLY_BUDGET_USD', '26'); expect(monthlyBudgetMicroUsd()).toBe(0);
+    vi.stubEnv('GHOSTJOB_AI_MONTHLY_BUDGET_USD', '25'); expect(monthlyBudgetMicroUsd()).toBe(25_000_000);
+    expect(investigationKeys('u', 'f').attemptKey).not.toBe(investigationKeys('u', 'corrected').attemptKey);
+    expect(investigationKeys('u', 'f').attemptKey).not.toBe(investigationKeys('other', 'f').attemptKey);
+    expect(investigationKeys('u', 'f', new Date('2026-09-30T23:59:59Z')).monthKey).not.toBe(investigationKeys('u', 'f', new Date('2026-10-01T00:00:00Z')).monthKey);
+    expect(SETTLE_INVESTIGATION).toContain("reserved == 'settled'");
   });
   it('fails closed if Redis rejects the budget command', async () => {
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://redis.example'); vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test');
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ error: 'ERR' }) })));
-    await expect(reserveSearch('u', 'attempt-123', 'f')).rejects.toThrow('storage unavailable');
+    await expect(reserveInvestigation('u', 'f')).rejects.toThrow('storage unavailable');
   });
   it('never trusts a client-provided identity when no bearer is present', async () => {
     expect(await verifiedUser()).toBeNull();
@@ -35,7 +44,7 @@ describe('paid discovery controls', () => {
     await expect(scanV3({ title: 'Engineer', company: 'Acme', scoringVersion: 3, scanMode: 'deep', scanAttemptId: 'attempt-123' })).rejects.toMatchObject({ status: 401 });
   });
   it('reuses a completed signed-in deep check without another paid query', async () => {
-    for (const [key, value] of Object.entries({ GHOSTJOB_V3_ENABLED: 'true', GHOSTJOB_V3_SCHEMA_READY: 'true', GHOSTJOB_V3_ROLLOUT: 'public', GHOSTJOB_DEEP_SEARCH_ENABLED: 'true', BRAVE_SEARCH_API_KEY: 'test', UPSTASH_REDIS_REST_URL: 'https://redis.example', UPSTASH_REDIS_REST_TOKEN: 'test', SUPABASE_URL: 'https://auth.example', SUPABASE_ANON_KEY: 'test' })) vi.stubEnv(key, value);
+    for (const [key, value] of Object.entries({ GHOSTJOB_V3_ENABLED: 'true', GHOSTJOB_V3_SCHEMA_READY: 'true', GHOSTJOB_V3_ROLLOUT: 'public', GHOSTJOB_OPENAI_INVESTIGATION_ENABLED: 'true', GHOSTJOB_INVESTIGATION_SCHEMA_READY: 'true', GHOSTJOB_V3_PILOT_USERS: 'account-one', OPENAI_API_KEY: 'test', UPSTASH_REDIS_REST_URL: 'https://redis.example', UPSTASH_REDIS_REST_TOKEN: 'test', SUPABASE_URL: 'https://auth.example', SUPABASE_ANON_KEY: 'test' })) vi.stubEnv(key, value);
     const stored = new Map(); let paidQueries = 0, reservations = 0;
     vi.stubGlobal('fetch', vi.fn(async (url: any, init: any) => {
       const target = String(url);
@@ -45,15 +54,22 @@ describe('paid discovery controls', () => {
         let result: any = null;
         if (command[0] === 'GET') result = stored.get(command[1]) ?? null;
         if (command[0] === 'SET') { stored.set(command[1], command[2]); result = 'OK'; }
-        if (command[0] === 'EVAL') { reservations++; result = 1; }
+        if (command[0] === 'EVAL') { if (command[1] === RESERVE_INVESTIGATION) reservations++; result = 1; }
         return new Response(JSON.stringify({ result }), { status: 200 });
       }
-      if (target.includes('api.search.brave.com')) { paidQueries++; return new Response(JSON.stringify({ web: { results: [] } }), { status: 200 }); }
+      if (target.includes('api.openai.com')) {
+        paidQueries++;
+        const request = JSON.parse(init.body);
+        return new Response(JSON.stringify({ model: 'gpt-5.4-mini-2026-03-17', status: 'completed', usage: { input_tokens: 100, output_tokens: 100 }, output: [
+          ...(request.tools ? [{ type: 'web_search_call', action: { type: 'search', sources: [] } }] : []),
+          { type: 'message', content: [{ type: 'output_text', text: JSON.stringify(request.tools ? { urls: [] } : { selectedCandidateId: null, finding: 'insufficient_evidence', dimensions: [], cautionFlags: [] }) }] }
+        ] }), { status: 200 });
+      }
       throw new Error('Unexpected network request');
     }));
     const request = { title: 'Engineer', company: 'Acme', scoringVersion: 3, scanMode: 'deep', scanAttemptId: 'attempt-123' };
     const first = await scanV3(request, 'Bearer signed-in-test-token');
     const second = await scanV3(request, 'Bearer signed-in-test-token');
-    expect(second).toEqual(first); expect(paidQueries).toBe(2); expect(reservations).toBe(1);
+    expect(second.investigation).toEqual(first.investigation); expect(second.trustScore).toEqual(first.trustScore); expect(paidQueries).toBe(2); expect(reservations).toBe(1);
   });
 });

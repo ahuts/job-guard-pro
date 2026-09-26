@@ -1,5 +1,6 @@
 import type { DescriptionCoverage, JobInsight, JobQualityCheck } from "./jobInsights";
 import type { CoverageDetails, VerificationDetails } from './verification';
+import type { Investigation } from './investigation';
 
 export type TrustBand = "highly_verified" | "positive" | "unverified" | "weak" | "contradictory";
 export type GhostRisk = "low" | "low_moderate" | "unclear" | "high" | "very_high";
@@ -44,6 +45,7 @@ export interface TrustScoreResult {
   scoringVersion: 2 | 3;
   coverageDetails?: CoverageDetails;
   verification?: VerificationDetails;
+  investigation?: Investigation;
   scanAttemptId?: string;
   summary: string;
   descriptionCoverage: DescriptionCoverage;
