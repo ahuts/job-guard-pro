@@ -8,6 +8,9 @@
   "functions": {
     "api/scan.ts": {
       "maxDuration": 45
+    },
+    "api/storage-check.ts": {
+      "maxDuration": 15
     }
   }
 }

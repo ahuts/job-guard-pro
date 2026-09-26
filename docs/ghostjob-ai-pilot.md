@@ -125,12 +125,20 @@ ownership policies match the existing definitions. They reported a successful ru
 of `ghostjob-ai-schema-review.sql`; its transaction validates the nullable JSONB
 column before committing. The exported final result confirms policy names/roles,
 but does not include a separate column result. Private storage SQL and the new
-Cloud function are still pending live setup. AI remains disabled.
+Cloud function were pending live setup at that checkpoint. The user subsequently
+reported deploying the exact function source in the confirmed Cloud project.
+Independent probes verified unsigned POST 401 and OPTIONS 405, and the Vercel
+bridge release deployed successfully. Signed storage verification remains pending;
+the preview-only `/dashboard/storage-check` provides a provider-free diagnostic
+for authenticated allowlisted pilots. AI remains disabled.
 After the Cloud adapter: 111 tests, app/server type checks, targeted lint and
 production build passed. Bridge tests cover signature verification, modified
 requests, expired timestamps, browser/user denial, RPC restrictions, payload size,
 concealed upstream errors and the Vercel-to-Cloud request protocol. These checks
 do not claim that the function or signing secret is deployed in Cloud.
+The preview storage diagnostic additionally passed seven authorization/failure
+tests; the full suite now has 118 passing tests. App/server type checks, targeted
+lint and the production build passed. Signed live storage remains a separate gate.
 Jev remains in evaluation mode. Public rollout, publishing the extension and replacing
 the main score are outside this release.
 

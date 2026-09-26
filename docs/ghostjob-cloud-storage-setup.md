@@ -30,7 +30,11 @@ OpenAI and TypeSafe credentials stay in Vercel Preview. No Redis is introduced.
    local server development; the tracked `.env` must not.
 2. Run the reviewed `ghostjob-ai-storage-review.sql` in the confirmed project's SQL
    editor. It creates only private AI storage and four service-role-only RPCs.
-3. Deploy only `supabase/functions/ghostjob-ai-storage/index.ts` and its helper
+3. Open the existing GhostJob project chat in Lovable. Copy the **entire contents**
+   of `docs/ghostjob-cloud-deploy-prompt.md` into that chat and send it. The prompt
+   includes both source files and the exact function configuration. Lovable deploys
+   Edge Functions through its project chat; there is no create button in the Cloud
+   function list. This step deploys only `supabase/functions/ghostjob-ai-storage/index.ts` and its helper
    `supabase/functions/_shared/ghostjobStorageBridge.ts` to that Cloud project.
    Set `verify_jwt = false` for **this new function only**, as specified in
    `supabase/config.toml`. The handler authenticates HMAC signatures before any
@@ -41,14 +45,24 @@ OpenAI and TypeSafe credentials stay in Vercel Preview. No Redis is introduced.
    remain off for the storage smoke test.
 5. With server-side configuration in place, verify signed cache write/read and
    private-RPC access denial before enabling the pilot investigation switches.
+   Sign in to the pilot preview, then open `/dashboard/storage-check` and click
+   **Test storage connection**. This preview-only endpoint verifies the signed-in
+   account against the server pilot allowlist, writes/reads one temporary cache
+   value (60-second TTL), and checks that a public client cannot invoke the private
+   cache RPC. It never calls AI providers, changes a scan allowance, writes customer
+   records or reserves paid budget. Its response exposes no keys or account data.
    Unavailable functions, bad signatures, missing secrets or failed storage calls
    must prevent paid work. A missing key must never be worked around by granting
    anonymous or authenticated clients access to private RPCs.
 
 Cloud connector access to this project is unavailable from this task, so Cloud
 secret entry, SQL execution and function deployment require the project's editor.
-The implementation is prepared locally; it is not yet a verified live connection.
+On September 26 the user reported deployment of the exact Cloud source. Independent
+HTTP probes confirmed unsigned POST 401 and OPTIONS 405. The Vercel bridge release
+`111267d` is deployed successfully. The signed round trip still needs the preview
+storage diagnostic; unsigned probes alone do not prove matching secrets or RPC access.
 
 Sources: [Lovable Cloud credential access](https://supabase.com/docs/guides/troubleshooting/identify-lovable-cloud-or-supabase-backend),
 [signed function authentication](https://supabase.com/docs/guides/functions/auth),
 [built-in function secrets](https://supabase.com/docs/guides/functions/secrets).
+[Lovable function deployment](https://docs.lovable.dev/features/edge-functions).
