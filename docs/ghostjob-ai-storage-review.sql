@@ -125,7 +125,8 @@ begin
 end $$;
 
 -- RPCs have no public execution privileges. They retain caller privileges and
--- can be invoked only by the Vercel server using the existing service-role key.
+-- are invoked by the signed Cloud storage bridge using Cloud's internal key.
+-- Vercel never needs access to the managed database's service-role credential.
 revoke all on function public.ghostjob_ai_reserve(text,text,bigint,bigint) from public, anon, authenticated;
 revoke all on function public.ghostjob_ai_settle(text,bigint) from public, anon, authenticated;
 revoke all on function public.ghostjob_cache_get(text) from public, anon, authenticated;

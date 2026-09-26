@@ -35,7 +35,7 @@ earn freshness points. This is one live case, not completion of the benchmark.
 | `GHOSTJOB_V3_PILOT_USERS` | comma-separated verified Auth user IDs, never emails supplied by the client |
 | `SUPABASE_URL` | actual Lovable production URL; `VITE_SUPABASE_URL` fallback supported |
 | `SUPABASE_ANON_KEY` | publishable/anon key; `VITE_SUPABASE_PUBLISHABLE_KEY` fallback supported |
-| `SUPABASE_SERVICE_ROLE_KEY` | existing project's server-only key for private budget/cache RPCs |
+| `GHOSTJOB_STORAGE_BRIDGE_SECRET` | same random server-only secret in Vercel Preview and Lovable Cloud; see `ghostjob-cloud-storage-setup.md` |
 | `OPENAI_API_KEY` | server-only investigation credential |
 | `TYPESAFE_API_KEY` | server-only Jev evaluation credential |
 | `GHOSTJOB_OPENAI_INVESTIGATION_ENABLED` | unset (disabled) |

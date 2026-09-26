@@ -29,9 +29,11 @@ to allow authentication, budget settlement and cold-start overhead.
 2. Create a dedicated OpenAI project/key and a TypeSafe key. Enter secrets directly
    into that project's **Preview** environment. Do not put keys in chat, frontend
    variables, the tracked `.env`, Git, screenshots or extension files.
-3. Configure the existing database's **server-only** `SUPABASE_SERVICE_ROLE_KEY`
-   in Vercel Preview and the verified account UUIDs in `GHOSTJOB_V3_PILOT_USERS`.
-   `.env.ai.example` lists all switches and names. No Redis service is required.
+3. Follow `ghostjob-cloud-storage-setup.md`: deploy only the new signed storage
+   Edge Function and set the same server-only `GHOSTJOB_STORAGE_BRIDGE_SECRET`
+   in Cloud and Vercel Preview. Lovable Cloud does not expose its service-role key;
+   the function uses that credential internally. Configure verified account UUIDs
+   in `GHOSTJOB_V3_PILOT_USERS`. No Redis service is required.
 4. In the **actual** Lovable Cloud project `auevehneizminspolipf`, capture
    `ghostjob-1.3-schema-preflight.sql` output and policy definitions. Review
    `ghostjob-ai-schema-review.sql` against those definitions. Review and apply
@@ -73,7 +75,12 @@ Existing provider spending safeguards remain separate from this shared applicati
 ceiling. Atomic database RPCs serialize reservation and settlement using one row
 lock; server timestamps determine the UTC month and per-account minute bucket.
 Budget/cache tables reside in `ghostjob_private` with RLS enabled. Public RPCs
-use SECURITY INVOKER and grant execution only to `service_role`; anonymous and
+use SECURITY INVOKER and grant execution only to `service_role`. The Cloud storage
+function validates timestamped HMAC signatures from Vercel and forwards only four
+explicit budget/cache RPCs using Cloud's internal service-role credential. It rejects
+unsigned calls, browser origins, stale signatures, modified bodies and other RPCs;
+failures return generic errors and never fall back to a privileged connection.
+Anonymous and
 signed-in frontend clients cannot invoke them or read Jev records. Expired cache
 values are ignored on reads and removed on writes. No new hosted service is added.
 
@@ -112,7 +119,18 @@ round trips still require actual database access. No test fixture satisfies the
 manually reviewed benchmark gate.
 After the storage replacement: all 104 tests, app/server type checks, targeted
 lint and production build passed. The build retains its existing bundle-size
-and Browserslist warnings. The live database migration has not been applied.
+and Browserslist warnings. On September 26 the user supplied live preflight exports:
+both v3 constraints are present, both customer tables have RLS enabled, and their
+ownership policies match the existing definitions. They reported a successful run
+of `ghostjob-ai-schema-review.sql`; its transaction validates the nullable JSONB
+column before committing. The exported final result confirms policy names/roles,
+but does not include a separate column result. Private storage SQL and the new
+Cloud function are still pending live setup. AI remains disabled.
+After the Cloud adapter: 111 tests, app/server type checks, targeted lint and
+production build passed. Bridge tests cover signature verification, modified
+requests, expired timestamps, browser/user denial, RPC restrictions, payload size,
+concealed upstream errors and the Vercel-to-Cloud request protocol. These checks
+do not claim that the function or signing secret is deployed in Cloud.
 Jev remains in evaluation mode. Public rollout, publishing the extension and replacing
 the main score are outside this release.
 
