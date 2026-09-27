@@ -91,6 +91,18 @@ describe('provider boundaries', () => {
     await expect(comparePostings({}, Date.now() + 1000, meter, fetcher)).rejects.toThrow('provider unavailable');
     expect(meter.uncertain).toBe(true); expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('excludes unexecuted search attempts from evidence while charging them conservatively', async () => {
+    const fetcher = vi.fn(async () => openaiResponse({ urls: ['https://acme.example/', 'https://ignored.example/'] }, [
+      { type: 'web_search_call', status: 'completed', action: { type: 'search', sources: [{ url: 'https://acme.example/' }] } },
+      { type: 'web_search_call', status: 'completed', action: { type: 'open_page' } },
+      { type: 'web_search_call', status: 'searching', action: { type: 'search', sources: [{ url: 'https://ignored.example/' }] } },
+    ]));
+    const meter = newMeter();
+    expect(await discoverOfficialSources('Acme', Date.now() + 1000, meter, fetcher)).toEqual(['https://acme.example/']);
+    expect(meter.costMicroUsd).toBe(openaiCost(1000, 100, 3));
+    const executed = vi.fn(async () => openaiResponse({ urls: [] }, Array.from({ length: 3 }, () => ({ type: 'web_search_call', status: 'completed', action: { type: 'search' } }))));
+    await expect(discoverOfficialSources('Acme', Date.now() + 1000, newMeter(), executed)).rejects.toThrow('bounded web search');
+  });
   it('accounts for incomplete paid responses before declining them', async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({ model: OPENAI_MODEL, status: 'incomplete', usage: { input_tokens: 1000, output_tokens: 2500 }, output: [] }), { status: 200 }));
     const meter = newMeter(); await expect(comparePostings({}, Date.now() + 1000, meter, fetcher)).rejects.toThrow('incomplete');

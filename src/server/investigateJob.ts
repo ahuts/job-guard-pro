@@ -143,7 +143,8 @@ export async function investigateJob(input: InvestigationInput, userId: string |
         await put(`gj:jev-evaluation:${hash([userId, fingerprint])}`, { version: 1, status: 'unavailable', ...failure, openaiFinding: investigation.finding, checkedAt: investigation.checkedAt }, 30 * 86400, deadline - 1000).catch(() => {});
       }
     }
-  } catch {
+  } catch (error) {
+    console.info('ghostjob_openai_failure', { version: 1, ...providerFailure(error) });
     investigation = emptyInvestigation(Date.now() >= deadline - 1500 ? 'timed_out' : 'provider_error', 'Automatic investigation could not complete. The existing source verification has been preserved.');
   }
   const safeResolution: Resolution = { score: resolution.score, verification: resolution.verification };
