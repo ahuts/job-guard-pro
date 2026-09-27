@@ -51,7 +51,8 @@ to allow authentication, budget settlement and cold-start overhead.
 The Vercel connector denied access to this project's scope. Authenticated Chrome
 previously confirmed the jobghost preview settings and GitHub linkage. A dedicated
 OpenAI project, GhostJob Pilot, was created; the user subsequently obtained OpenAI
-and TypeSafe keys. Their live configuration has not been reverified. The Supabase
+and TypeSafe keys. Both variable names were confirmed in Preview; OpenAI live
+requests subsequently succeeded, while TypeSafe returned HTTP 402. The Supabase
 connector still denies access to the configured Lovable database. Schema compatibility
 is not inferred from local files. A different Supabase project named GhostJob is not a substitute.
 
@@ -128,9 +129,9 @@ but does not include a separate column result. Private storage SQL and the new
 Cloud function were pending live setup at that checkpoint. The user subsequently
 reported deploying the exact function source in the confirmed Cloud project.
 Independent probes verified unsigned POST 401 and OPTIONS 405, and the Vercel
-bridge release deployed successfully. Signed storage verification remains pending;
+bridge release deployed successfully. Signed storage verification subsequently passed;
 the preview-only `/dashboard/storage-check` provides a provider-free diagnostic
-for authenticated allowlisted pilots. AI remains disabled.
+for authenticated allowlisted pilots.
 After the Cloud adapter: 111 tests, app/server type checks, targeted lint and
 production build passed. Bridge tests cover signature verification, modified
 requests, expired timestamps, browser/user denial, RPC restrictions, payload size,
@@ -139,7 +140,36 @@ do not claim that the function or signing secret is deployed in Cloud.
 The preview storage diagnostic additionally passed seven authorization/failure
 tests; the full suite now has 118 passing tests. App/server type checks, targeted
 lint and the production build passed. Signed live storage remains a separate gate.
-Jev remains in evaluation mode. Public rollout, publishing the extension and replacing
+### September 26 live pilot checkpoint
+
+- Signed storage write/read and anonymous/authenticated private RPC denial passed.
+- OpenAI investigation and investigation schema readiness were enabled only on
+  `agent/ghostjob-1-3-employer-verification`. Provider secrets remain server-only.
+- A real OpenAI listing completed discovery and comparison with an insufficient
+  evidence result; unavailable official sources remained neutral. A cached deep
+  retry preserved its timestamp and produced no new provider investigation log.
+- The investigation saved successfully. Duplicate save preserved the existing job.
+  Live tracker reopening exposed a missing row-mapping field; release `79c7bd0`
+  corrected it, and the saved investigation then displayed after a fresh reload.
+- A Ramp listing exposed an ignored search attempt in addition to two completed
+  searches. Release `5ab964f` excludes non-completed attempts from evidence and
+  the execution limit, while conservatively charging all returned records. Live
+  diagnostics confirmed statuses `completed`, `completed`, `searching`. Three
+  completed calls still fail validation. Calls are requested sequentially with
+  `max_tool_calls: 2`; the provider's ignored attempts are not fetched as evidence.
+- Correcting Ramp's location invalidated its cache and completed a new comparison.
+  This also confirmed TypeSafe HTTP **402**. Jev is disabled on the pilot branch
+  pending the account's billing/credit check. Its failure preserved OpenAI findings
+  and retained the conservative reservation. No successful live Jev evaluation is
+  claimed. The console requires human verification before billing can be inspected.
+- The full suite passed 125 tests before the final two regression additions; the
+  updated provider and saved-display suites passed 23 tests. Application/server
+  type checks, targeted provider lint and the production build passed. Extraction
+  logs now contain only fixed status and character counts, without page text.
+- These live cases do not replace the independent 60-listing benchmark, held-out
+  false-exact-match gate, extension UI check, or live multi-connection stress test.
+
+Jev remains restricted to evaluation mode. Public rollout, publishing the extension and replacing
 the main score are outside this release.
 
 Sources: [OpenAI web search](https://developers.openai.com/api/docs/guides/tools-web-search),
