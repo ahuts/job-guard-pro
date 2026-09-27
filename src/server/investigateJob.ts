@@ -3,7 +3,7 @@ import { resolveEmployer, locationsMatch, type ResolverInput, type Resolution, t
 import { publicUrl } from './publicFetch.js';
 import { cacheGet, cachePut, hash, storeConfigured } from './searchStore.js';
 import { INVESTIGATION_VERSION, investigationKeys, reserveInvestigation, settleInvestigation } from './investigationBudget.js';
-import { comparePostings, discoverOfficialSources, evaluateJev, newMeter, type ModelComparison, type ProviderFetch } from './investigationProviders.js';
+import { comparePostings, discoverOfficialSources, evaluateJev, newMeter, providerFailure, type ModelComparison, type ProviderFetch } from './investigationProviders.js';
 
 export interface InvestigationInput extends ResolverInput {
   description?: string; employmentType?: string | null; descriptionCoverage?: string;
@@ -134,9 +134,13 @@ export async function investigateJob(input: InvestigationInput, userId: string |
       const candidate = state.candidates.find(c => c.id === comparison.selectedCandidateId) ?? null;
       try {
         const evaluation = await evaluateJev({ linkedin: state.linkedin, candidate }, deadline - 1500, meter, deps.fetcher);
-        await put(`gj:jev-evaluation:${hash([userId, fingerprint])}`, { version: 1, nativeOutcome: resolution.verification.outcome, openaiFinding: investigation.finding, candidateId: candidate?.id ?? null, evaluation, checkedAt: investigation.checkedAt }, 30 * 86400, deadline - 1000);
-      } catch {
-        await put(`gj:jev-evaluation:${hash([userId, fingerprint])}`, { version: 1, status: 'unavailable', openaiFinding: investigation.finding, checkedAt: investigation.checkedAt }, 30 * 86400, deadline - 1000).catch(() => {});
+        const stored = await put(`gj:jev-evaluation:${hash([userId, fingerprint])}`, { version: 1, nativeOutcome: resolution.verification.outcome, openaiFinding: investigation.finding, candidateId: candidate?.id ?? null, evaluation, checkedAt: investigation.checkedAt }, 30 * 86400, deadline - 1000);
+        console.info('ghostjob_jev_evaluation', { version: 1, status: 'completed', model: evaluation.model, latencyMs: evaluation.latencyMs,
+          inputTokens: evaluation.usage.input_tokens, outputTokens: evaluation.usage.output_tokens, stored });
+      } catch (error) {
+        const failure = providerFailure(error);
+        console.info('ghostjob_jev_evaluation', { version: 1, status: 'unavailable', ...failure });
+        await put(`gj:jev-evaluation:${hash([userId, fingerprint])}`, { version: 1, status: 'unavailable', ...failure, openaiFinding: investigation.finding, checkedAt: investigation.checkedAt }, 30 * 86400, deadline - 1000).catch(() => {});
       }
     }
   } catch {

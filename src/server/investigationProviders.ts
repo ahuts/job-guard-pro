@@ -8,6 +8,15 @@ export const JEV_MODEL = 'jev-1.13.0';
 export interface ProviderMeter { costMicroUsd: number; uncertain: boolean; inputTokens: number; outputTokens: number; searches: number }
 export const newMeter = (): ProviderMeter => ({ costMicroUsd: 0, uncertain: false, inputTokens: 0, outputTokens: 0, searches: 0 });
 export type ProviderFetch = typeof fetch;
+export class ProviderRequestError extends Error {
+  constructor(public httpStatus: number) { super('Investigation provider unavailable'); }
+}
+export function providerFailure(error: unknown) {
+  if (error instanceof ProviderRequestError) return { failure: 'http_error', httpStatus: error.httpStatus };
+  if (error instanceof z.ZodError || error instanceof SyntaxError) return { failure: 'invalid_output' };
+  if (error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name)) return { failure: 'timed_out' };
+  return { failure: 'unavailable' };
+}
 const usageSchema = z.object({ input_tokens: z.number().int().nonnegative(), output_tokens: z.number().int().nonnegative() });
 const providerEnvelope = z.object({
   usage: usageSchema, model: z.string(), status: z.string(),
@@ -51,7 +60,7 @@ async function post(url: string, key: string, body: unknown, deadline: number, m
   meter.uncertain = true;
   const response = await fetcher(url, { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body), signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) });
-  if (!response.ok) throw new Error('Investigation provider unavailable');
+  if (!response.ok) throw new ProviderRequestError(response.status);
   return await response.json();
 }
 async function openai(body: Record<string, unknown>, deadline: number, meter: ProviderMeter, fetcher: ProviderFetch) {

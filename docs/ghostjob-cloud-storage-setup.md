@@ -61,8 +61,8 @@ Cloud connector access to this project is unavailable from this task, so Cloud
 secret entry, SQL execution and function deployment require the project's editor.
 On September 26 the user reported deployment of the exact Cloud source. Independent
 HTTP probes confirmed unsigned POST 401 and OPTIONS 405. The Vercel bridge release
-`111267d` is deployed successfully. The signed round trip still needs the preview
-storage diagnostic; unsigned probes alone do not prove matching secrets or RPC access.
+`111267d` is deployed successfully. The signed round trip passed after the preview
+authentication key was corrected and the preview redeployed.
 
 If the diagnostic reports invalid authentication configuration, check Vercel
 Preview's `SUPABASE_URL` and `SUPABASE_ANON_KEY`. The public anonymous key must be
@@ -73,13 +73,15 @@ also work; a fingerprint difference alone does not establish that it is invalid.
 The diagnostic distinguishes Supabase's invalid-key response from an expired
 session and never displays provider error text or credential values.
 
-Live diagnostic checkpoint: the signed preview request stopped at invalid server
-authentication configuration before any storage write. The preview database URL
-matches the target. The current public client key in `.env` was separately verified
-against `/auth/v1/settings` (200); anonymous invocation of the private cache RPC
-returned 401 with PostgreSQL permission-denied code 42501. The preview anonymous
-key needs replacement before the signed round trip can be verified. No AI was
-enabled or invoked by these diagnostics.
+Live diagnostic checkpoint, September 26, 2026: the user replaced Preview's public
+anonymous key. Deployment `dpl_FEJMwGArVT8PCuW5FuSrqRjM2v9Z` of `434e3de` was
+redeployed with the updated settings and reached Ready. The signed-in pilot
+diagnostic passed: temporary signed cache write/read succeeded, and direct private
+RPC access was denied to both anonymous and signed-in clients. The permission
+checks require PostgreSQL permission-denied code 42501, not just an authentication
+error. No AI provider calls or scan allowances were used. This verifies the Cloud
+storage connection; live AI investigation and benchmark acceptance remain separate
+checks. Production was not deployed.
 
 Sources: [Lovable Cloud credential access](https://supabase.com/docs/guides/troubleshooting/identify-lovable-cloud-or-supabase-backend),
 [signed function authentication](https://supabase.com/docs/guides/functions/auth),

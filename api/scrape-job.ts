@@ -50,7 +50,6 @@ export default async function handler(
   const jobId = linkedInMatch[1];
 
   try {
-    console.log(`Fetching job ID: ${jobId}`);
     
     const apiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
     
@@ -65,7 +64,6 @@ export default async function handler(
       },
     });
     
-    console.log(`LinkedIn response status: ${apiResponse.status}`);
 
     if (!apiResponse.ok) {
       return res.status(422).json({
@@ -75,31 +73,6 @@ export default async function handler(
     }
 
     const html = await apiResponse.text();
-    console.log(`Response length: ${html.length} chars`);
-    
-    // DEBUG: Check for title in various ways
-    console.log('Looking for title tag...');
-    console.log('Has <title>:', html.includes('<title>'));
-    console.log('Has <TITLE>:', html.includes('<TITLE>'));
-    console.log('Has Title:', html.includes('Title'));
-    
-    // Try multiple regex approaches
-    const titleRegex1 = html.match(/\u003ctitle\u003e([\s\S]*?)\u003c\/title\u003e/i);
-    const titleRegex2 = html.match(/\u003cTITLE\u003e([\s\S]*?)\u003c\/TITLE\u003e/i);
-    const titleRegex3 = html.match(/title\u003e([^\u003c]+)/i);
-    
-    console.log('Regex1 result:', titleRegex1 ? titleRegex1[1].substring(0, 100) : 'null');
-    console.log('Regex2 result:', titleRegex2 ? titleRegex2[1].substring(0, 100) : 'null');
-    console.log('Regex3 result:', titleRegex3 ? titleRegex3[1].substring(0, 100) : 'null');
-    
-    // Sample of HTML around where title should be
-    const titleIndex = html.toLowerCase().indexOf('<title>');
-    if (titleIndex > -1) {
-      console.log('HTML around title:', html.substring(titleIndex, titleIndex + 200));
-    } else {
-      console.log('No <title> found in HTML at all');
-      console.log('HTML start:', html.substring(0, 500));
-    }
     
     // Parse HTML using regex patterns
     
@@ -110,7 +83,6 @@ export default async function handler(
     const cardTitleMatch = html.match(/class="[^"]*_9a287b82[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
     if (cardTitleMatch) {
       title = cardTitleMatch[1].trim();
-      console.log(`Title from card class: ${title}`);
     }
     
     // Try any element with job title keywords
@@ -126,7 +98,6 @@ export default async function handler(
         const match = html.match(pattern);
         if (match && match[1] && match[1].trim().length > 5) {
           title = match[1].trim();
-          console.log(`Title from pattern: ${title}`);
           break;
         }
       }
@@ -143,7 +114,6 @@ export default async function handler(
             !possibleTitle.includes('?trk=') && 
             !possibleTitle.includes('http')) {
           title = possibleTitle;
-          console.log(`Title from heading: ${title}`);
         }
       }
     }
@@ -154,7 +124,6 @@ export default async function handler(
                             html.match(/aria-label="([^"]+Job[^"]*)"/i);
       if (dataTitleMatch) {
         title = dataTitleMatch[1].trim();
-        console.log(`Title from data attribute: ${title}`);
       }
     }
     
@@ -166,7 +135,6 @@ export default async function handler(
         const linkText = linkTextMatch[1].trim();
         if (/director|manager|engineer|analyst/i.test(linkText) && !linkText.includes('?') && !linkText.includes('http')) {
           title = linkText;
-          console.log(`Title from link text: ${title}`);
         }
       }
     }
@@ -177,13 +145,11 @@ export default async function handler(
       const visibleTitleMatch = html.match(/class="[^"]*_9a287b82[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
       if (visibleTitleMatch) {
         title = visibleTitleMatch[1].trim();
-        console.log(`Title from visible content: ${title}`);
       } else {
         // Try h1
         const h1Match = html.match(/\u003ch1[^\u003e]*\u003e([^\u003c]+)\u003c\/h1\u003e/i);
         if (h1Match) {
           title = h1Match[1].trim();
-          console.log(`Title from h1: ${title}`);
         }
       }
     }
@@ -206,22 +172,20 @@ export default async function handler(
       }
     }
     
-    console.log(`Final title: ${title}`);
-    
     // Company - look for company name patterns
     const companyMatch = html.match(/\u003ca[^\u003e]*href="[^"]*\/company\/[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/a\u003e/i) ||
                         html.match(/"companyName":"([^"]+)"/i) ||
                         html.match(/\u003cspan[^\u003e]*class="[^"]*company[^"]*"[^\u003e]*\u003e([^\u003c]+)\u003c\/span\u003e/i);
     const company = companyMatch ? companyMatch[1].trim() : 'Unknown Company';
-    const companyHrefMatch = html.match(/href="([^\"]*\/company\/[^\"]+)"/i);
+    const companyHrefMatch = html.match(/href="([^"]*\/company\/[^"]+)"/i);
     const companyLinkedInUrl = companyHrefMatch
       ? new URL(companyHrefMatch[1].replace(/&amp;/g, '&'), 'https://www.linkedin.com').toString()
       : null;
 
     // Prefer the public external application destination. This is the source the
     // Trust Meter uses for exact employer/ATS verification, not a guessed domain.
-    const applicationMatch = html.match(/"(?:companyApplyUrl|applyUrl|jobApplyUrl)":"([^\"]+)"/i) ||
-      html.match(/href="(https?:\/\/[^\"]*(?:greenhouse\.io|lever\.co|ashbyhq\.com)[^\"]*)"/i);
+    const applicationMatch = html.match(/"(?:companyApplyUrl|applyUrl|jobApplyUrl)":"([^"]+)"/i) ||
+      html.match(/href="(https?:\/\/[^"]*(?:greenhouse\.io|lever\.co|ashbyhq\.com)[^"]*)"/i);
     const { links: sourceLinks } = await import('../src/server/employerResolver.js');
     const candidates = sourceLinks(html, 'https://www.linkedin.com');
     const externalApply = candidates.find(l => /apply/i.test(l.label) && !/(^|\.)linkedin\.com$/.test(new URL(l.url).hostname));
@@ -233,7 +197,6 @@ export default async function handler(
     
     // Location - try multiple patterns
     let location = 'Unknown Location';
-    console.log('Starting location extraction...');
     
     // Try location in various HTML patterns
     const locPatterns = [
@@ -245,10 +208,8 @@ export default async function handler(
     
     for (let i = 0; i < locPatterns.length; i++) {
       const match = html.match(locPatterns[i]);
-      console.log(`Location pattern ${i + 1} result:`, match ? match[1].substring(0, 50) : 'null');
       if (match && match[1] && match[1].trim()) {
         location = match[1].trim();
-        console.log(`Location from pattern ${i + 1}: ${location}`);
         break;
       }
     }
@@ -280,7 +241,6 @@ export default async function handler(
                              html.match(/\u003c[hH][34][^\u003e]*\u003e([^\u003c]*On-site[^\u003c]*)\u003c\/h[34]\u003e/i);
       if (locHeadingMatch) {
         location = locHeadingMatch[1].trim();
-        console.log(`Location from heading: ${location}`);
       }
     }
     
@@ -289,7 +249,6 @@ export default async function handler(
       const remoteMatch = html.match(/\u003e(Remote|Hybrid|On-site)\u003c/i);
       if (remoteMatch) {
         location = remoteMatch[1].trim();
-        console.log(`Location from text: ${location}`);
       }
     }
     
@@ -299,30 +258,23 @@ export default async function handler(
       const locClassMatch = html.match(/class="[^"]*(?:location|Location)[^"]*"[^\u003e]*\u003e([^\u003c]+)/i);
       if (locClassMatch) {
         location = locClassMatch[1].trim();
-        console.log(`Location from class: ${location}`);
       }
     }
     
     // Look for LinkedIn's specific location class pattern
     if (location === 'Unknown Location') {
-      console.log('Trying LinkedIn tvm__text pattern...');
       // Pattern for: <span class="tvm__text..."><!---->Lenexa, KS<!----></span>
       const linkedInLocMatch = html.match(/class="[^"]*tvm__text[^"]*"[^\u003e]*\u003e(?:\u003c!--.*?--\u003e)?([^\u003c,]+,\s*[A-Z]{2})(?:\u003c!--.*?--\u003e)?\u003c\/span\u003e/i);
-      console.log('tvm__text pattern result:', linkedInLocMatch ? linkedInLocMatch[1] : 'null');
       if (linkedInLocMatch) {
         location = linkedInLocMatch[1].trim();
-        console.log(`Location from LinkedIn pattern: ${location}`);
       }
     }
     
     // Try another pattern - any span with city, state format
     if (location === 'Unknown Location') {
-      console.log('Trying city/state span pattern...');
       const cityStateSpanMatch = html.match(/\u003cspan[^\u003e]*\u003e(?:\u003c!--.*?--\u003e)?([A-Z][a-z]+(?:\s[A-Z][a-z]+)?,\s*[A-Z]{2})\u003c/i);
-      console.log('City/state span result:', cityStateSpanMatch ? cityStateSpanMatch[1] : 'null');
       if (cityStateSpanMatch) {
         location = cityStateSpanMatch[1].trim();
-        console.log(`Location from span: ${location}`);
       }
     }
     
@@ -331,7 +283,6 @@ export default async function handler(
       const locElementMatch = html.match(/\u003c(?:span|div|p)[^\u003e]*\u003e([^\u003c]{5,50}(?:United States|USA?|Canada|UK|Remote|Hybrid|\d{5}|[A-Z]{2})[^\u003c]*)\u003c\/\u003c(?:span|div|p)\u003e/i);
       if (locElementMatch) {
         location = locElementMatch[1].trim();
-        console.log(`Location from element: ${location}`);
       }
     }
     
@@ -340,7 +291,6 @@ export default async function handler(
       const cityStateMatch = html.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?),?\s*[A-Z]{2}\s+\d{5}/);
       if (cityStateMatch) {
         location = cityStateMatch[0].trim();
-        console.log(`Location from city/state: ${location}`);
       }
     }
     
@@ -349,11 +299,8 @@ export default async function handler(
       const cityMatch = html.match(/\u003e(Chicago|New York|San Francisco|Los Angeles|Austin|Seattle|Boston|Denver|Miami|Atlanta|Dallas|Houston|Phoenix|Philadelphia|Portland|San Diego|San Jose|Nashville|Detroit|Minneapolis|Raleigh|Charlotte|Indianapolis|Columbus|Kansas City|St\. Louis|Cleveland|Cincinnati|Pittsburgh|Baltimore|Washington|Virginia Beach|Richmond|Milwaukee|Madison|Salt Lake City|Boise|Spokane|Albuquerque|Oklahoma City|New Orleans|Memphis|Louisville|Birmingham|Jacksonville|Tampa|Orlando)\u003c/i);
       if (cityMatch) {
         location = cityMatch[1].trim();
-        console.log(`Location from city name: ${location}`);
       }
     }
-    
-    console.log(`Final location: ${location}`);
     
     // Description - look for description div
     const descMatch = html.match(/\u003cdiv[^\u003e]*class="[^"]*show-more-less-html[^"]*"[^\u003e]*\u003e([\s\S]*?)\u003c\/div\u003e/i) ||
@@ -391,7 +338,6 @@ export default async function handler(
           ? "linkedin_apply"
           : "unknown";
 
-    console.log(`Parsed - Title: ${title}, Company: ${company}, Location: ${location}`);
 
     const jobData: JobData = {
       employerUrl,
@@ -415,6 +361,7 @@ export default async function handler(
       descriptionCoverage: description ? "partial" : "unavailable",
     };
 
+    console.info('ghostjob_extraction', { status: 'completed', descriptionCharacters: description.length });
     return res.status(200).json({
       success: true,
       data: jobData,
@@ -422,8 +369,7 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Scraping error:', error);
-    console.error('Error details:', error instanceof Error ? error.stack : 'No stack');
+    console.info('ghostjob_extraction', { status: 'unavailable' });
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',

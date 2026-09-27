@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { investigationSchema } from './investigation';
 import { evidenceState, investigateJob, investigationAccess, investigationFingerprint, validateComparison, type InvestigationInput } from '../server/investigateJob';
-import { comparePostings, discoverOfficialSources, evaluateJev, newMeter, OPENAI_MODEL, type ModelComparison } from '../server/investigationProviders';
+import { comparePostings, discoverOfficialSources, evaluateJev, newMeter, OPENAI_MODEL, providerFailure, type ModelComparison } from '../server/investigationProviders';
 import { openaiCost, jevCost } from '../server/investigationBudget';
 import { resolveEmployer, type EmployerCandidate, type Resolution } from '../server/employerResolver';
 
@@ -72,6 +72,11 @@ describe('evidence-backed model findings', () => {
   });
 });
 describe('provider boundaries', () => {
+  it('only exposes fixed failure classifications, never provider bodies or error text', () => {
+    expect(providerFailure(new Error('secret provider body account credential'))).toEqual({ failure: 'unavailable' });
+    expect(providerFailure(new SyntaxError('private response text'))).toEqual({ failure: 'invalid_output' });
+    expect(providerFailure(new DOMException('private request', 'TimeoutError'))).toEqual({ failure: 'timed_out' });
+  });
   it('uses a pinned model, non-stored responses, bounded mandatory search and actually returned URLs', async () => {
     enabled();
     const fetcher = vi.fn(async () => openaiResponse({ urls: ['https://acme.example/', 'https://invented.example/'] }, [{ type: 'web_search_call', action: { type: 'search', sources: [{ url: 'https://acme.example/' }] } }]));
@@ -124,11 +129,15 @@ describe('automatic investigation controls', () => {
   });
   it('keeps Jev private and preserves OpenAI findings when Jev fails', async () => {
     enabled(); vi.stubEnv('GHOSTJOB_JEV_EVALUATION_ENABLED', 'true'); vi.stubEnv('TYPESAFE_API_KEY', 'test');
+    const logs = vi.spyOn(console, 'info').mockImplementation(() => {});
     const fetcher = vi.fn(async (url: string | URL | Request) => String(url).includes('typesafe') ? new Response('{}', { status: 529 }) : openaiResponse(comparison()));
     const put = vi.fn(async () => undefined), settle = vi.fn(async () => undefined);
     const result = await investigateJob(input, 'pilot', Date.now() + 30_000, { resolver: vi.fn(async () => resolution), get: vi.fn(async () => null), reserve: vi.fn(async () => ({ status: 1, attemptKey: 'a', monthKey: 'm', resultKey: 'r' })), put, settle, fetcher });
     expect(result.investigation.finding).toBe('exact_match'); expect(JSON.stringify(result)).not.toContain('jev'); expect(settle).not.toHaveBeenCalled();
     expect(JSON.stringify(put.mock.calls)).not.toContain(description);
+    expect(logs).toHaveBeenCalledWith('ghostjob_jev_evaluation', { version: 1, status: 'unavailable', failure: 'http_error', httpStatus: 529 });
+    expect(JSON.stringify(logs.mock.calls)).not.toContain(description);
+    expect(JSON.stringify(result)).not.toContain('httpStatus');
   });
   it('never includes provider/account secrets in the evidence state', () => {
     expect(JSON.stringify(evidenceState(input, [candidate]))).not.toContain('API_KEY');

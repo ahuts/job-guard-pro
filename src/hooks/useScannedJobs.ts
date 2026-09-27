@@ -20,6 +20,7 @@ function rowToJob(row: any): Job {
     scoring_version: row.scoring_version ?? null,
     ghost_risk: row.ghost_risk ?? null,
     careers_verification: row.careers_verification ?? null,
+    investigation: row.investigation ?? null,
     rating: row.rating as Job["rating"] ?? "low",
     signals: Array.isArray(row.signals) ? (row.signals as string[]) : [],
     application_status: row.application_status as Job["application_status"],
