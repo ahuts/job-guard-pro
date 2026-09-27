@@ -158,10 +158,19 @@ lint and the production build passed. Signed live storage remains a separate gat
   completed calls still fail validation. Calls are requested sequentially with
   `max_tool_calls: 2`; the provider's ignored attempts are not fetched as evidence.
 - Correcting Ramp's location invalidated its cache and completed a new comparison.
-  This also confirmed TypeSafe HTTP **402**. Jev is disabled on the pilot branch
-  pending the account's billing/credit check. Its failure preserved OpenAI findings
-  and retained the conservative reservation. No successful live Jev evaluation is
-  claimed. The console requires human verification before billing can be inspected.
+  This also confirmed TypeSafe HTTP **402**. Jev was temporarily disabled on the
+  pilot branch. Its failure preserved OpenAI findings and retained the conservative
+  reservation.
+- After the user reported fixing TypeSafe access, Jev was re-enabled only on the pilot
+  branch and preview deployment `dpl_DParfj5iPjfJcDdfhxgtQYqYqwMc` reached Ready.
+  Supplying `https://openai.com` for the same OpenAI listing invalidated its cache.
+  The live evaluation completed with `jev-1.13.0`, 158 ms latency, 2,007 input and
+  209 output tokens. Its private storage write completed without error. The public
+  finding remained insufficient evidence, with the Trust Score unchanged at 50.
+  Total investigation latency was 8,408 ms; reported usage produced an application
+  cost estimate of $0.020276 with no uncertain usage. This is not an invoice check
+  or a benchmark accuracy result. The void storage return was subsequently corrected
+  in logging to report `stored: true` after a successful awaited write.
 - The full suite passed 125 tests before the final two regression additions; the
   updated provider and saved-display suites passed 23 tests. Application/server
   type checks, targeted provider lint and the production build passed. Extraction
