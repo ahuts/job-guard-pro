@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Trash2, MapPin, Calendar, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Job } from "@/types";
+import { InvestigationDetails } from "@/components/InvestigationDetails";
 
 interface JobCardProps {
   job: Job;
@@ -42,7 +43,7 @@ function getSignalDot(signal: unknown) {
 
 export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const isV2 = job.scoring_version === 2 && job.trust_score != null;
+  const isV2 = [2, 3].includes(job.scoring_version ?? 0) && job.trust_score != null;
   const score = job.trust_score ?? 50;
   const badge = getScoreBadge(score);
 
@@ -72,7 +73,7 @@ export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
           </div>
 
           <Badge variant="outline" className={cn("shrink-0 font-semibold", badge.className)}>
-            {isV2 ? `${score}/100 · ${badge.label}` : `Legacy score · ${job.ghost_score}/100`}
+            {isV2 ? `${score}/100 · ${badge.label} · v${job.scoring_version}` : `Legacy score · ${job.ghost_score}/100`}
           </Badge>
 
           {expanded ? (
@@ -107,12 +108,14 @@ export default function JobCard({ job, onDelete, deleting }: JobCardProps) {
             </div>
 
             {/* Signals */}
+            {job.investigation ? <InvestigationDetails value={job.investigation} /> : null}
             {job.signals && job.signals.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">Detected Signals</p>
                 <ul className="space-y-1.5">
-                  {job.signals.map((signal: any, i: number) => {
-                    const label = typeof signal === 'string' ? signal : (signal?.title || signal?.type || JSON.stringify(signal));
+                  {job.signals.map((signal: unknown, i: number) => {
+                    const record = signal && typeof signal === 'object' ? signal as Record<string, unknown> : {};
+                    const label = typeof signal === 'string' ? signal : String(record.title || record.type || JSON.stringify(signal));
                     return (
                       <li
                         key={i}

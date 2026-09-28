@@ -8,7 +8,8 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ jobs }: DashboardStatsProps) {
   const totalScanned = jobs.length;
-  const v2Jobs = jobs.filter((j) => j.scoring_version === 2 && j.trust_score != null);
+  const version = jobs.some(j => j.scoring_version === 3) ? 3 : 2;
+  const v2Jobs = jobs.filter((j) => j.scoring_version === version && j.trust_score != null);
   const ghostJobs = v2Jobs.filter((j) => (j.trust_score ?? 50) < 40).length;
   const avgScore = totalScanned > 0
     ? Math.round(v2Jobs.reduce((sum, j) => sum + (j.trust_score ?? 50), 0) / (v2Jobs.length || 1))
@@ -31,7 +32,7 @@ export function DashboardStats({ jobs }: DashboardStatsProps) {
       title: "Avg Trust Score",
       value: v2Jobs.length > 0 ? `${avgScore}/100` : "—",
       icon: TrendingUp,
-      description: "Average for Trust Meter v2 scans",
+      description: `Average for Trust Meter v${version} scans only`,
       color: "text-safe",
       bgColor: "bg-safe/10",
     },
@@ -44,10 +45,10 @@ export function DashboardStats({ jobs }: DashboardStatsProps) {
       bgColor: "bg-warning/10",
     },
     {
-      title: "Ghost Jobs",
+      title: "High Ghost Risk",
       value: ghostJobs,
       icon: Ghost,
-      description: "v2 listings with high Ghost Risk",
+      description: `v${version} listings with high Ghost Risk`,
       color: "text-destructive",
       bgColor: "bg-destructive/10",
     },

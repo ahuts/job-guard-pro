@@ -117,7 +117,7 @@ export function JobScannerDemo() {
       {result && (
         <GhostScoreDisplay 
           result={result} 
-          onSave={() => console.log('Save job', result)}
+          onResultChange={setResult}
         />
       )}
     </div>

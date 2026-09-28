@@ -1,7 +1,7 @@
 // Vercel Serverless Function: Health check
 // Endpoint: GET /api/health
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './scan';
 
 export default async function handler(
   req: VercelRequest,
@@ -10,7 +10,7 @@ export default async function handler(
   return res.status(200).json({
     status: 'ok',
     service: 'ghostjob-api',
-    version: '1.0.0',
+    version: '1.3.0',
     timestamp: new Date().toISOString(),
   });
 }

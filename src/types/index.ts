@@ -10,6 +10,7 @@ export interface Job {
   description?: string;
   ghost_score: number;
   trust_score?: number | null;
+  investigation?: unknown;
   scoring_version?: number | null;
   ghost_risk?: 'low' | 'low_moderate' | 'unclear' | 'high' | 'very_high' | null;
   careers_verification?: 'verified_match' | 'active_board_no_match' | 'unverified' | 'closed_conflict' | null;

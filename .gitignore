@@ -3,7 +3,18 @@
 
 # Local dependencies and macOS metadata sidecars
 node_modules/
+dist/
 ._*
+supabase/.temp/
 
 # Utility scripts
 grant-pro.js
+
+# Server-only secrets and private benchmark evidence
+.env.local
+.env.*.local
+.vercel/
+private-benchmarks/
+# Local spreadsheet conversion used for the private review sheet
+outputs/ghostjob-review-sheet/
+outputs/*.zip

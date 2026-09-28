@@ -1,9 +1,9 @@
-// GhostJob Popup Script v1.2.1
+// GhostJob Popup Script v1.3.10 Preview
 // Handles scanning from the extension popup + Supabase auth
 
 const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
-const DASHBOARD_URL = 'https://jobghost.io/dashboard';
+const DASHBOARD_URL = 'https://www.jobghost.io/dashboard';
 
 function createHandoffNonce() {
   const bytes = new Uint8Array(16);
@@ -61,9 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  chrome.storage.local.get(['gj_auth_token', 'gj_user_email'], (stored) => {
-    if (stored.gj_auth_token && stored.gj_user_email) {
-      showLoggedIn(stored.gj_user_email);
+  chrome.runtime.sendMessage({ action: 'authStatus' }, (status) => {
+    if (status?.success && status.authenticated) {
+      chrome.storage.local.get(['gj_user_email'], (stored) => {
+        if (stored.gj_user_email) showLoggedIn(stored.gj_user_email);
+      });
+    } else if (status?.error?.includes('Sign in again')) {
+      authStatus.textContent = 'Session expired. Please sign in again.';
+      authStatus.style.color = '#fca5a5';
     }
   });
 
