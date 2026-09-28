@@ -60,10 +60,20 @@ Deno.serve(async (req) => {
       });
       customerId = customer.id;
 
-      await supabase
+      // Use a service-role server client so the admin update is not subject to RLS
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      const { error: updateError } = await adminClient
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", userId);
+
+      if (updateError) {
+        throw new Error(`Failed to save Stripe customer ID: ${updateError.message}`);
+      }
     }
 
     const { origin } = new URL(req.url);
