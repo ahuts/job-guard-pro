@@ -40,19 +40,23 @@ export async function freeUsage(userId: string): Promise<FreeUsage> {
   if (result.status !== 'available') throw new Error('Scan allowance unavailable');
   return usageFrom(result);
 }
-export async function reserveFreeScan(userId: string, input: { url?: string | null; title: string; company: string; location?: string | null }): Promise<{ reservation: FreeReservation | null; usage: FreeUsage; limited: boolean }> {
+export async function reserveFreeScan(userId: string, input: { url?: string | null; title: string; company: string; location?: string | null }): Promise<{ reservation: FreeReservation | null; usage: FreeUsage; limited: boolean; inProgress: boolean }> {
   const accountKey = hash(userId);
   const jobKey = freeJobKey(input);
+  const leaseKey = randomUUID();
   const result = await storageRpc<StorageResult>('ghostjob_free_scan', {
-    p_action: 'reserve', p_account_key: accountKey, p_job_key: jobKey, p_lease_key: randomUUID(),
+    p_action: 'reserve', p_account_key: accountKey, p_job_key: jobKey, p_lease_key: leaseKey,
   });
   if (!['reserved', 'existing', 'limited'].includes(result.status) || !result.monthKey) throw new Error('Scan allowance unavailable');
   const usage = usageFrom(result);
-  if (result.status === 'limited') return { reservation: null, usage: { ...usage, remaining: 0 }, limited: true };
+  if (result.status === 'limited') return { reservation: null, usage: { ...usage, remaining: 0 }, limited: true, inProgress: false };
   if (result.status === 'reserved' && !result.leaseKey) throw new Error('Scan allowance unavailable');
+  if (result.status === 'reserved' && result.leaseKey !== leaseKey) {
+    return { reservation: null, usage, limited: false, inProgress: true };
+  }
   return {
     reservation: { accountKey, jobKey, monthKey: result.monthKey, leaseKey: result.status === 'reserved' ? result.leaseKey! : null, existing: result.status === 'existing' },
-    usage, limited: false,
+    usage, limited: false, inProgress: false,
   };
 }
 export async function finishFreeScan(reservation: FreeReservation, success: boolean): Promise<FreeUsage | null> {

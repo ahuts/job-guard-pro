@@ -56,6 +56,13 @@ describe('shared Free scan API gate', () => {
     expect(result.status).toBe(503);
     expect(JSON.stringify(result.payload)).not.toContain('private storage details');
   });
+  it('does not run a second scan under another request\'s pending lease', async () => {
+    mocks.storageRpc.mockResolvedValue({ status: 'reserved', monthKey: '2026-09', used: 0, leaseKey: 'another-request-lease' });
+    const result = await call({ title: 'Engineer', company: 'Acme', scoringVersion: 2 });
+    expect(result.status).toBe(409);
+    expect(result.payload.code).toBe('scan_in_progress');
+    expect(mocks.storageRpc).toHaveBeenCalledTimes(1);
+  });
   it('keeps Pro standard scans available when Free allowance storage fails', async () => {
     mocks.verifiedPro.mockResolvedValue(true);
     mocks.storageRpc.mockRejectedValue(new Error('storage offline'));

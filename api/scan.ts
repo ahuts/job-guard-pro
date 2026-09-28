@@ -289,6 +289,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try { quota = await reserveFreeScan(user, { url: validated.data.url, title: validated.data.title!, company: validated.data.company!, location: validated.data.location }); }
     catch { return res.status(503).json({ code: 'scan_allowance_unavailable', error: 'Free scans are temporarily unavailable. Please retry shortly.' }); }
     if (quota.limited) return res.status(429).json({ code: 'free_scan_limit', error: 'Your three free job checks are used for this month. Upgrade to Pro for more scans.', freeUsage: quota.usage });
+    if (quota.inProgress) return res.status(409).json({ code: 'scan_in_progress', error: 'This job is already being checked. Please retry in a moment.', freeUsage: quota.usage });
   }
   let result: TrustScoreResult;
   try {
