@@ -85,7 +85,7 @@ export function getQualityBadges(description: string, salary?: string | null): Q
   const value = `${description} ${salary ?? ""}`.toLowerCase();
   const badges: QualityBadge[] = [];
   if (/\$\d[\d,]*|\d{2,3}k\b/.test(value)) badges.push({ id: "salary", label: "Salary listed" });
-  if (/health insurance|401k|dental|vision|benefits package/.test(value)) badges.push({ id: "benefits", label: "Benefits mentioned" });
+  if (/\bhealth insurance\b|\b401k\b|\bdental\b|\bvision\b|\bbenefits package\b/.test(value)) badges.push({ id: "benefits", label: "Benefits mentioned" });
   if (/remote|hybrid|work from home|\bwfh\b|flexible work/.test(value)) badges.push({ id: "flexible_work", label: "Flexible work mentioned" });
   return badges;
 }

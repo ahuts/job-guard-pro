@@ -14,7 +14,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.8-preview';
+  const VERSION  = '1.3.9-preview';
   // This unpacked pilot must not write scan observations or saved jobs to the
   // live Lovable Cloud database while it is exercising the Preview API.
   const PREVIEW_BUILD = true;
@@ -632,10 +632,20 @@
         break;
       }
     }
+    if (!data.location && jobHeader) {
+      var leafLocations = Array.from(jobHeader.querySelectorAll('span,p')).filter(function(el) {
+        return !el.children.length && el.textContent.trim().length < 100;
+      });
+      var cityState = leafLocations.find(function(el) {
+        return /^[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,4},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})$/.test(el.textContent.trim());
+      });
+      if (cityState) data.location = cityState.textContent.trim();
+    }
     // LinkedIn may combine city/state and age into one accessible header node,
     // such as "Overland Park, KS · 4 days ago".
     if (!data.location) {
-      var locationMatch = headerText.match(/\b([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,4},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}))\b/);
+      var locationText = headerText.replace(data.company, '').replace(data.title, '');
+      var locationMatch = locationText.match(/\b([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,4},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}))\b/);
       if (locationMatch) data.location = locationMatch[1];
     }
     // Remote/hybrid may be a separate header link without a city.

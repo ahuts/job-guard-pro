@@ -104,7 +104,7 @@ export function getJobInsights(input: JobInsightInput): JobInsight[] {
   if (input.experienceLevel) push("experience-level", "role", "Experience level", input.experienceLevel);
 
   if (input.salary || /\$\d[\d,]*|\b\d{2,3}k\b/i.test(description)) push("salary", "quality", "Salary information listed", input.salary || "A compensation amount or range appears in the posting.");
-  if (sectionPresent(description, /health insurance|401\(?k\)?|dental|vision|benefits package|parental leave/i)) push("benefits", "quality", "Benefits mentioned", "The posting names at least one benefit. This does not affect Trust Score.");
+  if (sectionPresent(description, /\bhealth insurance\b|\b401\(?k\)?|\bdental\b|\bvision\b|\bbenefits package\b|\bparental leave\b/i)) push("benefits", "quality", "Benefits mentioned", "The posting names at least one benefit. This does not affect Trust Score.");
   const workMode = [input.location, description].join(" ").match(/\b(remote|hybrid|on[- ]site|work from home|wfh)\b/i)?.[1];
   if (workMode) push("work-arrangement", "quality", "Work arrangement", workMode.replace(/^\w/, (letter) => letter.toUpperCase()));
   if (input.location) push("location", "quality", "Location", input.location);
@@ -131,15 +131,16 @@ export function getJobInsights(input: JobInsightInput): JobInsight[] {
 
 export function getJobQualityChecklist(input: JobInsightInput): JobQualityCheck[] {
   const description = compact(input.description ?? "");
+  const excerptSource = (input.description ?? "").replace(/\r\n?/g, "\n");
   const hasDescription = description.length > 0 && input.descriptionCoverage !== "unavailable";
   const location = compact(input.location ?? "");
   const hasLocation = Boolean(location) && !/^unknown(?: location)?$/i.test(location);
   const salary = compact(input.salary ?? "");
   const skills = extractSkills(description);
   const workArrangement = /\b(remote|remotely|hybrid|on[- ]site|work from home|wfh|flexible work)\b/i;
-  const reporting = /\breport(?:ing)? to\b|\bmanager\b|\bsupervisor\b|\bteam of\b|\bjoin (?:our )?team\b/i;
+  const reporting = /\breport(?:s|ing)? to\b|\bsupervised by\b|\bdirect reports?\b|\bteam of\b|\bjoin (?:our )?team\b|\bmanage a team\b/i;
   const contact = /\bhiring manager\b|\breach out to\b|\bcontact\b.{0,50}\b(?:at|via|@)\b|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
-  const benefits = /health insurance|401\(?k\)?|dental|vision|benefits package|parental leave|paid time off|\bpto\b/i;
+  const benefits = /\bhealth insurance\b|\b401\(?k\)?|\bdental\b|\bvision\b|\bbenefits package\b|\bparental leave\b|\bpaid time off\b|\bpto\b/i;
   const employment = /\b(full[- ]time|part[- ]time|contract(?:or)?|temporary|internship|apprenticeship|seasonal|freelance)\b/i;
   const responsibilities = /responsibilit|what you'?ll do|you will|you'll|day to day|responsible for|\bown\b|\bdeliver\b/i;
   const qualifications = /requirements?|qualifications?|must have|preferred|nice to have|experience with/i;
@@ -147,7 +148,7 @@ export function getJobQualityChecklist(input: JobInsightInput): JobQualityCheck[
   const qualificationsExcerpt = sectionExcerpt(input.description ?? "", /^(?:required |preferred )?qualifications\b|^requirements\b|^what you bring\b/i);
   const applicationKnown = Boolean(input.applicationUrl) || Boolean(input.applicationMethod && input.applicationMethod !== "unknown");
   const check = (id: string, label: string, found: boolean, foundDetail: string, missingDetail: string, pattern?: RegExp): JobQualityCheck => {
-    const excerpt = pattern ? description.split(/\n+|(?<=[.!?])\s+/).map(compact).find(line => pattern.test(line))?.slice(0, 400) : undefined;
+    const excerpt = pattern ? excerptSource.split(/\n+|(?<=[.!?])\s+/).map(compact).find(line => pattern.test(line))?.slice(0, 240) : undefined;
     if (found) return { id, label, status: "found", detail: excerpt || foundDetail, excerpt };
     if (!hasDescription) return { id, label, status: "unknown", detail: "Job details were unavailable, so GhostJob could not check this item." };
     return { id, label, status: "not_listed", detail: `${missingDetail} This does not affect Trust Score.` };

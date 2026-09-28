@@ -121,7 +121,7 @@ export async function investigateJob(input: InvestigationInput, userId: string |
   let investigation: Investigation;
   try {
     if (resolution.verification.outcome !== 'matched' && resolution.verification.outcome !== 'closed') {
-      const urls = await discoverOfficialSources(JSON.stringify({ company: input.company, companyLinkedInUrl: input.companyLinkedInUrl, title: input.title, location: input.location, requisitionId: input.requisitionId }), Math.min(deadline - 8500, Date.now() + 10_000), meter, deps.fetcher);
+      const urls = await discoverOfficialSources(JSON.stringify({ company: input.company, companyLinkedInUrl: input.companyLinkedInUrl, title: input.title, location: input.location, requisitionId: input.requisitionId }), Math.min(deadline - 8500, Date.now() + 17_000), meter, deps.fetcher);
       const discovered = await resolver(input, { deadline: Math.min(deadline - 7000, Date.now() + 10_000), discoveryUrls: urls, collectCandidates: true });
       // Discovery failure or weaker evidence must not erase the native result.
       const rank = (r: Resolution) => r.verification.outcome === 'matched' || r.verification.outcome === 'closed' ? 3 : r.verification.outcome === 'board_no_match' ? 2 : r.score.companyIdentityVerified ? 1 : 0;
@@ -148,7 +148,10 @@ export async function investigateJob(input: InvestigationInput, userId: string |
     }
   } catch (error) {
     console.info('ghostjob_openai_failure', { version: 1, ...providerFailure(error) });
-    investigation = emptyInvestigation(Date.now() >= deadline - 1500 ? 'timed_out' : 'provider_error', 'Automatic investigation could not complete. The existing source verification has been preserved.');
+    const timedOut = providerFailure(error).failure === 'timed_out' || Date.now() >= deadline - 1500;
+    investigation = emptyInvestigation(timedOut ? 'timed_out' : 'provider_error', timedOut
+      ? 'Automatic investigation timed out. The existing source verification has been preserved.'
+      : 'Automatic investigation could not complete. The existing source verification has been preserved.');
   }
   const safeResolution: Resolution = { score: resolution.score, verification: resolution.verification };
   const result = { resolution: safeResolution, investigation };
