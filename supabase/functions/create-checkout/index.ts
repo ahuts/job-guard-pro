@@ -60,17 +60,20 @@ Deno.serve(async (req) => {
       });
       customerId = customer.id;
 
-      // Billing fields are not client-writable. Only this verified server
-      // function and the signed Stripe webhook may change them.
-      const admin = createClient(
+      // Use a service-role server client so the admin update is not subject to RLS
+      const adminClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
-      const { error: customerError } = await admin
+
+      const { error: updateError } = await adminClient
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", userId);
-      if (customerError) throw customerError;
+
+      if (updateError) {
+        throw new Error(`Failed to save Stripe customer ID: ${updateError.message}`);
+      }
     }
 
     const { origin } = new URL(req.url);
