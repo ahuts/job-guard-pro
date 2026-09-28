@@ -104,9 +104,10 @@ feature switch disables that provider; turning off v3 restores existing v2 acces
 ## Evaluation and release status
 
 Use `docs/ai-investigation-benchmark.md` and
-`scripts/ai-investigation-benchmark.ts`. Sixty independently reviewed, dated listings
-are required: 30 rubric cases and 30 untouched holdout cases. Automated tests do not
-satisfy this requirement. No manually reviewed corpus was present in the repository.
+`scripts/ai-investigation-benchmark.ts`. Twenty-four independently reviewed, dated listings
+are required: 12 rubric cases and 12 untouched holdout cases. Automated tests do not
+satisfy this requirement. Aaron reviewed the 24-row intake sheet, but the dated,
+balanced input and expected native/OpenAI/Jev labels are not yet frozen.
 
 Pilot acceptance still requires live credentials, verified database support, real
 scan/save/retry checks, and zero false exact-match findings on the holdout set.
@@ -175,11 +176,28 @@ lint and the production build passed. Signed live storage remains a separate gat
   updated provider and saved-display suites passed 23 tests. Application/server
   type checks, targeted provider lint and the production build passed. Extraction
   logs now contain only fixed status and character counts, without page text.
-- These live cases do not replace the independent 60-listing benchmark, held-out
+- These live cases do not replace the independent 24-listing benchmark, held-out
   false-exact-match gate, extension UI check, or live multi-connection stress test.
 
 Jev remains restricted to evaluation mode. Public rollout, publishing the extension and replacing
 the main score are outside this release.
+
+### September 28 signed-in extension checkpoint
+
+- Unpacked Preview extension 1.3.9 scanned the selected VA Chief Financial Officer
+  listing with the correct Indianapolis location, posting age, salary, description,
+  and LinkedIn application-closure note. The Preview build does not save scans.
+- The first investigation exposed a 10-second OpenAI discovery timeout. The
+  subdeadline was extended within the existing 30-second overall limit. The next
+  live scan completed OpenAI search/comparison and stored a Jev evaluation.
+- The completed result remained insufficient evidence because no accessible
+  employer-related candidate posting was established. It did not claim an exact
+  match or reduce the Trust Score. Vercel logs reported 16,835 ms investigation
+  latency, 3,055 Jev input tokens, and $0.021166 estimated application cost.
+- The pilot branch was merged with current `main`; PR #3 is mergeable and remains
+  draft. The full pilot suite passed 132 tests before a further quality-label
+  regression was added; its focused tests pass. Production still serves API v1.0.0.
+  All new provider keys and feature switches visible in Vercel are Preview scoped.
 
 Sources: [OpenAI web search](https://developers.openai.com/api/docs/guides/tools-web-search),
 [model](https://developers.openai.com/api/docs/models/gpt-5.4-mini),

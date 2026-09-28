@@ -14,3 +14,6 @@ grant-pro.js
 .env.*.local
 .vercel/
 private-benchmarks/
+# Local spreadsheet conversion used for the private review sheet
+outputs/ghostjob-review-sheet/
+outputs/*.zip

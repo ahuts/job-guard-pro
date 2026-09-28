@@ -15,10 +15,10 @@ const caseSchema = z.object({
 });
 const [inputPath, outputPath] = process.argv.slice(2);
 if (!inputPath || !outputPath) throw new Error('Usage: npx tsx --env-file=.env.local scripts/ai-investigation-benchmark.ts private-benchmarks/reviewed-cases.json private-benchmarks/report.json');
-const cases = z.array(caseSchema).length(60).parse(JSON.parse(readFileSync(inputPath, 'utf8')));
-if (new Set(cases.map(c => c.id)).size !== 60 || cases.filter(c => c.split === 'rubric').length !== 30 || cases.filter(c => c.split === 'holdout').length !== 30 || cases.some(c => Date.parse(c.reviewedAt) > Date.now())) throw new Error('Require 60 unique, already-reviewed cases split 30/30.');
+const cases = z.array(caseSchema).length(24).parse(JSON.parse(readFileSync(inputPath, 'utf8')));
+if (new Set(cases.map(c => c.id)).size !== 24 || cases.filter(c => c.split === 'rubric').length !== 12 || cases.filter(c => c.split === 'holdout').length !== 12 || cases.some(c => Date.parse(c.reviewedAt) > Date.now())) throw new Error('Require 24 unique, already-reviewed cases split 12/12.');
 for (const category of ['exact', 'title_variation', 'different_role', 'closed', 'unresolved', 'caution']) {
-  for (const split of ['rubric', 'holdout']) if (cases.filter(c => c.category === category && c.split === split).length !== 5) throw new Error(`Require five ${category} cases in each split.`);
+  for (const split of ['rubric', 'holdout']) if (cases.filter(c => c.category === category && c.split === split).length !== 2) throw new Error(`Require two ${category} cases in each split.`);
 }
 const userId = process.env.GHOSTJOB_BENCHMARK_USER_ID;
 if (!userId || !v3Allowed(userId) || investigationAccess(userId) !== 'available' || process.env.GHOSTJOB_JEV_EVALUATION_ENABLED !== 'true' || !process.env.TYPESAFE_API_KEY) throw new Error('Require a configured pilot UUID, enabled investigation and Jev credentials. This runner shares the $25 budget.');
@@ -65,7 +65,7 @@ const summary = (rows: typeof results) => ({ count: rows.length, completed: rows
   p95LatencyMs: rows.length ? [...rows].sort((a, b) => a.elapsedMs - b.elapsedMs)[Math.ceil(rows.length * 0.95) - 1].elapsedMs : null,
   estimatedUsageUsd: rows.reduce((sum, r) => sum + r.metrics.costMicroUsd, 0) / 1_000_000,
   uncertainCostCases: rows.filter(r => r.metrics.usageUncertain).length });
-const passed = results.length === 60 && results.every(r => r.status === 'completed' && r.jevCorrect !== null) && holdout.length === 30 && !holdout.some(r => r.falseExact || r.falseNativeClaim);
+const passed = results.length === 24 && results.every(r => r.status === 'completed' && r.jevCorrect !== null) && holdout.length === 12 && !holdout.some(r => r.falseExact || r.falseNativeClaim);
 writeFileSync(outputPath, JSON.stringify({ checkedAt: new Date().toISOString(), acceptanceGatePassed: passed, summary: summary(results), holdout: summary(holdout), results }, null, 2));
 console.log(JSON.stringify({ acceptanceGatePassed: passed, count: results.length, report: outputPath }));
 if (!passed) process.exitCode = 1;

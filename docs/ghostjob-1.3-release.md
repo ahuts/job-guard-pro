@@ -1,24 +1,23 @@
-# GhostJob 1.3.0 release runbook
+# GhostJob 1.3 release runbook
 
 The paid investigation configuration is now maintained in `ghostjob-ai-pilot.md`.
 OpenAI and TypeSafe use the existing Supabase database for shared storage.
 
 ## Release state
 
-The implementation is prepared for review, not a declaration of production readiness.
+The Preview pilot is functioning, not a declaration of production readiness.
 Scoring v3 is disabled by default. The existing v2 route remains available to old clients.
 The website negotiates its scoring version through authenticated `GET /api/scan`;
-non-pilot accounts continue using v2. Extension 1.3.0 requires v3 explicitly and
+non-pilot accounts continue using v2. The unpacked Preview extension requires v3 explicitly and
 rejects an older server response rather than counting it as a successful v3 scan.
 The unpacked extension is `ghostjob-extension-v4/ghostjob-extension`.
 
-Local verification on 2026-09-15: 71 automated tests passed, including DOM
-expansion, exact-role matching, public HTTPS transport, legacy API compatibility,
-pilot controls, and authenticated retry deduplication. Both browser and server
-TypeScript configurations passed. Public Lever, Ashby and Greenhouse field
-projections were captured for parser regression tests. The live 50-case review,
-live database concurrency test, signed-in Chrome pilot, and Lovable schema query
-remain release gates; they are not claimed as completed by those tests.
+On 2026-09-28, a signed-in Chrome scan completed OpenAI investigation and private
+Jev evaluation through the Preview API. The Trust Score remained neutral for an
+unresolved official source. The pilot branch passed 132 automated tests before a
+subsequent focused quality-label test was added; type checks and build passed.
+The 24-case reviewed benchmark is not yet balanced or frozen, and live database
+contention remains untested.
 
 A public-source smoke check on 2026-09-15 found Spreedly's AI Operations Manager
 role through its employer website and Lever board, and independently confirmed
@@ -54,28 +53,27 @@ results for 24 hours. No raw LinkedIn description is stored in the public-source
 
 ## Database review gate
 
-The checked-in v2 migration limits `scanned_jobs.scoring_version` to 1/2 and
-`scan_observations.scoring_version` to 2. The live Lovable project's schema could not
-be inspected through the available Supabase connector (permission denied).
-Run `ghostjob-1.3-schema-preflight.sql` (read only) in Lovable Cloud.
-Review the exact proposed constraint changes before applying them. Do not run them
-on `czxrgjmropukzgyvlztg` or `ijvkbopodjzvcpgbppch` as a substitute.
-Capture table counts and constraint definitions before/after, and verify an account's
-existing saved jobs are intact. No data rewrite or backfill is part of this release.
+Aaron ran the schema review in the confirmed Lovable Cloud project
+`auevehneizminspolipf`, and the signed Preview storage bridge, budget ledger,
+saved-result path and private Jev write worked live. The Supabase connector still
+denies direct schema inspection. Preserve existing saved jobs and ownership policies;
+do not reverse v3 constraints after writes. No data rewrite or backfill is planned.
 
 ## Verification and deployment gates
 
-1. Run `npm test`, `npx tsc -p tsconfig.app.json`, `npx tsc -p tsconfig.server.json`, and `npm run build`.
-2. Review the benchmark worksheet. Synthetic fixtures are not a substitute for the
-   approximately 50 manually reviewed, dated live listings required for the pilot.
-3. Resolve the schema gate and configure the actual pilot account ID and server secrets.
-4. Deploy the backward-compatible backend and verify a v2 response, a rejected non-pilot
-   v3 request, and an authorized v3 request. Verify saved observations and jobs in Lovable.
-5. Reload the unpacked 1.3.0 extension, refresh LinkedIn, and test both standalone and
-   split-pane jobs. Verify a failed scan/deep retry never increases the scan allowance.
-6. Verify the deployed website can edit details and deepen a result without saving stale scores.
-7. Review accuracy, description coverage, latency, cost, and limitations before approving
-   broader release. Only then set public rollout and publish the extension package.
+1. Freeze 24 dated, balanced, independently labeled listings: 12 rubric and 12
+   holdout cases. Replace or recover the missing LinkedIn descriptions in the
+   current intake sheet. Run the benchmark and require no false exact matches on
+   holdout cases.
+2. Verify Production environment settings. The OpenAI, TypeSafe, storage-bridge
+   and v3 pilot switches currently shown in Vercel are Preview scoped. Do not
+   copy provider secrets into client variables or enable public rollout.
+3. Deploy the backward-compatible backend only after a production release
+   decision. Verify existing paying accounts still receive v2, pilot accounts
+   receive v3 only when explicitly configured, and saved jobs remain intact.
+4. Test the production extension package against the actual custom domain and
+   both pilot and non-pilot accounts before Chrome Store submission. The unpacked
+   Preview extension is not the production package.
 
 Rollback: disable `GHOSTJOB_OPENAI_INVESTIGATION_ENABLED` for provider issues. Disable
 `GHOSTJOB_V3_ENABLED` to stop v3; existing v2 clients continue to use the legacy scorer.

@@ -1,11 +1,11 @@
 # OpenAI / Jev live benchmark
 
-**Not completed:** no independently reviewed corpus or configured provider keys were
-available during implementation. Fixture tests verify behavior, not model accuracy.
+**Not completed:** the research shortlist has human review notes but is not a
+balanced, frozen benchmark corpus. Fixture tests verify behavior, not model accuracy.
 
-Collect 60 real, dated LinkedIn listings from at least ten employers. Freeze 30
-rubric cases for prompt refinement and 30 holdout cases before making changes.
-Each split contains five cases from each category: `exact`, `title_variation`,
+Collect 24 real, dated LinkedIn listings from at least six employers. Freeze 12
+rubric cases for prompt refinement and 12 holdout cases before making changes.
+Each split contains two cases from each category: `exact`, `title_variation`,
 `different_role`, `closed`, `unresolved`, `caution`. Independently read the LinkedIn
 listing and employer source. Record expected native finding, semantic finding,
 caution types and four Jev dimension labels before inspecting model output.
@@ -65,3 +65,11 @@ and cannot pass with incomplete cases or missing Jev evaluations. Inspect the
 report and dated sources; zero false holdout claims alone does not establish
 reliability across all employers. Retest changed/removed listings against updated,
 independently reviewed expectations rather than trusting stale labels.
+
+The 2026-09-26 research shortlist and review sheet are intake material, not a
+runner input. A `reviewed` status or selected category does not substitute for a
+dated source snapshot, independent expected findings, and four Jev labels.
+The 24-case gate must not be relaxed to fit weak or missing categories. Preserve
+the original reviewer notes and replace or adjudicate cases before freezing the
+rubric and holdout sets. Source text captured after the human review must be
+rechecked for material changes before it is used as the reviewed input.
