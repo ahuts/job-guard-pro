@@ -1,5 +1,4 @@
 project_id = "auevehneizminspolipf"
-
 # This new endpoint authenticates HMAC-signed server requests inside its handler.
 # Existing customer/auth/billing function settings are unchanged.
 [functions.ghostjob-ai-storage]
