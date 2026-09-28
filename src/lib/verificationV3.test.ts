@@ -151,5 +151,9 @@ describe('release controls and request bounds', () => {
     expect(v3Allowed('pilot')).toBe(true);
     expect(v3Allowed(null)).toBe(false);
     expect(v3Allowed('someone-else')).toBe(false);
+    vi.stubEnv('GHOSTJOB_V3_ROLLOUT', 'pro');
+    expect(v3Allowed('someone-else', true)).toBe(true);
+    expect(v3Allowed('someone-else', false)).toBe(false);
+    expect(v3Allowed(null, true)).toBe(false);
   });
 });

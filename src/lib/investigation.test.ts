@@ -125,9 +125,10 @@ describe('automatic investigation controls', () => {
     expect(investigationFingerprint({ ...input, scanAttemptId: 'new-attempt', scanMode: 'deep' })).toBe(investigationFingerprint(input));
     expect(investigationFingerprint({ ...input, description: `${description} Changed qualification.` })).not.toBe(investigationFingerprint(input));
   });
-  it('requires explicit pilot membership even when native scoring rolls out publicly', () => {
+  it('admits server-verified Pro accounts and pilots while rejecting free accounts', () => {
     enabled(); vi.stubEnv('GHOSTJOB_V3_ROLLOUT', 'public');
-    expect(investigationAccess('pilot')).toBe('available'); expect(investigationAccess('other')).toBe('not_eligible'); expect(investigationAccess(null)).toBe('sign_in_required');
+    expect(investigationAccess('pilot')).toBe('available'); expect(investigationAccess('other')).toBe('not_eligible');
+    expect(investigationAccess('other', true)).toBe('available'); expect(investigationAccess(null, true)).toBe('sign_in_required');
     vi.stubEnv('OPENAI_API_KEY', ''); expect(investigationAccess('pilot')).toBe('disabled');
   });
   it('budget exhaustion and storage failure preserve native results without paid calls', async () => {

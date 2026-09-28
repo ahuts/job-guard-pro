@@ -60,10 +60,17 @@ Deno.serve(async (req) => {
       });
       customerId = customer.id;
 
-      await supabase
+      // Billing fields are not client-writable. Only this verified server
+      // function and the signed Stripe webhook may change them.
+      const admin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { error: customerError } = await admin
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", userId);
+      if (customerError) throw customerError;
     }
 
     const { origin } = new URL(req.url);

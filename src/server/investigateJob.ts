@@ -17,11 +17,11 @@ export function investigationFingerprint(input: InvestigationInput) {
     requisitionId: input.requisitionId ?? '', description: input.description ?? '', employmentType: input.employmentType ?? '',
     descriptionCoverage: input.descriptionCoverage ?? '', truncated: Boolean(input.coverageDetails?.truncated), linkedinClosed: Boolean(input.linkedinClosed) }, INVESTIGATION_VERSION]);
 }
-export function investigationAccess(userId: string | null): Investigation['status'] | 'available' {
+export function investigationAccess(userId: string | null, proEligible = false): Investigation['status'] | 'available' {
   if (process.env.GHOSTJOB_OPENAI_INVESTIGATION_ENABLED !== 'true' || process.env.GHOSTJOB_INVESTIGATION_SCHEMA_READY !== 'true' || !process.env.OPENAI_API_KEY || !storeConfigured()) return 'disabled';
   if (!userId) return 'sign_in_required';
   const pilot = (process.env.GHOSTJOB_V3_PILOT_USERS ?? '').split(',').map(v => v.trim()).filter(Boolean);
-  return pilot.includes(userId) ? 'available' : 'not_eligible';
+  return proEligible || pilot.includes(userId) ? 'available' : 'not_eligible';
 }
 const normalizeQuote = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim();
 const cautionLabels = {
@@ -98,13 +98,14 @@ export function validateComparison(model: ModelComparison, input: InvestigationI
 }
 export interface InvestigationRun { resolution: Resolution; investigation: Investigation }
 export interface InvestigationDependencies {
+  proEligible?: boolean;
   resolver?: typeof resolveEmployer; fetcher?: ProviderFetch;
   get?: typeof cacheGet; put?: typeof cachePut; reserve?: typeof reserveInvestigation; settle?: typeof settleInvestigation;
   onMetrics?: (metrics: { costMicroUsd: number; usageUncertain: boolean; cached: boolean; latencyMs: number }) => void;
 }
 export async function investigateJob(input: InvestigationInput, userId: string | null, deadline: number, deps: InvestigationDependencies = {}): Promise<InvestigationRun> {
   const resolver = deps.resolver ?? resolveEmployer, get = deps.get ?? cacheGet, put = deps.put ?? cachePut;
-  const access = investigationAccess(userId);
+  const access = investigationAccess(userId, deps.proEligible);
   const fingerprint = investigationFingerprint(input);
   const keys = investigationKeys(userId ?? '', fingerprint);
   if (access === 'available') {
@@ -112,7 +113,7 @@ export async function investigateJob(input: InvestigationInput, userId: string |
     if (cached) { deps.onMetrics?.({ costMicroUsd: 0, usageUncertain: false, cached: true, latencyMs: 0 }); return cached; }
   }
   let resolution = await resolver(input, { deadline: Math.min(deadline, Date.now() + (access === 'available' ? 5000 : 8500)), collectCandidates: access === 'available' });
-  if (access !== 'available') return { resolution, investigation: emptyInvestigation(access, access === 'disabled' ? 'Automatic investigation is not configured.' : access === 'sign_in_required' ? 'Sign in to use automatic investigation.' : 'Automatic investigation is restricted to pilot accounts.') };
+  if (access !== 'available') return { resolution, investigation: emptyInvestigation(access, access === 'disabled' ? 'Automatic investigation is not configured.' : access === 'sign_in_required' ? 'Sign in to use automatic investigation.' : 'Automatic investigation requires Pro access.') };
   let reservation;
   try { reservation = await (deps.reserve ?? reserveInvestigation)(userId!, fingerprint, deadline); }
   catch { return { resolution, investigation: emptyInvestigation('disabled', 'Paid investigation is unavailable because budget storage could not be verified.') }; }

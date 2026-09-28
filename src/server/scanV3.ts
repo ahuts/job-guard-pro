@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { calculateTrustScore, getQualityBadges, hasConcreteRoleDetails } from '../lib/trustScore.js';
 import { getJobInsights, getJobQualityChecklist, getSuggestedQuestions } from '../lib/jobInsights.js';
 import { investigateJob } from './investigateJob.js';
+import { verifiedPro } from './proEntitlement.js';
 
 const url = z.preprocess(v => v === '' ? undefined : v, z.string().url().max(2048).refine(v => new URL(v).protocol === 'https:', 'HTTPS required').nullish());
 export const scanSchema = z.object({
@@ -38,20 +39,21 @@ export async function verifiedUser(authorization?: string, onFailure?: (reason: 
     return null;
   } catch { onFailure?.('provider_unavailable'); return null; }
 }
-export function v3Allowed(userId: string | null): boolean {
+export function v3Allowed(userId: string | null, isPro = false): boolean {
   if (process.env.GHOSTJOB_V3_ENABLED !== 'true' || process.env.GHOSTJOB_V3_SCHEMA_READY !== 'true') return false;
   const pilot = (process.env.GHOSTJOB_V3_PILOT_USERS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-  return process.env.GHOSTJOB_V3_ROLLOUT === 'public' || Boolean(userId && pilot.includes(userId));
+  return process.env.GHOSTJOB_V3_ROLLOUT === 'public' || Boolean(userId && (pilot.includes(userId) || (process.env.GHOSTJOB_V3_ROLLOUT === 'pro' && isPro)));
 }
 export async function scanV3(body: unknown, authorization?: string) {
   const parsed = scanSchema.safeParse(body);
   if (!parsed.success) throw new ScanError(400, 'Invalid scan details: ' + parsed.error.issues.map(i => i.path.join('.') + ' ' + i.message).slice(0, 3).join('; '));
   const input = parsed.data;
-  const userId = await verifiedUser(authorization);
-  if (!v3Allowed(userId)) throw new ScanError(503, 'GhostJob 1.3 is not enabled for this account yet. The production pilot requires a compatible database and server release.');
-  if (input.scanMode === 'deep' && !userId) throw new ScanError(401, 'Sign in to search more sources.');
   const deadline = Date.now() + 30_000;
-  const { resolution, investigation } = await investigateJob({ ...input, title: input.title!, company: input.company!, url: input.url ?? undefined }, userId, deadline);
+  const userId = await verifiedUser(authorization);
+  const isPro = await verifiedPro(userId, authorization);
+  if (!v3Allowed(userId, isPro)) throw new ScanError(503, 'GhostJob 1.3 is not enabled for this account yet.');
+  if (input.scanMode === 'deep' && !userId) throw new ScanError(401, 'Sign in to search more sources.');
+  const { resolution, investigation } = await investigateJob({ ...input, title: input.title!, company: input.company!, url: input.url ?? undefined }, userId, deadline, { proEligible: isPro });
   const result = calculateTrustScore({ ...resolution.score, scoringVersion: 3,
     concreteRoleDetails: hasConcreteRoleDetails(input.description ?? ''), reposted: input.reposted,
     repeatedWithoutVerification: Boolean(input.firstObservedAt && Date.now() - Date.parse(input.firstObservedAt) >= 45 * 86400000),

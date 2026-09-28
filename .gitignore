@@ -5,6 +5,7 @@
 node_modules/
 dist/
 ._*
+supabase/.temp/
 
 # Utility scripts
 grant-pro.js

@@ -252,11 +252,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method === 'GET') {
     const { verifiedUser, v3Allowed } = await import('../src/server/scanV3.js');
+    const { verifiedPro } = await import('../src/server/proEntitlement.js');
     const auth = req.headers?.authorization;
-    const user = await verifiedUser(typeof auth === 'string' ? auth : undefined);
+    const authorization = typeof auth === 'string' ? auth : undefined;
+    const user = await verifiedUser(authorization);
+    const isPro = await verifiedPro(user, authorization);
     res.setHeader('Cache-Control', 'no-store');
     const { investigationAccess } = await import('../src/server/investigateJob.js');
-    return res.status(200).json({ scoringVersion: v3Allowed(user) ? 3 : 2, investigationEnabled: v3Allowed(user) && investigationAccess(user) === 'available' });
+    return res.status(200).json({ scoringVersion: v3Allowed(user, isPro) ? 3 : 2, investigationEnabled: v3Allowed(user, isPro) && investigationAccess(user, isPro) === 'available' });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 

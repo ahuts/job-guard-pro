@@ -30,8 +30,8 @@ earn freshness points. This is one live case, not completion of the benchmark.
 |---|---|
 | `GHOSTJOB_V3_ENABLED` | unset (disabled); `true` enables the gated v3 path |
 | `GHOSTJOB_V3_SCHEMA_READY` | unset; set `true` only after live schema verification |
-| `GHOSTJOB_V3_ROLLOUT` | pilot; `public` is the later broad release switch |
-| `GHOSTJOB_V3_PILOT_USERS` | comma-separated verified Auth user IDs, never emails supplied by the client |
+| `GHOSTJOB_V3_ROLLOUT` | `pilot` initially; `pro` advertises v3 to every server-verified Pro profile (paid or gifted); `public` advertises v3 to all accounts |
+| `GHOSTJOB_V3_PILOT_USERS` | optional comma-separated verified Auth user IDs for internal tests, never emails supplied by the client |
 | `SUPABASE_URL` | actual Lovable production URL; `VITE_SUPABASE_URL` fallback supported |
 | `SUPABASE_ANON_KEY` | publishable/anon key; `VITE_SUPABASE_PUBLISHABLE_KEY` fallback supported |
 | `GHOSTJOB_STORAGE_BRIDGE_SECRET` | same random server-only secret in Vercel Preview and Lovable Cloud; see `ghostjob-cloud-storage-setup.md` |
@@ -59,6 +59,18 @@ saved-result path and private Jev write worked live. The Supabase connector stil
 denies direct schema inspection. Preserve existing saved jobs and ownership policies;
 do not reverse v3 constraints after writes. No data rewrite or backfill is planned.
 
+Before setting `GHOSTJOB_V3_ROLLOUT=pro`, deploy the updated `create-checkout`
+and signed-only `stripe-webhook` functions, then apply
+`20260928162800_protect_profile_entitlements.sql` to the same Cloud project.
+The migration preserves every profile and gift while removing client write
+access to billing fields. Verify a signed-in user can still update `full_name`
+but cannot change `subscription_tier`, `subscription_status`, or
+`stripe_customer_id`; verify new checkout and a signed webhook still update
+billing fields. The Vercel server reads the current Pro tier with the verified
+account's JWT and fails closed if this lookup fails. All Pro accounts receive
+the same AI eligibility, regardless of payment or giveaway origin. The shared
+$25 monthly budget remains the spending ceiling.
+
 ## Verification and deployment gates
 
 1. Freeze 24 dated, balanced, independently labeled listings: 12 rubric and 12
@@ -66,11 +78,12 @@ do not reverse v3 constraints after writes. No data rewrite or backfill is plann
    current intake sheet. Run the benchmark and require no false exact matches on
    holdout cases.
 2. Verify Production environment settings. The OpenAI, TypeSafe, storage-bridge
-   and v3 pilot switches currently shown in Vercel are Preview scoped. Do not
-   copy provider secrets into client variables or enable public rollout.
+   and v3 pilot switches currently shown in Vercel are Preview scoped. Add
+   server-only Production secrets, keep Jev private, and use `pro` rollout
+   after profile permissions and billing functions are verified.
 3. Deploy the backward-compatible backend only after a production release
-   decision. Verify existing paying accounts still receive v2, pilot accounts
-   receive v3 only when explicitly configured, and saved jobs remain intact.
+   decision. Verify every Pro account receives v3 investigation eligibility,
+   free accounts receive v2, old clients still receive v2, and saved jobs remain intact.
 4. Test the production extension package against the actual custom domain and
    both pilot and non-pilot accounts before Chrome Store submission. The unpacked
    Preview extension is not the production package.
