@@ -7,12 +7,14 @@ import { Loader2, Search, AlertTriangle, XCircle } from 'lucide-react';
 import { analyzeJob, refineAnalysis, recordScanObservation, saveAnalysis } from '@/services/jobScraper';
 import { GhostScoreDisplay } from './GhostScoreDisplay';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import AuthDialog from './AuthDialog';
 import { track, scoreBand } from '@/lib/analytics';
 import type { AnalysisResult } from '@/services/jobScraper';
 
 export function JobScanner() {
   const { user } = useAuth();
+  const { isPro, loading: profileLoading } = useProfile();
   // Preview-only validation aid. This is disabled unless a Vercel Preview
   // build explicitly supplies the flag, and anonymous scans are never saved.
   const allowPreviewAnonymousScan = import.meta.env.VITE_GHOSTJOB_PREVIEW_ALLOW_ANONYMOUS_SCAN === 'true';
@@ -51,7 +53,7 @@ export function JobScanner() {
       return;
     }
 
-    if (scansRemaining <= 0) {
+    if (!isPro && !profileLoading && scansRemaining <= 0) {
       track('free_scan_limit_reached', { location: 'scanner' });
       setError("You've used all 3 free scans. Go Pro for unlimited scans and saved history.");
       return;
@@ -73,7 +75,7 @@ export function JobScanner() {
           // A history write must never hide a completed public-evidence scan.
         });
       }
-      setScansRemaining(prev => prev - 1);
+      if (!isPro) setScansRemaining(prev => prev - 1);
       track('scan_completed', {
         location: 'scanner',
         band: scoreBand(analysis.trustScore.trustScore),
@@ -99,7 +101,7 @@ export function JobScanner() {
             Check a LinkedIn job
           </CardTitle>
           <CardDescription>
-            Paste a LinkedIn job URL and get a Trust Score in seconds — free, no card.
+            {isPro ? 'Paste a LinkedIn job URL for a Trust Score and available employer investigation.' : 'Paste a LinkedIn job URL and get a Trust Score in seconds — free, no card.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -113,7 +115,7 @@ export function JobScanner() {
                 className="flex-1"
                 disabled={loading}
               />
-              <Button type="submit" disabled={loading || scansRemaining <= 0}>
+              <Button type="submit" disabled={loading || (!isPro && !profileLoading && scansRemaining <= 0)}>
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -134,7 +136,11 @@ export function JobScanner() {
             </div>}
           </form>
 
-          {scansRemaining > 0 ? (
+          {isPro ? (
+            <div className="text-sm text-muted-foreground">Pro scans available</div>
+          ) : profileLoading && user ? (
+            <div className="text-sm text-muted-foreground">Checking your plan...</div>
+          ) : scansRemaining > 0 ? (
             <div className="text-sm text-muted-foreground">
               {scansRemaining} free scan{scansRemaining !== 1 ? 's' : ''} remaining
             </div>
