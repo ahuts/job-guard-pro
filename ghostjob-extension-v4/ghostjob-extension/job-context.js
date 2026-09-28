@@ -5,7 +5,9 @@
   const visible = el => !el.closest('[hidden], [aria-hidden="true"], #gj-modal') && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
   function key() {
     const url = new URL(location.href);
-    const fromUrl = url.searchParams.get('currentJobId') || url.pathname.match(/\/view\/(\d+)/)?.[1];
+    const segment = url.pathname.match(/\/jobs\/view\/([^/]+)/)?.[1] || '';
+    const pathId = /^\d+$/.test(segment) ? segment : segment.match(/-(\d{7,})$/)?.[1];
+    const fromUrl = url.searchParams.get('currentJobId') || pathId;
     if (fromUrl) return fromUrl;
     const area = root();
     return area?.getAttribute('data-job-id') || area?.querySelector('[data-job-id]')?.getAttribute('data-job-id') || area?.querySelector('h1 a[href*="/jobs/view/"], [data-test-job-title] a[href*="/jobs/view/"]')?.href.match(/\/view\/(\d+)/)?.[1] || '';

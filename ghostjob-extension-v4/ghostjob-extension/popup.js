@@ -1,4 +1,4 @@
-// GhostJob Popup Script v1.3.5 Preview
+// GhostJob Popup Script v1.3.8 Preview
 // Handles scanning from the extension popup + Supabase auth
 
 const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
@@ -61,9 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  chrome.storage.local.get(['gj_auth_token', 'gj_user_email'], (stored) => {
-    if (stored.gj_auth_token && stored.gj_user_email) {
-      showLoggedIn(stored.gj_user_email);
+  chrome.runtime.sendMessage({ action: 'authStatus' }, (status) => {
+    if (status?.success && status.authenticated) {
+      chrome.storage.local.get(['gj_user_email'], (stored) => {
+        if (stored.gj_user_email) showLoggedIn(stored.gj_user_email);
+      });
+    } else if (status?.error?.includes('Sign in again')) {
+      authStatus.textContent = 'Session expired. Please sign in again.';
+      authStatus.style.color = '#fca5a5';
     }
   });
 

@@ -14,7 +14,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.5-preview';
+  const VERSION  = '1.3.8-preview';
   // This unpacked pilot must not write scan observations or saved jobs to the
   // live Lovable Cloud database while it is exercising the Preview API.
   const PREVIEW_BUILD = true;
@@ -758,7 +758,10 @@
     return waitForJobIdentity(5000).then(async function(data) {
       var description = await GhostJobContext.readDescription(expectedKey);
       if (GhostJobContext.key() !== expectedKey) throw new Error('The selected job changed. Please scan again.');
-      Object.assign(data, description);
+      // LinkedIn can finish rendering the top card while the description is
+      // expanding. Re-read the selected job after both are stable.
+      if (!GhostJobContext.header()) throw new Error('The selected job header changed. Retry this scan.');
+      Object.assign(data, extractJobData(), description);
       data.fullPageText = (data.description + ' ' + data.salary).trim();
       data.scanAttemptId = activeAttempt.id;
       lastScannedJob = data;
@@ -773,7 +776,7 @@
       function read() {
         var jobData;
         try { jobData = extractJobData(); } catch (_) { return false; }
-        if (jobData.title && jobData.company) {
+        if (jobData.title && jobData.company && GhostJobContext.header()) {
           resolve(jobData);
           return true;
         }
