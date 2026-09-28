@@ -11,7 +11,7 @@ const PrivacyPolicy = () => {
           <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Privacy Policy
           </h1>
-          <p className="text-muted-foreground">Last updated: April 30, 2026</p>
+          <p className="text-muted-foreground">Last updated: September 28, 2026</p>
           <p className="text-muted-foreground text-sm mt-1">Effective date: April 30, 2026</p>
         </div>
 
@@ -37,7 +37,7 @@ const PrivacyPolicy = () => {
 
             <h3 className="text-lg font-medium text-foreground mt-4 mb-2">2.2 Scan Data</h3>
             <p className="text-muted-foreground leading-relaxed">
-              When you save a scan result to your Dashboard, we collect:
+              When you scan a LinkedIn job, the extension sends the job URL, title, company, location, description, and available posting details to the GhostJob API to produce the result. When you save a result to your Dashboard, we also store:
             </p>
             <ul className="text-muted-foreground space-y-2 mt-2 list-disc list-inside">
               <li><strong className="text-foreground">Job URL</strong> — the LinkedIn job posting URL you scanned</li>
@@ -45,6 +45,7 @@ const PrivacyPolicy = () => {
               <li><strong className="text-foreground">Trust Score</strong> — the numerical legitimacy rating (0–100)</li>
               <li><strong className="text-foreground">Detected signals</strong> — red, yellow, and green flag indicators with quotes from the posting</li>
               <li><strong className="text-foreground">Scan date</strong> — when the scan was performed</li>
+              <li><strong className="text-foreground">Employer verification findings</strong> — source links and supporting excerpts when available</li>
             </ul>
 
             <h3 className="text-lg font-medium text-foreground mt-4 mb-2">2.3 Usage Data</h3>
@@ -59,7 +60,7 @@ const PrivacyPolicy = () => {
               <li><strong className="text-foreground">Authentication tokens</strong> — stored in <code className="text-sm bg-secondary px-2 py-0.5 rounded">chrome.storage.local</code> for session persistence (access token and refresh token)</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Local browser data never leaves your device and is not transmitted to any server.
+              Preferences remain on your device. Authentication tokens are sent over HTTPS to our authentication service and GhostJob API when needed to sign you in, refresh your session, or authorize a scan.
             </p>
           </div>
 
@@ -73,6 +74,7 @@ const PrivacyPolicy = () => {
               <li><strong className="text-foreground">Save to Dashboard</strong> — to store scan results so you can review them later on your Dashboard</li>
               <li><strong className="text-foreground">Usage enforcement</strong> — to track scan counts and apply free tier limits (3 scans/month for free users, unlimited for Pro users)</li>
               <li><strong className="text-foreground">Subscription management</strong> — to verify and manage your Pro subscription status via Stripe</li>
+              <li><strong className="text-foreground">Job investigation</strong> — for eligible Pro scans, to find employer sources, compare job postings, and show evidence-supported findings. The existing Trust Score remains separate from experimental model evaluations.</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-2">
               We do not use your data for advertising, marketing, profiling, or any purpose beyond the core functionality described above.
@@ -85,7 +87,7 @@ const PrivacyPolicy = () => {
               Your account information and saved scan data are stored on servers managed by our backend provider, Supabase Inc. Supabase hosts data on Amazon Web Services (AWS) infrastructure. Your data is stored in the region configured for our project.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Local browser data (extension preferences and authentication tokens) is stored on your device using Chrome's local storage API and is not transmitted to any server.
+              Extension preferences and session tokens are stored on your device using Chrome's local storage API. Session tokens are also transmitted to our authentication service and GhostJob API as described above.
             </p>
           </div>
 
@@ -97,9 +99,12 @@ const PrivacyPolicy = () => {
             <ul className="text-muted-foreground space-y-2 mt-2 list-disc list-inside">
               <li><strong className="text-foreground">Supabase Inc.</strong> — acts as our data processor for authentication, database storage, and API services. Supabase stores account credentials (hashed passwords), saved scan results, and usage data. Supabase's privacy policy: <a href="https://supabase.com/privacy" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">supabase.com/privacy</a></li>
               <li><strong className="text-foreground">Stripe, Inc.</strong> — processes Pro subscription payments. Stripe receives payment card information and transaction details. We do not store your full card number. Stripe's privacy policy: <a href="https://stripe.com/privacy" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">stripe.com/privacy</a></li>
+              <li><strong className="text-foreground">Vercel</strong> — hosts the GhostJob website and scan API, which receive the listing details sent for a scan.</li>
+              <li><strong className="text-foreground">OpenAI</strong> — for eligible Pro investigations, receives employer and job details, selected listing description text, and fetched employer posting excerpts to discover and compare public job sources.</li>
+              <li><strong className="text-foreground">TypeSafe AI</strong> — during evaluation of eligible Pro investigations, receives the extracted listing and fetched employer posting excerpts for comparison. Its evaluation does not change the Trust Score or user-facing finding.</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              We do not share user data with any other third parties, including advertising networks, analytics platforms, data brokers, or social media companies.
+              We do not sell scan data or share it with advertising networks or data brokers. OpenAI and TypeSafe receive job evidence for the investigation feature, not your account credentials.
             </p>
           </div>
 
@@ -131,7 +136,7 @@ const PrivacyPolicy = () => {
             <ul className="text-muted-foreground space-y-2 mt-2 list-disc list-inside">
               <li>All data transmitted between the extension and our servers is encrypted via HTTPS/TLS</li>
               <li>Passwords are hashed by Supabase using bcrypt — we never store or have access to plain-text passwords</li>
-              <li>Authentication tokens are stored locally in Chrome's secure storage API</li>
+              <li>Authentication tokens are stored in Chrome extension storage and sent only over HTTPS for authentication and authorized API requests</li>
               <li>Access to production databases is restricted and logged</li>
             </ul>
           </div>
@@ -145,9 +150,11 @@ const PrivacyPolicy = () => {
               <li><strong className="text-foreground">activeTab</strong> — reads LinkedIn job page content only when you click "Scan for Ghost Jobs"</li>
               <li><strong className="text-foreground">storage</strong> — saves scan results, preferences, and authentication tokens locally in your browser</li>
               <li><strong className="text-foreground">Host access to linkedin.com</strong> — injects the scan button and results overlay into LinkedIn job posting pages</li>
+              <li><strong className="text-foreground">Host access to jobghost.io</strong> — requests scan results from the GhostJob API and opens the account dashboard</li>
+              <li><strong className="text-foreground">Host access to our Supabase endpoint</strong> — signs users in and saves authorized account and scan data</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Page content is analyzed locally in your browser. Raw page content is not transmitted to any server. Only saved scan summaries (job title, company, score, signals) are sent to our backend when you explicitly click "Save to Dashboard."
+              The extension reads the active LinkedIn job posting when you scan it. Listing details, including description text, are sent to the GhostJob API for analysis. Eligible Pro investigations may send the job evidence to OpenAI and TypeSafe as described above. Saving a result to your Dashboard stores its score, signals, and available employer verification findings.
             </p>
           </div>
 
