@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateTrustScore } from "./trustScore";
+import { calculateTrustScore, getQualityBadges } from "./trustScore";
 
 describe("calculateTrustScore", () => {
   it("returns 100 when every positive verification box is checked", () => {
@@ -31,5 +31,10 @@ describe("calculateTrustScore", () => {
     const result = calculateTrustScore({ careersVerification: "closed_conflict", reposted: true, repeatedWithoutVerification: true });
     expect(result.trustScore).toBe(0);
     expect(result.ghostRisk).toBe("very_high");
+  });
+
+  it("does not advertise flexible work when the listing explicitly rules it out", () => {
+    expect(getQualityBadges("Remote: Not a remote position. Compressed/Flexible: Not Authorized.").some(b => b.id === "flexible_work")).toBe(false);
+    expect(getQualityBadges("This is a hybrid role.").some(b => b.id === "flexible_work")).toBe(true);
   });
 });

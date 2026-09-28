@@ -86,7 +86,11 @@ export function getQualityBadges(description: string, salary?: string | null): Q
   const badges: QualityBadge[] = [];
   if (/\$\d[\d,]*|\d{2,3}k\b/.test(value)) badges.push({ id: "salary", label: "Salary listed" });
   if (/\bhealth insurance\b|\b401k\b|\bdental\b|\bvision\b|\bbenefits package\b/.test(value)) badges.push({ id: "benefits", label: "Benefits mentioned" });
-  if (/remote|hybrid|work from home|\bwfh\b|flexible work/.test(value)) badges.push({ id: "flexible_work", label: "Flexible work mentioned" });
+  const flexibleLines = description.toLowerCase().split(/\n|(?<=[.!?])\s+/);
+  if (flexibleLines.some(line => /\bremote\b|\bhybrid\b|\bwork from home\b|\bwfh\b|\bflexible work\b/.test(line) &&
+    !/\b(?:not|no|unavailable|unauthorized)\b.{0,45}\b(?:remote|hybrid|telework|flexible)\b|\b(?:remote|hybrid|telework|flexible)(?:\s+work|\s+position)?\s*:\s*(?:not|no|unavailable|unauthorized)\b/.test(line))) {
+    badges.push({ id: "flexible_work", label: "Flexible work mentioned" });
+  }
   return badges;
 }
 

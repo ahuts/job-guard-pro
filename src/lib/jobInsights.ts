@@ -69,7 +69,7 @@ function sectionExcerpt(description: string, heading: RegExp): string | undefine
   const selected: string[] = [];
   for (let index = start; index < lines.length && selected.length < 3; index++) {
     const line = lines[index];
-    if (index > start && /^(?:primary |key )?(?:responsibilities|qualifications)|^(?:preferred |required )?qualifications|^benefits|^about (?:the )?company/i.test(line)) break;
+    if (index > start && /^(?:primary |key )?(?:responsibilities|qualifications)|^(?:preferred |required )?qualifications|^duties\b|^benefits|^about (?:the )?company/i.test(line)) break;
     selected.push(line);
   }
   return compact(selected.join(" ")).slice(0, 400) || undefined;
@@ -93,7 +93,7 @@ export function getJobInsights(input: JobInsightInput): JobInsight[] {
   };
 
   if (description.length >= 500) push("role-detail", "role", "Detailed job description", `${description.length.toLocaleString()} characters of job detail were analyzed.`);
-  const responsibilitiesExcerpt = sectionExcerpt(input.description ?? "", /^(?:primary |key )?responsibilities\b|^what you'?ll do\b/i);
+  const responsibilitiesExcerpt = sectionExcerpt(input.description ?? "", /^(?:primary |key )?responsibilities\b|^what you'?ll do\b|^duties\b/i);
   const qualificationsExcerpt = sectionExcerpt(input.description ?? "", /^(?:required |preferred )?qualifications\b|^requirements\b|^what you bring\b/i);
   if (sectionPresent(description, /responsibilit|what you'?ll do|you will|day to day/i)) push("responsibilities", "role", "Responsibilities are described", "The posting explains work the role is expected to own or deliver.", responsibilitiesExcerpt);
   if (sectionPresent(description, /requirement|qualification|must have|preferred|nice to have/i)) push("qualifications", "role", "Qualifications are described", "The posting includes required or preferred candidate qualifications.", qualificationsExcerpt);
@@ -144,7 +144,7 @@ export function getJobQualityChecklist(input: JobInsightInput): JobQualityCheck[
   const employment = /\b(full[- ]time|part[- ]time|contract(?:or)?|temporary|internship|apprenticeship|seasonal|freelance)\b/i;
   const responsibilities = /responsibilit|what you'?ll do|you will|you'll|day to day|responsible for|\bown\b|\bdeliver\b/i;
   const qualifications = /requirements?|qualifications?|must have|preferred|nice to have|experience with/i;
-  const responsibilitiesExcerpt = sectionExcerpt(input.description ?? "", /^(?:primary |key )?responsibilities\b|^what you'?ll do\b/i);
+  const responsibilitiesExcerpt = sectionExcerpt(input.description ?? "", /^(?:primary |key )?responsibilities\b|^what you'?ll do\b|^duties\b/i);
   const qualificationsExcerpt = sectionExcerpt(input.description ?? "", /^(?:required |preferred )?qualifications\b|^requirements\b|^what you bring\b/i);
   const applicationKnown = Boolean(input.applicationUrl) || Boolean(input.applicationMethod && input.applicationMethod !== "unknown");
   const check = (id: string, label: string, found: boolean, foundDetail: string, missingDetail: string, pattern?: RegExp): JobQualityCheck => {
@@ -168,7 +168,7 @@ export function getJobQualityChecklist(input: JobInsightInput): JobQualityCheck[
     // An explicit header value is authoritative. Do not replace it with the
     // first instance of "full-time" in prose, which is often salary wording.
     check("employment-type", "Employment type", Boolean(input.employmentType) || employment.test(description), input.employmentType || "The posting identifies an employment type.", "Employment type was not listed in the scanned job details.", input.employmentType ? undefined : employment),
-    check("responsibilities", "Responsibilities", responsibilities.test(description), responsibilitiesExcerpt || "The posting describes work the role is expected to own or deliver.", "Responsibilities were not clearly listed in the scanned job details.", responsibilitiesExcerpt ? undefined : responsibilities),
+    check("responsibilities", "Responsibilities", Boolean(responsibilitiesExcerpt) || responsibilities.test(description), responsibilitiesExcerpt || "The posting describes work the role is expected to own or deliver.", "Responsibilities were not clearly listed in the scanned job details.", responsibilitiesExcerpt ? undefined : responsibilities),
     check("qualifications", "Qualifications", qualifications.test(description), qualificationsExcerpt || "The posting includes required or preferred qualifications.", "Qualifications were not clearly listed in the scanned job details.", qualificationsExcerpt ? undefined : qualifications),
     check("skills-tools", "Skills and tools", skills.length > 0, skills.length ? `Mentioned: ${skills.join(", ")}.` : "Skills or tools are listed.", "Specific skills or tools were not listed in the scanned job details."),
     check("application-path", "Application path", applicationKnown, input.applicationUrl ? "A direct application destination is available." : "LinkedIn identifies an application method.", "An application path was not identified in the scanned job details."),

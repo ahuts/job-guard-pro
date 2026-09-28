@@ -69,11 +69,12 @@ describe("getJobInsights", () => {
   });
 
   it("does not mistake division or a role title for benefits or reporting details", () => {
-    const description = "Chief Financial Officer for a two division medical center.\nBasic Requirements\n• Financial Manager experience required.\nDuties\n• The role may be remote from a VA facility.";
+    const description = "Chief Financial Officer for a two division medical center.\nBasic Requirements\n• Financial Manager experience required.\nDuties\n• Prepare the facility budget.\n• The role may be remote from a VA facility.";
     const checklist = getJobQualityChecklist({ description, location: "Indianapolis, IN", descriptionCoverage: "complete" });
     expect(checklist.find(item => item.id === "benefits")?.status).toBe("not_listed");
     expect(checklist.find(item => item.id === "team-reporting")?.status).toBe("not_listed");
     expect(checklist.find(item => item.id === "work-arrangement")?.detail).toContain("The role may be remote");
     expect(checklist.find(item => item.id === "work-arrangement")?.detail).not.toContain("Basic Requirements");
+    expect(checklist.find(item => item.id === "responsibilities")?.detail).toContain("Prepare the facility budget");
   });
 });
