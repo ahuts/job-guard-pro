@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import FeaturesSection from "@/components/FeaturesSection";
-import SocialProofSection from "@/components/SocialProofSection";
 import HowItWorksSection from "@/components/HowItWorksSection";
 import PricingSection from "@/components/PricingSection";
 import FAQSection, { homepageFaqs } from "@/components/FAQSection";
@@ -39,8 +38,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="GhostJob — Free LinkedIn Ghost Job Checker | Scan a Listing"
-        description="Paste a LinkedIn job URL to spot reposts, stale listings, vague pay, and generic copy before you apply. Get 3 free scans — no card required."
+        title="GhostJob — Check LinkedIn Jobs Against Employer Sources"
+        description="Check a LinkedIn job against public employer sources. Free includes a Trust Score and basic verification; Pro adds deeper posting comparison when available."
         path="/"
         jsonLd={[
           organizationSchema,
@@ -51,7 +50,6 @@ const Index = () => {
       <Navbar />
       <HeroSection />
       <FeaturesSection />
-      <SocialProofSection />
       <HowItWorksSection />
       <PricingSection />
       <FAQSection />

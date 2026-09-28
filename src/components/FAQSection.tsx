@@ -5,32 +5,32 @@ export const homepageFaqs = [
   {
     question: "What is a ghost job?",
     answer:
-      "A ghost job is a public job posting that isn't tied to active hiring. Companies leave them up to build talent pipelines, signal growth to investors, hit recruiter activity targets, or keep evergreen pipelines warm — even when no one is being interviewed for the role.",
+      "A ghost job is a posting that appears open without a corresponding active hiring opportunity. Public sources can reveal inconsistencies, but they cannot establish an employer's private hiring intent.",
   },
   {
     question: "How does GhostJob calculate the Trust Score?",
     answer:
-      "GhostJob starts neutral at 50 and looks for public, concrete verification: an exact employer or ATS role match, an active application destination, LinkedIn company identity, current source evidence, and a specific role description. A confirmed closed employer role is a strong contrary signal. Reposting is only a caution.",
+      "The current Trust Score starts neutral and changes when public evidence supports a matching employer role, an active application path, current source details, or an explicit closure. Reposting, age, salary, and applicant count are context rather than proof of hiring intent.",
   },
   {
     question: "What signals does GhostJob use?",
     answer:
-      "Exact employer/ATS role verification, a live application destination, company identity, current source evidence, concrete role details, an explicitly closed employer role, and LinkedIn's repost label. Salary, benefits, location flexibility, culture language, and experience requirements are Job Quality details—not Trust Score factors.",
+      "Free checks employer identity, available public postings, and the application path. Pro can investigate additional employer sources and compare responsibilities, qualifications, seniority, location, and requisition details when enough evidence is available.",
   },
   {
     question: "Does GhostJob work only on LinkedIn?",
     answer:
-      "Today GhostJob is LinkedIn-native — the extension injects directly into LinkedIn job pages so you get a Trust Score without leaving the listing. Support for additional boards (Indeed, Glassdoor, ZipRecruiter) is on the roadmap.",
+      "GhostJob currently accepts LinkedIn job URLs on this site and scans the active LinkedIn listing through its Chrome extension.",
   },
   {
     question: "Is my LinkedIn data sent anywhere?",
     answer:
-      "GhostJob sends the job details needed to check public employer and ATS sources. Scan observation history stays in extension local storage until you sign in, then it is stored only in your own account. It does not use your LinkedIn messages or account data.",
+      "GhostJob sends job details needed to check public employer and hiring-platform sources. Pro investigation may share posting evidence with the providers named in our Privacy Policy. GhostJob does not use your LinkedIn messages.",
   },
   {
     question: "Can GhostJob tell if a job is a scam or just stale?",
     answer:
-      "GhostJob is optimized to detect ghost jobs — listings that are real companies but not actively hiring. It can flag scam-adjacent red flags (urgency, vague compensation, suspicious senders), but it is not a dedicated scam detector. When in doubt, verify the recruiter directly on the company's career site.",
+      "GhostJob can show evidence-supported posting cautions, including certain payment or credential requests. It cannot determine whether an employer privately intends to hire or verify a recruiter's identity. Use the official company site for sensitive decisions.",
   },
 ];
 

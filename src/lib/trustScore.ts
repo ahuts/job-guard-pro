@@ -6,6 +6,7 @@ export type TrustBand = "highly_verified" | "positive" | "unverified" | "weak" |
 export type GhostRisk = "low" | "low_moderate" | "unclear" | "high" | "very_high";
 export type CareersVerification = "verified_match" | "active_board_no_match" | "unverified" | "closed_conflict";
 export type EvidenceGroup = "verified" | "caution" | "unverified";
+export interface FreeUsage { limit: number; used: number; remaining: number; resetsAt: string }
 
 export interface TrustEvidence {
   id: string;
@@ -47,6 +48,7 @@ export interface TrustScoreResult {
   verification?: VerificationDetails;
   investigation?: Investigation;
   scanAttemptId?: string;
+  freeUsage?: FreeUsage;
   summary: string;
   descriptionCoverage: DescriptionCoverage;
   jobInsights: JobInsight[];

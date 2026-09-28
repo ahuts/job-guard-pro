@@ -12,7 +12,7 @@ const Footer = () => {
               <span className="font-bold text-foreground">GhostJob</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Detect ghost jobs on LinkedIn before you apply.
+              Check public job evidence before you apply.
             </p>
           </div>
 

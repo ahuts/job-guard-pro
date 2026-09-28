@@ -12,8 +12,8 @@ const tiers = [
     name: "Free",
     price: "$0",
     period: "forever",
-    description: "Perfect for getting started",
-    features: ["3 scans per month", "Basic Trust Score", "Red flag summary", "Chrome extension included"],
+    description: "Check the public evidence",
+    features: ["3 new job checks per month", "Current Trust Score", "Basic employer-source verification", "Saved job tracker", "Chrome extension included"],
     cta: "Start Free",
     featured: false,
   },
@@ -21,14 +21,13 @@ const tiers = [
     name: "Pro",
     price: "$9",
     period: "/month",
-    description: "For serious job seekers",
+    description: "Investigate before you invest time applying",
     features: [
-      "Unlimited scans",
-      "Full Trust Score breakdown",
-      "Application tracker",
-      "Weekly insight reports",
-      "Priority support",
-      "Export to CSV",
+      "Unlimited standard scans",
+      "Deeper employer-posting investigation when available",
+      "Role, qualifications, and location comparison",
+      "Source links and evidence-supported cautions",
+      "All Free features included",
     ],
     cta: "Upgrade to Pro",
     featured: true,
@@ -63,6 +62,8 @@ const PricingSection = () => {
       }
     } else if (!user) {
       setAuthOpen(true);
+    } else {
+      document.getElementById('scan')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -75,9 +76,10 @@ const PricingSection = () => {
               Simple, Transparent Pricing
             </h2>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              Start free. Upgrade when you're ready for unlimited power.
+              Start with the Trust Score. Go Pro for a closer look at the employer's posting.
             </p>
           </div>
+          <p className="mt-6 text-center text-xs text-muted-foreground">Public sources may be incomplete or unavailable. Pro investigation has shared monthly capacity; standard scans remain available.</p>
 
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {tiers.map((tier) => (
@@ -122,7 +124,7 @@ const PricingSection = () => {
         </div>
       </section>
 
-      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} upgradeIntent />
     </>
   );
 };

@@ -38,7 +38,7 @@ export default function ProUpgradeBanner({ isPro }: ProUpgradeBannerProps) {
             Unlock unlimited scans
           </h3>
           <p className="text-muted-foreground mt-1">
-            Free plan includes 3 scans per month. Upgrade to Pro for unlimited scans, priority signal updates, and more.
+            Free includes three new job checks per month. Pro adds unlimited standard scans and deeper employer-posting investigation when available.
           </p>
         </div>
         <button

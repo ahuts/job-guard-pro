@@ -1,7 +1,7 @@
 import { createHash, createHmac } from 'node:crypto';
 
 export const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const rpcNames = new Set(['ghostjob_cache_get', 'ghostjob_cache_put', 'ghostjob_ai_reserve', 'ghostjob_ai_settle']);
+const rpcNames = new Set(['ghostjob_cache_get', 'ghostjob_cache_put', 'ghostjob_ai_reserve', 'ghostjob_ai_settle', 'ghostjob_free_scan']);
 export const storeConfigured = () => Boolean((process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) &&
   ((process.env.GHOSTJOB_STORAGE_BRIDGE_SECRET?.length || 0) >= 32 || process.env.SUPABASE_SERVICE_ROLE_KEY));
 export async function storageRpc<T = unknown>(name: string, args: Record<string, unknown>, deadline?: number): Promise<T> {

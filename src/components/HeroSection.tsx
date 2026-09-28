@@ -31,16 +31,16 @@ const HeroSection = () => {
             <div className="space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/10 text-danger text-sm font-medium">
                 <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-                Ghost jobs waste weeks of your search
+                Check the evidence before you apply
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-foreground">
-                Check a LinkedIn job before you{" "}
-                <span className="text-gradient-hero">waste an application</span>
+                See whether the employer's posting{" "}
+                <span className="text-gradient-hero">backs up the LinkedIn job</span>
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
-                Paste a LinkedIn job URL and GhostJob scores it on repost history, listing age, pay transparency, and description quality — so you know which listings look actively worked before you apply.
+                GhostJob checks public employer sources and the application path. Pro adds a closer comparison of the role, qualifications, and location when enough evidence is available.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start">
@@ -49,7 +49,7 @@ const HeroSection = () => {
                   onClick={scrollToScanner}
                   className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-colors text-lg shadow-md"
                 >
-                  Scan a LinkedIn job free
+                  Check a LinkedIn job
                 </button>
                 <a
                   href={CHROME_STORE_URL}
@@ -71,7 +71,7 @@ const HeroSection = () => {
 
               <div className="flex items-center gap-2 justify-center lg:justify-start text-sm text-muted-foreground">
                 <Shield className="h-4 w-4 text-safe" />
-                <span>3 free scans · no card · score is an estimate, not a verdict</span>
+                <span>3 new job checks per month with a Free account · no card · evidence, not a verdict</span>
               </div>
             </div>
 

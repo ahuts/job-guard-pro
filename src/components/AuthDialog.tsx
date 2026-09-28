@@ -13,15 +13,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Ghost, Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { track } from "@/lib/analytics";
+import { redirectToCheckout } from "@/lib/stripe";
+import { getPublicAppOrigin } from "@/lib/authRedirect";
 
 interface AuthDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  upgradeIntent?: boolean;
 }
 
 type AuthView = "main" | "login" | "signup" | "forgot";
 
-const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
+const AuthDialog = ({ open, onOpenChange, upgradeIntent = false }: AuthDialogProps) => {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const { toast } = useToast();
   const [view, setView] = useState<AuthView>("main");
@@ -56,13 +59,20 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
       resetForm();
       setView("main");
       onOpenChange(false);
+      if (upgradeIntent) {
+        try { await redirectToCheckout(); }
+        catch (checkoutError) {
+          toast({ title: "Could not start checkout", description: checkoutError instanceof Error ? checkoutError.message : "Please try again.", variant: "destructive" });
+        }
+      }
     }
   };
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signUpWithEmail(email, password);
+    const redirect = upgradeIntent ? getPublicAppOrigin() + '/dashboard?upgrade=1' : undefined;
+    const { error } = await signUpWithEmail(email, password, undefined, redirect);
     setLoading(false);
     if (error) {
       toast({ title: "Signup failed", description: error, variant: "destructive" });
@@ -70,7 +80,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
       track("signup_completed", { method: "email" });
       toast({
         title: "Check your email",
-        description: "We sent you a verification link. Confirm your email to unlock your 3 free scans.",
+        description: upgradeIntent ? "Confirm your email to continue to Pro checkout." : "We sent you a verification link. Confirm your email to unlock your free scans.",
       });
       resetForm();
       setView("main");
@@ -98,16 +108,16 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             )}
             <Ghost className="h-6 w-6 text-primary" />
             <DialogTitle className="text-xl">
-              {view === "main" && "Create your free account"}
+              {view === "main" && (upgradeIntent ? "Continue to GhostJob Pro" : "Create your free account")}
               {view === "login" && "Welcome Back"}
-              {view === "signup" && "Create your free account"}
+              {view === "signup" && (upgradeIntent ? "Create an account for Pro" : "Create your free account")}
               {view === "forgot" && "Reset Password"}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {view === "main" && "Get 3 free ghost job scans. No credit card required."}
+            {view === "main" && (upgradeIntent ? "Create an account or sign in, then continue to secure Pro checkout." : "Get 3 free job checks. No credit card required.")}
             {view === "login" && "Sign in to your GhostJob account."}
-            {view === "signup" && "Get 3 free ghost job scans. No credit card required."}
+            {view === "signup" && (upgradeIntent ? "Confirm your email to continue your Pro upgrade." : "Get 3 free job checks. No credit card required.")}
             {view === "forgot" && "Enter your email and we'll send you a reset link."}
           </DialogDescription>
 
@@ -145,7 +155,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               onClick={() => setView("signup")}
             >
               <Mail className="h-5 w-5" />
-              Create your free account — get 3 scans
+              {upgradeIntent ? "Create an account for Pro" : "Create your free account — get 3 checks"}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground pt-1">

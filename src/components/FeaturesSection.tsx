@@ -1,45 +1,45 @@
-import { AlertTriangle, CheckCircle2, Search, Eye, Shield, Clock, Ban } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Search, Shield, Clock, Building2 } from "lucide-react";
 
 const features = [
   {
     icon: Shield,
     title: "Trust Score (0–100)",
-    description: "Instant legitimacy rating — higher means safer. Color-coded green (legit), yellow (caution), or red (likely ghost job).",
+    description: "A 0–100 summary of supported public evidence. Missing evidence stays neutral; a score is not a verdict on hiring intent.",
     color: "text-safe",
     bg: "bg-safe/10",
   },
   {
     icon: AlertTriangle,
-    title: "Red & Yellow Flag Detection",
-    description: "Reposted jobs, vague salaries, unrealistic requirements, urgency language, AI-generated text, and more — all surfaced with actual quotes from the posting.",
+    title: "Employer Source Checks",
+    description: "Look for the role on the employer's public careers page or a hiring platform linked to the company.",
     color: "text-danger",
     bg: "bg-danger/10",
   },
   {
     icon: CheckCircle2,
-    title: "Green Flag Highlights",
-    description: "Salary transparency, benefits, flexible work, hiring manager contact — see what makes a job legitimate too, not just what's wrong.",
+    title: "Direct Posting Links",
+    description: "Open the employer's posting when GhostJob can establish a reliable source for the role.",
     color: "text-safe",
     bg: "bg-safe/10",
   },
   {
     icon: Search,
-    title: "One-Click LinkedIn Scanning",
-    description: "Our Chrome extension injects a Scan button directly into LinkedIn. No copy/paste, no leaving the page.",
+    title: "Compare the Role with Pro",
+    description: "When public evidence is available, compare responsibilities, qualifications, seniority, location, and application details.",
     color: "text-primary",
     bg: "bg-primary/10",
   },
   {
     icon: Clock,
-    title: "Stale & Reposted Detection",
-    description: "Jobs open 30+ days or reposted without closing the original? That's a major ghost signal. 30-40% of reposted roles never result in a hire.",
+    title: "Posting Context",
+    description: "See reposting, posting age, compensation, and other job details as context. They do not establish hiring intent on their own.",
     color: "text-danger",
     bg: "bg-danger/10",
   },
   {
-    icon: Ban,
-    title: "AI Language Detection",
-    description: "Catches generic, could-apply-anywhere text patterns that signal pipeline postings rather than real hiring.",
+    icon: Building2,
+    title: "Evidence and Limits",
+    description: "Review what matched, what conflicted, and where the available listing or employer source was incomplete.",
     color: "text-warning",
     bg: "bg-warning/10",
   },
@@ -51,10 +51,10 @@ const FeaturesSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Know Which Jobs Are Real Before You Apply
+            Check the Posting Against the Employer's Evidence
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            GhostJob scans 10+ legitimacy signals and shows you exactly what's wrong — and what's right — about every posting.
+            Start with basic verification for free. Pro investigates public employer sources more deeply and compares the role when it can.
           </p>
         </div>
 
@@ -73,55 +73,6 @@ const FeaturesSection = () => {
           ))}
         </div>
 
-        {/* Signal breakdown */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <h3 className="text-2xl font-bold text-foreground text-center mb-8">
-            What We Detect
-          </h3>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-card rounded-xl border border-danger/20 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-3 h-3 rounded-full bg-danger" />
-                <h4 className="font-semibold text-foreground">Red Flags</h4>
-              </div>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>🔄 Reposted job</li>
-                <li>⚡ Urgency language</li>
-                <li>📊 Unrealistic experience</li>
-                <li>💰 Vague "competitive" salary</li>
-                <li>📝 Generic description</li>
-                <li>🎯 High experience for entry-level</li>
-              </ul>
-            </div>
-            <div className="bg-card rounded-xl border border-warning/20 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-3 h-3 rounded-full bg-warning" />
-                <h4 className="font-semibold text-foreground">Yellow Flags</h4>
-              </div>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>🔍 No salary range listed</li>
-                <li>👤 No team/manager mentioned</li>
-                <li>📍 Vague or missing location</li>
-                <li>🤖 AI-generated language</li>
-                <li>⚡ Culture buzzwords + red flags</li>
-                <li>⏳ Stale listing 30+ days</li>
-              </ul>
-            </div>
-            <div className="bg-card rounded-xl border border-safe/20 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-3 h-3 rounded-full bg-safe" />
-                <h4 className="font-semibold text-foreground">Green Flags</h4>
-              </div>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>💰 Salary transparency</li>
-                <li>🏥 Benefits mentioned</li>
-                <li>🏠 Flexible work options</li>
-                <li>👤 Hiring manager contact</li>
-                <li>📋 Clear, specific requirements</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

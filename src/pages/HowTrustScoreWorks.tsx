@@ -135,10 +135,10 @@ const HowTrustScoreWorks = () => {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">What does a scored listing look like in practice?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                A "Senior Backend Engineer" posting from a 200-person SaaS company is 6 days old, has been posted once, includes a $160k–$200k salary range, names the team and the database stack, and shows "Be among the first 25 applicants." That posting would land in the 80s — fresh, specific, transparent, and not part of a repost pattern.
+                Suppose LinkedIn shows a "Senior Backend Engineer" role and the employer's public careers site shows a compatible live role with a working application path. Those independently checked sources can support a higher Trust Score.
               </p>
               <p className="text-muted-foreground leading-relaxed mt-3">
-                The same title from a company that has reposted the role 4 times in the last 90 days, with no salary, generic responsibilities, and 800+ applicants would land in the 20s.
+                If the employer explicitly marks that same role closed while the LinkedIn listing remains active, the conflicting public evidence can lower the score. Reposts, missing pay, and applicant counts do not lower the current score by themselves.
               </p>
             </section>
 
@@ -149,8 +149,8 @@ const HowTrustScoreWorks = () => {
               <ul className="space-y-2 text-muted-foreground list-disc list-inside">
                 <li>Trust Score is an estimate, not a verdict. Always pair it with your own judgment.</li>
                 <li>Some companies legitimately repost roles to widen reach — context matters.</li>
-                <li>GhostJob does not yet detect outright scams; it focuses on ghost-job signals on real companies.</li>
-                <li>Newly posted roles (under 24 hours) have less historical data, so scores can swing as more signals come in.</li>
+                <li>Evidence-supported cautions can flag suspicious requests, but GhostJob does not verify a recruiter's identity or guarantee that a posting is safe.</li>
+                <li>Some LinkedIn descriptions and employer pages are incomplete or unavailable. GhostJob reports those limits instead of assuming a match.</li>
               </ul>
             </section>
 

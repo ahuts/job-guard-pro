@@ -3,18 +3,18 @@ import { Chrome, Search, ShieldCheck } from "lucide-react";
 const steps = [
   {
     icon: Chrome,
-    title: "Install the Extension",
-    description: "Add GhostJob to Chrome. A \"Scan for Ghost Jobs\" button appears next to every LinkedIn posting.",
+    title: "Choose a LinkedIn job",
+    description: "Paste the job URL here or use the GhostJob Chrome extension while viewing the listing.",
   },
   {
     icon: Search,
-    title: "Click Scan",
-    description: "One click analyzes the posting for 10+ legitimacy signals — reposted jobs, vague salaries, urgency language, and more.",
+    title: "Check public evidence",
+    description: "GhostJob checks employer sources, the application path, and the job details available to it.",
   },
   {
     icon: ShieldCheck,
-    title: "Apply with Confidence",
-    description: "See your Trust Score (0–100) with detailed signal breakdowns and actual quotes from the posting. Focus on real opportunities.",
+    title: "Review the findings",
+    description: "Read the Trust Score and coverage limits. Pro adds a closer comparison with the employer posting when available.",
   },
 ];
 
@@ -27,7 +27,7 @@ const HowItWorksSection = () => {
             How It Works
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Three steps. No copy/paste. No leaving LinkedIn.
+            Scan on this site or directly from LinkedIn with the extension.
           </p>
         </div>
 
@@ -53,10 +53,10 @@ const HowItWorksSection = () => {
         <div className="mt-14 max-w-2xl mx-auto text-center">
           <div className="bg-card rounded-xl border border-primary/20 p-6">
             <p className="text-lg font-semibold text-foreground mb-2">
-              🎯 The only tool that works directly inside LinkedIn
+              Evidence before you invest time applying
             </p>
             <p className="text-muted-foreground text-sm">
-              Other tools make you copy/paste URLs or leave the page. GhostJob injects a scan button right into the LinkedIn interface — one click, instant results.
+              A missing source does not mean a job is fake. GhostJob shows what it could verify and where public evidence stops.
             </p>
           </div>
         </div>

@@ -34,7 +34,7 @@ export const softwareApplicationSchema = {
   },
   aggregateRating: undefined,
   description:
-    "GhostJob is a Chrome extension that scans LinkedIn job postings for ghost-job signals — repost age, vague salaries, urgency pressure, applicant-count anomalies, and more — so you never waste time on fake listings again.",
+    "GhostJob checks LinkedIn jobs against available public employer sources and application paths. Pro adds deeper posting comparison when evidence is available.",
   publisher: {
     "@type": "Organization",
     name: SITE_NAME,
