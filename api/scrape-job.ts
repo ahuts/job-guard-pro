@@ -26,6 +26,18 @@ interface JobData {
   descriptionCoverage: "partial" | "unavailable";
 }
 
+export function linkedInJobId(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:' || !['linkedin.com', 'www.linkedin.com'].includes(parsed.hostname)) return null;
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (segments.length !== 3 || segments[0] !== 'jobs' || segments[1] !== 'view') return null;
+    return segments[2].match(/(?:^|-)(\d+)$/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
@@ -40,14 +52,12 @@ export default async function handler(
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  const linkedInMatch = url.match(/linkedin\.com\/jobs\/view\/(\d+)/);
-  if (!linkedInMatch) {
+  const jobId = linkedInJobId(url);
+  if (!jobId) {
     return res.status(400).json({ 
-      error: 'Invalid LinkedIn URL. Must be in format: linkedin.com/jobs/view/{job_id}' 
+      error: 'Invalid LinkedIn job URL. Use a linkedin.com/jobs/view/ posting link.'
     });
   }
-
-  const jobId = linkedInMatch[1];
 
   try {
     
@@ -351,7 +361,7 @@ export default async function handler(
       applicants,
       employmentType,
       experienceLevel,
-      url,
+      url: `https://www.linkedin.com/jobs/view/${jobId}/`,
       applicationUrl,
       companyLinkedInUrl,
       reposted,
