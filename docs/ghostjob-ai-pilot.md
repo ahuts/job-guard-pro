@@ -109,8 +109,10 @@ are required: 12 rubric cases and 12 untouched holdout cases. Automated tests do
 satisfy this requirement. Aaron reviewed the 24-row intake sheet, but the dated,
 balanced input and expected native/OpenAI/Jev labels are not yet frozen.
 
-Pilot acceptance still requires live credentials, verified database support, real
-scan/save/retry checks, and zero false exact-match findings on the holdout set.
+Pilot acceptance still requires the frozen benchmark with zero false exact-match
+findings on the holdout set, live multi-connection budget contention, and a
+split-pane LinkedIn scan. Preview credentials, signed storage, save/retry paths,
+and a signed-in standalone extension scan have been verified separately.
 The initial implementation passed 96 full-suite tests and a subsequent retry
 regression. The Supabase replacement additionally executes its SQL in a local
 PostgreSQL engine via the pinned development-only PGlite dependency. Its tests
