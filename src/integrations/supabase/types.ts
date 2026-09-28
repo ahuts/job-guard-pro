@@ -237,6 +237,17 @@ export type Database = {
         Args: { p_key: string; p_ttl_seconds: number; p_value: Json }
         Returns: boolean
       }
+      ghostjob_free_scan: {
+        Args: {
+          p_account_key: string
+          p_action: string
+          p_job_key?: string
+          p_lease_key?: string
+          p_month_key?: string
+          p_success?: boolean
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
