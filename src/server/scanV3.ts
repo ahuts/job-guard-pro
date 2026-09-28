@@ -18,6 +18,7 @@ export const scanSchema = z.object({
   reposted: z.boolean().optional(), postedAt: z.string().max(100).nullish(),
   applicants: z.string().max(100).nullish(), employmentType: z.string().max(100).nullish(), experienceLevel: z.string().max(100).nullish(),
   promoted: z.boolean().optional(), activelyReviewing: z.boolean().optional(),
+  linkedinClosed: z.boolean().optional(),
   applicationMethod: z.enum(['linkedin_easy_apply', 'linkedin_apply', 'external_apply', 'unknown']).optional(),
   firstObservedAt: z.string().max(100).nullish(),
 });

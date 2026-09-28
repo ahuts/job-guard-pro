@@ -23,6 +23,17 @@
     const details = Array.from(document.querySelectorAll('[data-testid="job-details"], .jobs-search__job-details--container, .jobs-search__job-details, .job-view-layout, main')).find(el => visible(el) && !el.querySelector('.jobs-search-results-list'));
     return details || null;
   }
+  function header() {
+    const jobId = key();
+    const about = jobId && document.getElementById('JobDetails_AboutTheJob_' + jobId);
+    // LinkedIn's standalone layout puts the selected top card immediately
+    // before the details column. The details column also contains similar jobs.
+    const card = about?.parentElement?.previousElementSibling;
+    if (card && (card.innerText || card.textContent).length < 5000 && card.querySelector('a[href*="/company/"]') &&
+        !card.querySelector('[id^="JobDetailsSimilarJobsSlot_"]')) return card;
+    const area = root();
+    return area?.querySelector('[data-testid="job-details-top-card"], .job-details-jobs-unified-top-card__container, .jobs-unified-top-card, .top-card-layout') || null;
+  }
   function section() {
     const h = heading();
     if (!h) return null;
@@ -108,5 +119,5 @@
     data.requisitionId = content(section()).match(/(?:requisition|job)\s*(?:id|number|#)\s*[:#]?\s*([a-z0-9][a-z0-9_-]{2,80})/i)?.[1] || '';
     return data;
   }
-  globalThis.GhostJobContext = { key, root, section, control, content, readDescription, application, normalize };
+  globalThis.GhostJobContext = { key, root, header, section, control, content, readDescription, application, normalize };
 })();

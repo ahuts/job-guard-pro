@@ -43,15 +43,19 @@ describe('evidence-backed model findings', () => {
   });
   it('known requisition conflicts prevent exact matches even when the model insists', () => {
     const result = validateComparison(comparison(), input, { ...resolution, candidates: [{ ...candidate, requisitionId: 'REQ-OTHER' }] });
-    expect(result.finding).toBe('different_role'); expect(result.dimensions.find(d => d.dimension === 'requisition_id')?.finding).toBe('conflicting');
+    expect(result.finding).toBe('probable_match'); expect(result.dimensions.find(d => d.dimension === 'requisition_id')?.finding).toBe('conflicting');
+    expect(result.limitations.join(' ')).toContain('Requisition IDs differ');
+    const different = comparison(); different.dimensions[1].finding = 'conflicting';
+    expect(validateComparison(different, input, { ...resolution, candidates: [{ ...candidate, requisitionId: 'REQ-OTHER' }] }).finding).toBe('different_role');
   });
   it('does not claim exact matches for incompatible remote eligibility', () => {
     const result = validateComparison(comparison(), input, { ...resolution, candidates: [{ ...candidate, locations: ['Remote UK'] }] });
     expect(result.finding).not.toBe('exact_match'); expect(result.limitations.join(' ')).toContain('Location eligibility');
   });
   it('preserves closure and partial-description limitations', () => {
-    const result = validateComparison(comparison(), { ...input, descriptionCoverage: 'partial', coverageDetails: { truncated: true } }, { ...resolution, verification: { ...resolution.verification, outcome: 'closed' } });
+    const result = validateComparison(comparison(), { ...input, descriptionCoverage: 'partial', coverageDetails: { truncated: true }, linkedinClosed: true }, { ...resolution, verification: { ...resolution.verification, outcome: 'closed' } });
     expect(result.finding).not.toBe('exact_match'); expect(result.limitations.join(' ')).toContain('closed'); expect(result.limitations.join(' ')).toContain('truncated');
+    expect(result.limitations.join(' ')).toContain('LinkedIn says this posting');
   });
   it('only surfaces supported caution excerpts and never scores them', () => {
     const quote = 'Pay a $200 fee to obtain this job before you can interview.';

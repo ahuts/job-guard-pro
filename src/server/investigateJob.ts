@@ -7,7 +7,7 @@ import { comparePostings, discoverOfficialSources, evaluateJev, newMeter, provid
 
 export interface InvestigationInput extends ResolverInput {
   description?: string; employmentType?: string | null; descriptionCoverage?: string;
-  coverageDetails?: { truncated?: boolean }; scanAttemptId?: string; scanMode?: string;
+  coverageDetails?: { truncated?: boolean }; scanAttemptId?: string; scanMode?: string; linkedinClosed?: boolean;
 }
 export function investigationFingerprint(input: InvestigationInput) {
   // Only corrected comparison evidence invalidates the paid investigation.
@@ -15,7 +15,7 @@ export function investigationFingerprint(input: InvestigationInput) {
   return hash([{ title: input.title, company: input.company, location: input.location ?? '', url: input.url ?? '',
     companyLinkedInUrl: input.companyLinkedInUrl ?? '', employerUrl: input.employerUrl ?? '', applicationUrl: input.applicationUrl ?? '',
     requisitionId: input.requisitionId ?? '', description: input.description ?? '', employmentType: input.employmentType ?? '',
-    descriptionCoverage: input.descriptionCoverage ?? '', truncated: Boolean(input.coverageDetails?.truncated) }, INVESTIGATION_VERSION]);
+    descriptionCoverage: input.descriptionCoverage ?? '', truncated: Boolean(input.coverageDetails?.truncated), linkedinClosed: Boolean(input.linkedinClosed) }, INVESTIGATION_VERSION]);
 }
 export function investigationAccess(userId: string | null): Investigation['status'] | 'available' {
   if (process.env.GHOSTJOB_OPENAI_INVESTIGATION_ENABLED !== 'true' || process.env.GHOSTJOB_INVESTIGATION_SCHEMA_READY !== 'true' || !process.env.OPENAI_API_KEY || !storeConfigured()) return 'disabled';
@@ -70,13 +70,14 @@ export function validateComparison(model: ModelComparison, input: InvestigationI
   }
   let finding = selected ? model.finding : 'insufficient_evidence';
   const semanticSupport = dimensions.filter(d => ['responsibilities', 'required_qualifications'].includes(d.dimension) && d.finding === 'aligned').length === 2;
-  const conflict = dimensions.some(d => d.finding === 'conflicting');
+  // A new requisition can be a repost of the same work. It rules out an
+  // exact posting match, but is not by itself proof of a different role.
+  const materialConflict = dimensions.some(d => d.dimension !== 'requisition_id' && d.finding === 'conflicting');
   const nativeExact = selected && resolution.verification.outcome === 'matched' && resolution.score.exactRoleMatch && resolution.score.sourceUrl === selected.url;
   const locationConfirmed = selected && locationsMatch(input.location ?? '', selected.locations);
-  if (finding === 'exact_match' && (!nativeExact || !semanticSupport || !locationConfirmed || conflict)) finding = semanticSupport && !conflict ? 'probable_match' : 'insufficient_evidence';
-  if (finding === 'probable_match' && (!semanticSupport || conflict)) finding = conflict ? 'different_role' : 'insufficient_evidence';
-  if (finding === 'different_role' && !conflict) finding = 'insufficient_evidence';
-  if (knownIdConflict) finding = 'different_role';
+  if (finding === 'exact_match' && (!nativeExact || !semanticSupport || !locationConfirmed || materialConflict || knownIdConflict)) finding = materialConflict ? 'different_role' : semanticSupport ? 'probable_match' : 'insufficient_evidence';
+  if (finding === 'probable_match' && (!semanticSupport || materialConflict)) finding = materialConflict ? 'different_role' : 'insufficient_evidence';
+  if (finding === 'different_role' && !materialConflict) finding = knownIdConflict && semanticSupport ? 'probable_match' : 'insufficient_evidence';
   const cautionFlags: Investigation['cautionFlags'] = [];
   for (const flag of model.cautionFlags) {
     if (cautionFlags.some(existing => existing.kind === flag.kind)) continue;
@@ -88,7 +89,9 @@ export function validateComparison(model: ModelComparison, input: InvestigationI
   if (input.descriptionCoverage !== 'complete' && input.descriptionCoverage !== 'expanded') limitations.push('The LinkedIn description may be incomplete.');
   if (input.coverageDetails?.truncated) limitations.push('The LinkedIn description was truncated before analysis.');
   if (resolution.verification.outcome === 'closed') limitations.push('The native source check reports this role closed; semantic similarity does not imply availability.');
+  if (input.linkedinClosed) limitations.push('LinkedIn says this posting is no longer accepting applications; an employer role may be a separate open requisition.');
   if (selected && !locationConfirmed) limitations.push('Location eligibility was not independently confirmed.');
+  if (knownIdConflict) limitations.push('Requisition IDs differ; this may be a related or reopened role, not the same posting.');
   if (!candidates.length) limitations.push('No accessible employer-related candidate posting was available.');
   return { version: 1, status: 'completed', finding, reason: findingLabels[finding], checkedAt: new Date().toISOString(),
     ...(selected ? { sourceUrl: selected.url } : {}), dimensions, cautionFlags, limitations };

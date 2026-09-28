@@ -14,7 +14,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.4-preview';
+  const VERSION  = '1.3.5-preview';
   // This unpacked pilot must not write scan observations or saved jobs to the
   // live Lovable Cloud database while it is exercising the Preview API.
   const PREVIEW_BUILD = true;
@@ -466,6 +466,7 @@
         promoted: jobData.promoted,
         activelyReviewing: jobData.activelyReviewing,
         applicationMethod: jobData.applicationMethod,
+        linkedinClosed: jobData.linkedinClosed,
         descriptionCoverage: jobData.descriptionCoverage,
         firstObservedAt: firstObservedAt
       };
@@ -523,7 +524,8 @@
   function extractJobData() {
     var scope = GhostJobContext.root();
     if (!scope) throw new Error("Job details are still loading. Retry or enter the details manually.");
-    var data = { url: location.href, title: '', company: '', location: '', description: '', salary: '', fullPageText: '', postedAgo: '', isReposted: false, applicationUrl: '', companyLinkedInUrl: '', applicants: '', employmentType: '', experienceLevel: '', promoted: false, activelyReviewing: false, applicationMethod: 'unknown', descriptionCoverage: 'unavailable' };
+    var jobHeader = GhostJobContext.header();
+    var data = { url: location.href, title: '', company: '', location: '', description: '', salary: '', fullPageText: '', postedAgo: '', isReposted: false, applicationUrl: '', companyLinkedInUrl: '', applicants: '', employmentType: '', experienceLevel: '', promoted: false, activelyReviewing: false, applicationMethod: 'unknown', linkedinClosed: false, descriptionCoverage: 'unavailable' };
 
     // Title - LinkedIn uses different class names for the logged-in card,
     // guest card, and its periodic UI experiments.
@@ -538,7 +540,7 @@
       'h1'
     ];
     for (var i = 0; i < titleSelectors.length; i++) {
-      var el = scope.querySelector(titleSelectors[i]);
+      var el = jobHeader && jobHeader.querySelector(titleSelectors[i]);
       if (el && el.textContent.trim()) { data.title = el.textContent.trim(); break; }
     }
 
@@ -554,16 +556,16 @@
       '.artdeco-entity-lockup__subtitle'
     ];
     for (var i = 0; i < companySelectors.length; i++) {
-      var el = scope.querySelector(companySelectors[i]);
+      var el = jobHeader && jobHeader.querySelector(companySelectors[i]);
       if (el && el.textContent.trim()) { data.company = el.textContent.trim(); break; }
     }
-    var companyLink = scope.querySelector('a[href*="/company/"]');
+    var companyLink = jobHeader && jobHeader.querySelector('a[href*="/company/"]');
     if (companyLink && companyLink.href) data.companyLinkedInUrl = companyLink.href;
 
     // LinkedIn can render the visible top card after the extension has loaded.
     // Its document title and JSON-LD are useful neutral fallbacks while that
     // DOM work is in progress.
-    var metadataTitle = scope.querySelector('meta[property="og:title"]');
+    var metadataTitle = document.querySelector('meta[property="og:title"]');
     var standalone = /\/jobs\/view\//.test(location.pathname) && !new URL(location.href).searchParams.has('currentJobId');
     var titleText = standalone ? ((metadataTitle && metadataTitle.content) || document.title || '') : '';
     var titleMatch = titleText.match(/^(.+?)\s+(?:at|@)\s+(.+?)\s*(?:\||\u2013|\u2014)\s*LinkedIn/i);
@@ -580,7 +582,7 @@
     }
 
     if (!data.title || !data.company) {
-      var schemaScripts = scope.querySelectorAll('script[type="application/ld+json"]');
+      var schemaScripts = document.querySelectorAll('script[type="application/ld+json"]');
       for (var schemaIndex = 0; schemaIndex < schemaScripts.length; schemaIndex++) {
         try {
           var schema = JSON.parse(schemaScripts[schemaIndex].textContent || '{}');
@@ -601,9 +603,8 @@
       }
     }
 
-    // Find the compact active-job header before reading its metadata. The
-    // primary job page also contains employee cards and similar jobs, whose
-    // metadata must never be mistaken for the selected job's facts.
+    // Read metadata only from the selected job's compact top card. The details
+    // column also contains similar jobs with their own locations and dates.
     function compactText(node) {
       return (node && (node.innerText || node.textContent) || '').replace(/\s+/g, ' ').trim();
     }
@@ -614,22 +615,8 @@
         /\b[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,4},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b/.test(text) ||
         /\b(?:United States|United Kingdom|Canada|Australia)\b/i.test(text);
     }
-    function findJobHeader() {
-      var needles = [data.title, data.company].filter(Boolean);
-      var elements = scope.querySelectorAll('h1,h2,h3,a,span,div,p');
-      for (var ei = 0; ei < elements.length; ei++) {
-        var candidateText = compactText(elements[ei]);
-        if (!needles.some(function(needle) { return candidateText === needle; })) continue;
-        for (var depth = 0, parent = elements[ei]; parent && parent !== scope && depth < 9; parent = parent.parentElement, depth++) {
-          var text = compactText(parent);
-          if (data.title && text.indexOf(data.title) !== -1 && text.length < 1800 &&
-              ((data.company && text.indexOf(data.company) !== -1) || /\bapply\b|\b\d+\s+(?:day|week|month)s? ago\b/i.test(text))) return parent;
-        }
-      }
-      return null;
-    }
-    var jobHeader = findJobHeader();
     var headerText = compactText(jobHeader);
+    data.linkedinClosed = /not currently accepting applications/i.test(headerText);
 
     // Location - class-agnostic extraction, scoped to the active job header.
     var locationSelectors = [
@@ -639,7 +626,7 @@
       '.top-card-layout__metadata-item'
     ];
     for (var i = 0; i < locationSelectors.length; i++) {
-      var el = (jobHeader || scope).querySelector(locationSelectors[i]);
+      var el = jobHeader && jobHeader.querySelector(locationSelectors[i]);
       if (el && looksLikeLocation(el.textContent)) {
         data.location = el.textContent.replace(/\s+/g, ' ').trim();
         break;
@@ -653,7 +640,7 @@
     }
     // Remote/hybrid may be a separate header link without a city.
     if (!data.location) {
-      var locationNodes = (jobHeader || scope).querySelectorAll('a,span,p,div');
+      var locationNodes = jobHeader ? jobHeader.querySelectorAll('a,span,p,div') : [];
       for (var li = 0; li < locationNodes.length; li++) {
         var locationText = compactText(locationNodes[li]);
         if (locationText.length < 100 && looksLikeLocation(locationText)) { data.location = locationText; break; }
@@ -669,7 +656,7 @@
     }
     var applicantMatch = headerText.match(/(?:over\s+)?([\d,]+)\s+(?:applicants?|people clicked apply)/i);
     if (applicantMatch) data.applicants = applicantMatch[0].trim();
-    var headerNodes = (jobHeader || scope).querySelectorAll('a,span,p,div');
+    var headerNodes = jobHeader ? jobHeader.querySelectorAll('a,span,p,div') : [];
     for (var hi = 0; hi < headerNodes.length; hi++) {
       var headerValue = compactText(headerNodes[hi]);
       var employmentMatch = headerValue.match(/^(Full-time|Part-time|Contract|Temporary|Internship|Apprenticeship|Seasonal|Freelance)$/i);
@@ -689,12 +676,12 @@
       '.top-card-layout__salary'
     ];
     for (var i = 0; i < salarySelectors.length; i++) {
-      var el = scope.querySelector(salarySelectors[i]);
+      var el = jobHeader && jobHeader.querySelector(salarySelectors[i]);
       if (el && el.textContent.trim()) { data.salary = el.textContent.trim(); break; }
     }
     // Fallback: scan all spans for salary patterns like $120K/yr, $85,000 - $120,000, etc.
     if (!data.salary) {
-      var allSpans = scope.querySelectorAll('span');
+      var allSpans = jobHeader ? jobHeader.querySelectorAll('span') : [];
       for (var si = 0; si < allSpans.length; si++) {
         var t = allSpans[si].textContent.trim();
         // Skip LinkedIn UI chrome
@@ -713,7 +700,7 @@
     }
     // Fallback 3: scan <p> elements with · separators for salary-like content
     if (!data.salary) {
-      var paras = scope.querySelectorAll('p');
+      var paras = jobHeader ? jobHeader.querySelectorAll('p') : [];
       for (var pi = 0; pi < paras.length; pi++) {
         var ptext = paras[pi].textContent;
         if (ptext.indexOf('\u00b7') === -1 && ptext.indexOf('\u2022') === -1) continue;
@@ -750,8 +737,8 @@
     // Full page text — for signal detection beyond just the description.
     data.fullPageText = (data.description + ' ' + data.salary).trim();
 
-    Object.assign(data, GhostJobContext.application(scope));
-    var applyControls = Array.from(scope.querySelectorAll('button, a, [role="button"]'));
+    Object.assign(data, GhostJobContext.application(jobHeader));
+    var applyControls = Array.from(jobHeader ? jobHeader.querySelectorAll('button, a, [role="button"]') : []).filter(function(el) { return !el.disabled && el.getAttribute('aria-disabled') !== 'true'; });
     var applyText = applyControls.map(function(el) { return ((el.textContent || '') + ' ' + (el.getAttribute('aria-label') || '')).trim(); }).join(' ');
     if (/easy apply/i.test(applyText)) data.applicationMethod = 'linkedin_easy_apply';
     else if (data.applicationUrl) data.applicationMethod = 'external_apply';
@@ -1595,6 +1582,11 @@
       var reason = document.createElement('p'); reason.textContent = finding.reason; box.appendChild(reason);
       if (finding.sourceUrl && /^https:\/\//.test(finding.sourceUrl)) { var source = document.createElement('a'); source.href = finding.sourceUrl; source.target = '_blank'; source.rel = 'noopener noreferrer'; source.textContent = finding.outcome === 'matched' ? 'View employer posting ↗' : 'View employer source ↗'; box.appendChild(source); }
       var checked = document.createElement('p'); checked.textContent = 'Checked ' + new Date(finding.checkedAt).toLocaleString() + ' · Scoring v' + result.scoringVersion; box.appendChild(checked);
+    }
+    if (lastScannedJob && lastScannedJob.linkedinClosed) {
+      var linkedinStatus = document.createElement('p');
+      linkedinStatus.textContent = 'LinkedIn says this posting is no longer accepting applications. An active employer listing may be a related or reopened requisition; check its details before applying.';
+      box.appendChild(linkedinStatus);
     }
     if (result.investigation && result.investigation.version === 1) {
       var investigation = result.investigation;

@@ -6,6 +6,16 @@ const about = (control = '', body = 'Responsibilities\n' + 'Build reliable custo
 beforeEach(() => { document.body.innerHTML = ''; window.history.replaceState({}, '', '/jobs/view/123'); window.eval(script); vi.useFakeTimers(); });
 afterEach(() => vi.useRealTimers());
 describe('LinkedIn full-context extraction', () => {
+  it('uses the selected top card rather than similar jobs for metadata', () => {
+    document.body.innerHTML = `<main><div><div id="JobDetails_ManageJobBanner_123"></div>
+      <div id="active-card"><a href="https://www.linkedin.com/company/va/">U.S. Department of Veterans Affairs</a><span>Chief Financial Officer</span><span>Indianapolis, IN · 1 week ago</span></div>
+      <div><div id="JobDetails_AboutTheJob_123"><h2>About the job</h2><p>${'Financial management duties. '.repeat(15)}</p></div>
+      <div id="JobDetailsSimilarJobsSlot_123"><a href="https://www.linkedin.com/jobs/search-results/">Chief Financial Officer Talently New York, United States · Posted 13 hours ago</a></div></div></div></main>`;
+    expect(context().root().querySelector('#JobDetailsSimilarJobsSlot_123')).not.toBeNull();
+    expect(context().header().id).toBe('active-card');
+    expect(context().header().textContent).toContain('Indianapolis, IN · 1 week ago');
+    expect(context().header().textContent).not.toContain('Talently');
+  });
   it('expands duplicate accessibility labels and waits for delayed replaced content', async () => {
     document.body.innerHTML = about('<button id="more" aria-label="More" aria-expanded="false">More</button>');
     const apply = vi.fn(); document.querySelector('#apply')!.addEventListener('click', apply);
