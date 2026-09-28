@@ -1,7 +1,7 @@
-// Only the signed preview server may reach the four private AI storage RPCs.
+// Only the signed GhostJob server may reach private scan and AI storage RPCs.
 // Never return upstream errors, descriptions, credentials or account identifiers.
 type Settings = { secret?: string; supabaseUrl?: string; serviceKey?: string };
-const allowed = new Set(['ghostjob_cache_get', 'ghostjob_cache_put', 'ghostjob_ai_reserve', 'ghostjob_ai_settle']);
+const allowed = new Set(['ghostjob_cache_get', 'ghostjob_cache_put', 'ghostjob_ai_reserve', 'ghostjob_ai_settle', 'ghostjob_free_scan']);
 const encoder = new TextEncoder();
 const maxBytes = 1_048_576;
 const error = (status: number) => Response.json({ error: 'Storage unavailable' }, { status });
