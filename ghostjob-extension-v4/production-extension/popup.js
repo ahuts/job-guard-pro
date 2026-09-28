@@ -1,4 +1,4 @@
-// GhostJob Popup Script v1.3.10
+// GhostJob Popup Script v1.3.11
 // Handles scanning from the extension popup + Supabase auth
 
 const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';

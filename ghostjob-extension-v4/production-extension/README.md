@@ -1,4 +1,4 @@
-# GhostJob production extension candidate 1.3.10
+# GhostJob production extension candidate 1.3.11
 
 This folder is a prepared Chrome Web Store update candidate. It is **not published**.
 The unpacked pilot remains in the sibling `ghostjob-extension/` folder and points to

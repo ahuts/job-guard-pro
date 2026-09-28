@@ -14,7 +14,7 @@
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
   const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.10';
+  const VERSION  = '1.3.11';
   // This unpacked pilot must not write scan observations or saved jobs to the
   // Production scans may be saved to the signed-in user's dashboard.
   const PREVIEW_BUILD = false;
@@ -1624,15 +1624,6 @@
       var investigationTime = document.createElement('p'); investigationTime.textContent = 'Checked ' + new Date(investigation.checkedAt).toLocaleString(); investigationBox.appendChild(investigationTime);
       (investigation.limitations || []).forEach(function(text) { var limit = document.createElement('p'); limit.style.fontSize = '11px'; limit.textContent = text; investigationBox.appendChild(limit); });
       box.appendChild(investigationBox);
-    }
-    var details = document.createElement('details');
-    var summary = document.createElement('summary'); summary.textContent = 'View analyzed description'; details.appendChild(summary);
-    var description = document.createElement('pre'); description.style.cssText = 'white-space:pre-wrap;max-height:220px;overflow:auto;font-family:inherit'; description.textContent = lastScannedJob ? lastScannedJob.description : 'Description unavailable'; details.appendChild(description);
-    if (result.coverageDetails && result.coverageDetails.truncated) { var limit = document.createElement('p'); limit.textContent = 'Analysis capped at 12,000 characters.'; details.appendChild(limit); }
-    box.appendChild(details);
-    if (finding) {
-      var sources = document.createElement('details'); var sourcesTitle = document.createElement('summary'); sourcesTitle.textContent = 'Sources Checked'; sources.appendChild(sourcesTitle);
-      (finding.sources || []).forEach(function(item) { var p = document.createElement('p'); p.textContent = item.url + ' — ' + item.reason + ' (' + new Date(item.checkedAt).toLocaleString() + (item.cached ? ', cached' : '') + ')'; sources.appendChild(p); }); box.appendChild(sources);
     }
     function action(label, callback) { var b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.style.cssText = 'margin:10px 8px 0 0;padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:white;cursor:pointer'; b.addEventListener('click', callback); box.appendChild(b); return b; }
     action('Review details / Provide employer URL', function() { showScanEditor(); });

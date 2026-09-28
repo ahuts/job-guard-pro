@@ -2,7 +2,7 @@ import { hash, storageRpc, storeConfigured } from './searchStore.js';
 
 // Integer microdollars avoid float drift. Supabase serializes reservations,
 // settlements and retry identity in one database transaction per operation.
-export const INVESTIGATION_VERSION = 'openai-jev-3';
+export const INVESTIGATION_VERSION = 'openai-jev-4';
 export const RESERVATION_MICRO_USD = 1_000_000;
 export interface BudgetReservation { attemptKey: string; monthKey: string; resultKey: string; status: number }
 export function investigationKeys(userId: string, fingerprint: string, now = new Date()) {

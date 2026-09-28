@@ -59,13 +59,15 @@ export async function scanV3(body: unknown, authorization?: string) {
   });
   result.descriptionCoverage = input.descriptionCoverage ?? (input.description ? 'partial' : 'unavailable');
   result.coverageDetails = { status: result.descriptionCoverage, truncated: input.coverageDetails?.truncated ?? false, analyzedCharacters: input.description?.length ?? 0, reason: input.coverageDetails?.reason };
-  result.verification = { ...resolution.verification, deepSearch: investigation.status === 'completed' ? 'completed' : investigation.status === 'sign_in_required' ? 'sign_in_required' : investigation.status === 'budget_exhausted' ? 'limited' : 'disabled' };
+  // The public result needs the finding and direct employer link, not the
+  // internal list of discovery attempts or their diagnostic reasons.
+  result.verification = { ...resolution.verification, sources: [], deepSearch: investigation.status === 'completed' ? 'completed' : investigation.status === 'sign_in_required' ? 'sign_in_required' : investigation.status === 'budget_exhausted' ? 'limited' : 'disabled' };
   result.investigation = investigation;
   result.jobInsights = getJobInsights(input).map(i => ({ ...i, sourceUrl: input.url ?? undefined }));
   result.jobQualityChecklist = getJobQualityChecklist(input);
   result.suggestedQuestions = getSuggestedQuestions(input, resolution.score.careersVerification === 'verified_match');
   result.scanAttemptId = input.scanAttemptId;
   // No descriptions, account IDs, or URLs in operational metrics.
-  console.info('ghostjob_scan', { version: 3, mode: input.scanMode, outcome: result.verification.outcome, sources: result.verification.sources.length });
+  console.info('ghostjob_scan', { version: 3, mode: input.scanMode, outcome: result.verification.outcome, sources: resolution.verification.sources.length });
   return result;
 }

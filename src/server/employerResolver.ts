@@ -71,7 +71,7 @@ export function provider(raw: string): { kind: string; board: string; endpoint: 
   const u = new URL(raw), parts = u.pathname.split('/').filter(Boolean);
   if (['boards.greenhouse.io', 'job-boards.greenhouse.io'].includes(u.hostname)) {
     const board = parts[0] === 'embed' ? u.searchParams.get('for') : parts[0];
-    if (board) return { kind: 'greenhouse', board, endpoint: `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(board)}/jobs?content=true` };
+    if (board) return { kind: 'greenhouse', board, endpoint: `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(board)}/jobs` };
   }
   if (['jobs.lever.co', 'jobs.eu.lever.co'].includes(u.hostname) && parts[0]) return { kind: 'lever', board: parts[0], endpoint: `https://api${u.hostname.includes('.eu.') ? '.eu' : ''}.lever.co/v0/postings/${encodeURIComponent(parts[0])}?mode=json` };
   if (u.hostname === 'jobs.ashbyhq.com' && parts[0]) return { kind: 'ashby', board: parts[0], endpoint: `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(parts[0])}` };
@@ -82,7 +82,10 @@ export function providerPostings(kind: string, data: any): Posting[] {
   if (!Array.isArray(rows)) throw new Error('Incomplete provider response');
   if (data.next || data.nextPage || data.hasMore || (typeof data.meta?.total === 'number' && data.meta.total > rows.length)) throw new Error('Provider response requires additional pages');
   return rows.map((j: any) => kind === 'greenhouse' ? {
-    title: j.title ?? '', locations: (j.location?.name ?? '').split(/\s*[•;]\s*/), url: j.absolute_url ?? '', date: j.updated_at, id: String(j.requisition_id ?? j.id ?? ''), requisitionId: j.requisition_id ? String(j.requisition_id) : undefined, description: j.content,
+    title: j.title ?? '', locations: [(j.location?.name ?? ''), ...(j.offices ?? []).flatMap((office: any) => [office.name, office.location]), ...(j.metadata ?? []).filter((item: any) => item.name === 'Job Posting Location').flatMap((item: any) => Array.isArray(item.value) ? item.value : [item.value])].filter(Boolean),
+    url: (() => { try { const url = publicUrl(j.absolute_url ?? ''); if (url.hostname === 'boards.greenhouse.io') { url.hostname = 'job-boards.greenhouse.io'; url.search = ''; } return url.href; } catch { return ''; } })(),
+    date: j.updated_at, id: String(j.requisition_id ?? j.id ?? ''), requisitionId: j.requisition_id ? String(j.requisition_id) : undefined,
+    description: typeof j.content === 'string' ? j.content.replace(/&lt;/gi, '<').replace(/&gt;/gi, '>') : undefined,
   } : kind === 'lever' ? {
     title: j.text ?? '', locations: j.categories?.allLocations ?? [j.categories?.location ?? ''], url: j.hostedUrl ?? '', applyUrl: j.applyUrl,
     date: typeof j.createdAt === 'number' && Number.isFinite(j.createdAt) ? new Date(j.createdAt).toISOString() : undefined, id: j.id,
@@ -123,6 +126,16 @@ function identity(page: PublicPage, input: ResolverInput): boolean {
       try { const a = new URL(l.url), b = new URL(input.companyLinkedInUrl!); return /(^|\.)linkedin\.com$/.test(a.hostname) && a.pathname.replace(/\/$/, '') === b.pathname.replace(/\/$/, ''); } catch { return false; }
     }));
 }
+function officialHiringScripts(html: string, base: string): string[] {
+  const host = new URL(base).hostname;
+  return [...html.matchAll(/<astro-island\b[^>]*>/gi)]
+    .filter(match => /component-export=["'][^"']*(?:job|career|position)[^"']*["']/i.test(match[0]))
+    .flatMap(match => {
+      const path = match[0].match(/component-url=["']([^"']+)["']/i)?.[1];
+      if (!path) return [];
+      try { const url = publicUrl(new URL(path, base).href); return url.hostname === host ? [url.href] : []; } catch { return []; }
+    }).slice(0, 2);
+}
 export async function resolveEmployer(input: ResolverInput, options: {
   deadline: number; search?: (query: string) => Promise<string[]>;
   fetcher?: typeof publicFetch; collectCandidates?: boolean; discoveryUrls?: string[];
@@ -149,7 +162,10 @@ export async function resolveEmployer(input: ResolverInput, options: {
   function enqueue(url: string, trusted = false, board = false) {
     try {
       const normalized = publicUrl(url).href;
-    if (!visited.has(normalized + ':' + trusted) && !queue.some(q => q.url === normalized && q.trusted === trusted)) queue.push({ url: normalized, trusted, board });
+    if (!visited.has(normalized + ':' + trusted) && !queue.some(q => q.url === normalized && q.trusted === trusted)) {
+      if (trusted && board) queue.unshift({ url: normalized, trusted, board });
+      else queue.push({ url: normalized, trusted, board });
+    }
     } catch { /* supplied URLs are candidates, never trust assertions */ }
   }
   for (const url of (options.discoveryUrls ?? []).slice(0, 5)) enqueue(url);
@@ -190,6 +206,24 @@ export async function resolveEmployer(input: ResolverInput, options: {
         if (!options.fetcher) await cachePut(discoveryKey, page.url, 86400, options.deadline).catch(() => {});
       }
       let postings = p ? providerPostings(p.kind, JSON.parse(page.body)) : structuredPostings(page.body, page.url);
+      if (p?.kind === 'greenhouse' && trusted) {
+        const exactTitles = postings.filter(j => titlesMatchV3(j.title, input.title));
+        // The compact board feed omits office locations and descriptions. Read
+        // the few relevant job records before matching location or comparing text.
+        if (exactTitles.length <= 3) {
+          for (const posting of exactTitles) {
+            if (Date.now() >= options.deadline) break;
+            const jobId = new URL(posting.url).pathname.match(/\/jobs\/(\d+)$/)?.[1];
+            if (!jobId) continue;
+            try {
+              const detail = await load(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(p.board)}/jobs/${jobId}?content=true`);
+              if (detail.status !== 200) continue;
+              const enriched = providerPostings('greenhouse', { jobs: [JSON.parse(detail.body)] })[0];
+              if (enriched?.url === posting.url) Object.assign(posting, enriched);
+            } catch { /* Missing job details cannot establish a match. */ }
+          }
+        }
+      }
       const foundLinks = p ? [] : links(page.body, page.url);
       if (!p) {
         const homepage = new URL('/', page.url).href;
@@ -203,6 +237,19 @@ export async function resolveEmployer(input: ResolverInput, options: {
           for (const path of ['/careers', '/jobs', '/join-us']) enqueue(new URL(path, page.url).href, true, true);
           const domain = new URL(page.url).hostname.replace(/^www\./, '');
           for (const prefix of ['careers.', 'jobs.']) enqueue(`https://${prefix}${domain}`, false, true);
+        }
+        if (trusted && /\/(?:careers?|jobs?|positions)(?:\/|$)/i.test(new URL(page.url).pathname)) {
+          for (const scriptUrl of officialHiringScripts(page.body, page.url)) {
+            if (Date.now() >= options.deadline) break;
+            try {
+              const script = await fetcher(scriptUrl, options.deadline, 200_000);
+              if (script.status !== 200 || script.url !== scriptUrl) continue;
+              for (const match of script.body.matchAll(/https:\/\/boards-api\.greenhouse\.io\/v1\/boards\/([a-z0-9_-]+)\/jobs\b/gi)) {
+                enqueue(`https://job-boards.greenhouse.io/${match[1]}`, true, true);
+                check.reason = 'Employer careers page confirms a hiring-board relationship.';
+              }
+            } catch { /* Dynamic careers script unavailable: keep searching. */ }
+          }
         }
         // A direct job page without JSON-LD must have an exact heading and
         // explicit requisition/location evidence before it can be considered.

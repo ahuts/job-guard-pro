@@ -105,6 +105,32 @@ describe('employer verification fixtures', () => {
     const result = await resolveEmployer({ ...input, employerUrl: undefined, applicationUrl: board }, { fetcher: fixture(), search: async () => [home], deadline: Date.now() + 10000 });
     expect(result.score.exactRoleMatch).toBe(true);
   });
+  it('verifies a role on a board named by an official dynamic careers page', async () => {
+    const careers = 'https://cloudflare.example/careers/';
+    const script = 'https://cloudflare.example/assets/careers.js';
+    const boardUrl = 'https://job-boards.greenhouse.io/cloudflare';
+    const roleUrl = `${boardUrl}/jobs/7446310`;
+    const feed = 'https://boards-api.greenhouse.io/v1/boards/cloudflare/jobs';
+    const detail = `${feed}/7446310?content=true`;
+    const row = { id: 7446310, title: 'Software Engineer, Network Performance & Reliability (Argo)',
+      location: { name: 'Hybrid' }, absolute_url: 'https://boards.greenhouse.io/cloudflare/jobs/7446310?gh_jid=7446310', requisition_id: '892' };
+    const pages: Record<string, string> = {
+      [careers]: `<script type="application/ld+json">{"@type":"Organization","name":"Cloudflare","url":"https://cloudflare.example"}</script><astro-island component-export="CareersJobsListing" component-url="/assets/careers.js"></astro-island>`,
+      [script]: 'const jobs = "https://boards-api.greenhouse.io/v1/boards/cloudflare/jobs";',
+      [feed]: JSON.stringify({ jobs: [row] }),
+      [detail]: JSON.stringify({ ...row, offices: [{ name: 'Austin, TX' }], content: '&lt;p&gt;Build reliable networks.&lt;/p&gt;' }),
+      [roleUrl]: '<h1>Software Engineer, Network Performance &amp; Reliability (Argo)</h1><form>Upload resume<button>Submit application</button></form>',
+    };
+    const fetcher = vi.fn(async (url: string) => ({ url, body: pages[url] ?? '', status: pages[url] === undefined ? 404 : 200, checkedAt: '2026-09-28T12:00:00Z' }));
+    const jobInput = { company: 'Cloudflare', title: row.title, location: 'Austin, TX', employerUrl: careers };
+    const result = await resolveEmployer(jobInput, { fetcher, deadline: Date.now() + 10000, collectCandidates: true });
+    expect(result.verification.outcome).toBe('matched');
+    expect(result.verification.sourceUrl).toBe(roleUrl);
+    expect(result.candidates?.[0].text).toContain('Build reliable networks.');
+    expect(result.candidates?.[0].locations).toContain('Austin, TX');
+    const conflict = await resolveEmployer({ ...jobInput, requisitionId: 'other-requisition' }, { fetcher, deadline: Date.now() + 10000 });
+    expect(conflict.verification.outcome).not.toBe('matched');
+  });
   it('requires exact requisition identity for visible closure on a provider page', async () => {
     const result = await resolveEmployer({ ...input, requisitionId: 'abc' }, { fetcher: fixture({ closed: true }), deadline: Date.now() + 10000 });
     expect(result.score.careersVerification).toBe('closed_conflict');

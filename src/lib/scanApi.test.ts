@@ -29,6 +29,7 @@ describe('shared scan API compatibility', () => {
     const result = await call({ title: 'Engineer', company: 'Acme', scoringVersion: 3, description: '', reposted: true });
     expect(result.status).toBe(200); expect(result.payload.scoringVersion).toBe(3); expect(result.payload.trustScore).toBe(50);
     expect(result.payload.verification.outcome).toBe('identity_unresolved');
+    expect(result.payload.verification.sources).toEqual([]);
   });
   it('validates before source lookups and supports authorization preflight', async () => {
     expect((await call({ title: { injected: true }, company: 'Acme' })).status).toBe(400);
