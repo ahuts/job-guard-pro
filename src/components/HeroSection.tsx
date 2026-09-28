@@ -35,12 +35,12 @@ const HeroSection = () => {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-foreground">
-                See whether the employer's posting{" "}
-                <span className="text-gradient-hero">backs up the LinkedIn job</span>
+                Before you spend hours applying,{" "}
+                <span className="text-gradient-hero">see what’s behind the job.</span>
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
-                GhostJob checks public employer sources and the application path. Pro adds a closer comparison of the role, qualifications, and location when enough evidence is available.
+                Check public employer sources, spot suspicious requests, and track the jobs you decide to pursue.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start">
