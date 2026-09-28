@@ -39,6 +39,9 @@ const PrivacyPolicy = () => {
             <p className="text-muted-foreground leading-relaxed">
               When you scan a LinkedIn job, the extension sends the job URL, title, company, location, description, and available posting details to the GhostJob API to produce the result. When you save a result to your Dashboard, we also store:
             </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              Signed-in investigation results may be cached for up to 24 hours so an identical scan does not repeat paid provider work.
+            </p>
             <ul className="text-muted-foreground space-y-2 mt-2 list-disc list-inside">
               <li><strong className="text-foreground">Job URL</strong> — the LinkedIn job posting URL you scanned</li>
               <li><strong className="text-foreground">Job title and company name</strong> — extracted from the posting for display in your Dashboard</li>
@@ -60,7 +63,7 @@ const PrivacyPolicy = () => {
               <li><strong className="text-foreground">Authentication tokens</strong> — stored in <code className="text-sm bg-secondary px-2 py-0.5 rounded">chrome.storage.local</code> for session persistence (access token and refresh token)</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Preferences remain on your device. Authentication tokens are sent over HTTPS to our authentication service and GhostJob API when needed to sign you in, refresh your session, or authorize a scan.
+              Preferences remain on your device. Authentication tokens are sent over HTTPS to our authentication and database services and GhostJob API when needed to sign you in, refresh your session, authorize a scan, or save a result.
             </p>
           </div>
 
@@ -87,7 +90,7 @@ const PrivacyPolicy = () => {
               Your account information and saved scan data are stored on servers managed by our backend provider, Supabase Inc. Supabase hosts data on Amazon Web Services (AWS) infrastructure. Your data is stored in the region configured for our project.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Extension preferences and session tokens are stored on your device using Chrome's local storage API. Session tokens are also transmitted to our authentication service and GhostJob API as described above.
+              Extension preferences and session tokens are stored on your device using Chrome's local storage API. Session tokens are also transmitted to our authentication and database services and GhostJob API as described above.
             </p>
           </div>
 
