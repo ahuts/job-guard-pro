@@ -15,17 +15,17 @@ const faqs = [
   {
     question: "How can you tell if a LinkedIn job is a ghost job?",
     answer:
-      "Check four things together: how long the posting has been live, whether the same role keeps reappearing every few weeks, whether the applicant count matches the posting age, and whether the description contains specific team, stack, and pay details. Three or more weak signals is the point to be cautious.",
+      "Check whether the role appears on a verified employer source, whether the application path is active, and whether the title, location, and requirements describe the same job. Reposting and applicant counts alone cannot establish hiring intent.",
   },
   {
     question: "Is a reposted LinkedIn job always a ghost job?",
     answer:
-      "No. Roles are legitimately reposted when a hire falls through or the requirements change. It becomes a ghost-job signal when the same role reappears every two to four weeks under slightly different titles or recruiters without the original ever closing.",
+      "No. Employers may repost for many reasons. Treat a repost as context and check the employer's current posting before drawing a conclusion.",
   },
   {
     question: "Should I still apply if the Trust Score is borderline?",
     answer:
-      "A borderline score of 40 to 60 means the signals are mixed, not that the role is fake. If the job matters to your search, cross-check it on the company's own careers page before spending time on a tailored application.",
+      "A middle score often means public evidence is incomplete. Check the employer's own careers page and review any matching role before deciding how much time to spend.",
   },
 ];
 
@@ -38,14 +38,14 @@ const GhostJobsOnLinkedIn = () => {
     <div className="min-h-screen bg-background">
       <SEO
         title="Ghost Jobs on LinkedIn: How to Spot Them Before You Apply"
-        description="LinkedIn-specific ghost-job signals: reposted listings, applicant-count anomalies, posting age, vague descriptions, and when to verify a recruiter manually."
+        description="Check a LinkedIn job against employer sources, application links, role details, and available public evidence before applying."
         path="/ghost-jobs-on-linkedin"
         type="article"
         jsonLd={[
           articleSchema({
             headline: "Ghost Jobs on LinkedIn: How to Spot Them Before You Apply",
             description:
-              "LinkedIn-specific ghost-job signals: reposted listings, applicant-count anomalies, posting age, vague descriptions, and when to verify a recruiter manually.",
+              "Check a LinkedIn job against employer sources, application links, role details, and available public evidence before applying.",
             path: "/ghost-jobs-on-linkedin",
             datePublished: PUBLISHED,
           }),
@@ -64,17 +64,17 @@ const GhostJobsOnLinkedIn = () => {
           </h1>
 
           <p className="text-lg text-muted-foreground leading-relaxed mb-10">
-            LinkedIn is the largest source of ghost jobs because reposting is fast, cheap, and rewarded by the platform. The most reliable LinkedIn-specific signals are <strong className="text-foreground">posting age</strong>, <strong className="text-foreground">repost frequency</strong>, <strong className="text-foreground">applicant-count behavior</strong>, and <strong className="text-foreground">description quality</strong>. Use them together — no single signal is enough on its own.
+            A LinkedIn listing is a starting point, not proof that a role is still open. Look for a corresponding posting on a verified employer source and compare the title, location, requirements, and application path. If a page is unavailable or the description is incomplete, keep that uncertainty visible.
           </p>
 
           <AnswerBox
             question="Quick answer: how do you spot a ghost job on LinkedIn?"
-            answer="Read four signals together — posting age, repost frequency, applicant-count behaviour, and description quality. Any one alone is noise; three or more together is a real warning."
+            answer="Check the employer's public posting and application path. Compare role details when enough text is available, and treat missing evidence as unknown."
             points={[
-              "Live 30+ days with no edits on a high-volume title.",
-              "The same role reappears every 2–4 weeks under a new title or recruiter.",
-              "Applicant count doesn't match the posting age in either direction.",
-              "No pay range, no team detail, boilerplate responsibilities.",
+              "Confirm the source belongs to the employer or its authorized hiring platform.",
+              "Compare title, responsibilities, qualifications, and location.",
+              "Check whether the application path still works.",
+              "Review coverage limits before treating a missing match as a conflict.",
             ]}
           />
 
@@ -82,28 +82,28 @@ const GhostJobsOnLinkedIn = () => {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">1. How long has the posting been live?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Most genuinely active LinkedIn roles are filled or closed within 30 days. If a posting has been live for 30+ days with no edits, treat it with suspicion — especially for high-volume titles like "Software Engineer" or "Marketing Manager."
+                Posting age gives context, but it does not prove whether a role is open. Check the employer's current posting and application destination.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">2. Has the same role been reposted?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                The single strongest LinkedIn ghost-job signal. If the same role keeps reappearing every 2–4 weeks under a slightly different title or recruiter, the company is almost certainly using it as a pipeline. GhostJob automatically detects repost patterns based on title, company, and description fingerprint.
+                Reposting can reflect a changed role, a renewed search, or routine distribution. GhostJob shows the repost label as context; it does not deduct Trust Score points for it in the current scoring version.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">3. Does the applicant count make sense?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Watch for postings with hundreds or thousands of applicants but no movement on the role's status, or roles that show "Be among the first 25 applicants" weeks after going live. Both patterns suggest the funnel isn't being worked.
+                Applicant counts are not a reliable measure of a company's hiring intent or your chance of an interview. GhostJob keeps them separate from the Trust Score.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">4. Is the description specific or boilerplate?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Active hiring managers write specific descriptions: team name, tech stack, day-one priorities. Ghost jobs lean on generic boilerplate, missing salary ranges, and copy-paste responsibilities that could apply to any company.
+                A specific description makes a role easier to compare with an employer posting. Missing pay or team details do not by themselves mean that a job is inactive.
               </p>
             </section>
 
@@ -117,14 +117,14 @@ const GhostJobsOnLinkedIn = () => {
                 <li>The recruiter has no public activity and the posting was made by a generic HR account.</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed mt-3">
-                In those cases, cross-check the role on the company's own careers page. If it isn't listed there, the LinkedIn post is likely stale.
+                In those cases, cross-check the role on the company's own careers page. If it is not listed there, the result remains unresolved unless a source explicitly confirms closure.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-3">How do you check these signals automatically?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                GhostJob runs all of these checks in your browser as you read the listing — no copy/paste, no extra tab. Read about{" "}
+                GhostJob checks public sources through its service. You can scan on this site or use the extension while reading a LinkedIn listing. Read about{" "}
                 <Link to="/how-trust-score-works" className="text-primary hover:underline">how the Trust Score works</Link>{" "}
                 or the{" "}
                 <Link to="/what-is-a-ghost-job" className="text-primary hover:underline">underlying ghost-job definition</Link>.

@@ -4,14 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Ghost, Zap, Loader2 } from "lucide-react";
 import { redirectToCheckout } from "@/lib/stripe";
 import { useToast } from "@/hooks/use-toast";
+import type { FreeUsage } from "@/lib/trustScore";
 
 interface FreePlanBannerProps {
-  scansUsed: number;
-  maxScans: number;
+  usage: FreeUsage | null;
 }
 
-export default function FreePlanBanner({ scansUsed, maxScans }: FreePlanBannerProps) {
-  const remaining = Math.max(0, maxScans - scansUsed);
+export default function FreePlanBanner({ usage }: FreePlanBannerProps) {
   const [upgrading, setUpgrading] = useState(false);
   const { toast } = useToast();
 
@@ -39,10 +38,10 @@ export default function FreePlanBanner({ scansUsed, maxScans }: FreePlanBannerPr
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">
-              Free Plan — {remaining} of {maxScans} scans remaining
+              Free Plan — {usage ? usage.remaining + ' of ' + usage.limit + ' new job checks left this month' : 'checking scan availability'}
             </p>
             <p className="text-xs text-muted-foreground">
-              Upgrade for unlimited scans, advanced signals, and priority support.
+              Rechecking the same job is free. Pro adds deeper employer-posting comparison when available.
             </p>
           </div>
         </div>

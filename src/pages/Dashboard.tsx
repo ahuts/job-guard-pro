@@ -9,17 +9,39 @@ import { Search, PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useScannedJobs, useDeleteJob, useUserProfile } from "@/hooks/useScannedJobs";
 import { useToast } from "@/hooks/use-toast";
-
-const FREE_SCAN_LIMIT = 3;
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { getScanCapabilities } from "@/services/scanCapabilities";
+import { redirectToCheckout } from "@/lib/stripe";
+import type { FreeUsage } from "@/lib/trustScore";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: jobs = [], isLoading } = useScannedJobs();
   const { data: profile } = useUserProfile();
+  const [freeUsage, setFreeUsage] = useState<FreeUsage | null>(null);
+  const upgradeStarted = useRef(false);
   const deleteJob = useDeleteJob();
 
   const isFree = !profile || profile.subscription_tier === "free";
+  useEffect(() => {
+    if (!profile || !isFree) return;
+    let active = true;
+    void getScanCapabilities().then(value => { if (active) setFreeUsage(value.freeUsage ?? null); })
+      .catch(() => { if (active) setFreeUsage(null); });
+    return () => { active = false; };
+  }, [profile, isFree]);
+  useEffect(() => {
+    if (searchParams.get("upgrade") !== "1" || !profile || upgradeStarted.current) return;
+    upgradeStarted.current = true;
+    setSearchParams(previous => { const next = new URLSearchParams(previous); next.delete("upgrade"); return next; }, { replace: true });
+    if (profile.subscription_tier === "pro") return;
+    void redirectToCheckout().catch(error => {
+      toast({ title: "Could not start checkout", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    });
+  }, [profile, searchParams, setSearchParams, toast]);
 
   const handleDelete = (jobId: string) => {
     deleteJob.mutate(jobId, {
@@ -63,8 +85,8 @@ export default function Dashboard() {
         )}
 
         {/* Free plan scan counter */}
-        {isFree && jobs.length > 0 && (
-          <FreePlanBanner scansUsed={jobs.length} maxScans={FREE_SCAN_LIMIT} />
+        {isFree && (
+          <FreePlanBanner usage={freeUsage} />
         )}
 
         {/* Stats */}

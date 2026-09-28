@@ -18,6 +18,7 @@ interface GhostScoreDisplayProps {
   result: AnalysisResult;
   onSave?: () => void | Promise<void>;
   onResultChange?: (result: AnalysisResult) => void;
+  proAccess?: boolean;
 }
 
 const presentation = {
@@ -54,7 +55,7 @@ const qualityCheckPresentation: Record<JobQualityCheckStatus, { label: string; c
   unknown: { label: "Unknown", className: "border-slate-200 bg-slate-50 text-slate-700", icon: "?" },
 };
 
-export function GhostScoreDisplay({ result, onSave, onResultChange }: GhostScoreDisplayProps) {
+export function GhostScoreDisplay({ result, onSave, onResultChange, proAccess = true }: GhostScoreDisplayProps) {
   const [current, setCurrent] = useState(result);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -107,10 +108,10 @@ export function GhostScoreDisplay({ result, onSave, onResultChange }: GhostScore
             <p className="text-sm">{trustScore.verification.reason}</p>
             {trustScore.verification.sourceUrl && <a href={trustScore.verification.sourceUrl} target="_blank" rel="noreferrer" className="block underline">View employer {trustScore.verification.outcome === 'matched' ? 'posting' : 'source'} ↗</a>}
             <p className="text-xs text-muted-foreground">Checked {new Date(trustScore.verification.checkedAt).toLocaleString()}</p>
-            {trustScore.verification.outcome !== 'matched' && trustScore.verification.outcome !== 'closed' && <Button disabled={busy || trustScore.verification.deepSearch === 'disabled'} onClick={() => recheck('deep')}>{busy ? 'Checking…' : 'Search more sources'}</Button>}
-            <p className="text-xs">Deeper checks use separate search capacity and do not use another scan allowance. A completed no-match check is a result.</p>
+            {proAccess && trustScore.verification.outcome !== 'matched' && trustScore.verification.outcome !== 'closed' && <Button disabled={busy || trustScore.verification.deepSearch === 'disabled'} onClick={() => recheck('deep')}>{busy ? 'Checking…' : 'Search more sources'}</Button>}
+            {proAccess && <p className="text-xs">Deeper checks use separate search capacity and do not use another scan allowance. A completed no-match check is a result.</p>}
           </section>}
-          {trustScore.investigation ? <InvestigationDetails value={trustScore.investigation} /> : null}
+          {proAccess && trustScore.investigation ? <InvestigationDetails value={trustScore.investigation} /> : null}
           <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setEditing(!editing)}>Review details / Provide employer URL</Button><Button variant="outline" asChild><a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('GhostJob verification mismatch')}&body=${encodeURIComponent(`Please describe the mismatch:\n\nJob: ${job.url}\nScoring version: ${trustScore.scoringVersion}\nFinding: ${trustScore.verification?.outcome ?? 'unavailable'}`)}`}>Report a mismatch</a></Button></div>
           {editing && <form className="space-y-3" onSubmit={e => { e.preventDefault(); void recheck('standard'); }}>
             {(['title', 'company', 'location', 'employerUrl', 'description'] as const).map(name => <label key={name} className="block text-sm">{{ title: 'Job title', company: 'Company', location: 'Location / eligibility', employerUrl: 'Employer or job URL', description: 'Description' }[name]}{name === 'description' ? <textarea className="block min-h-40 w-full rounded border p-2" maxLength={12000} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} /> : <input className="block w-full rounded border p-2" maxLength={name === 'employerUrl' ? 2048 : 300} required={name === 'title' || name === 'company'} type={name === 'employerUrl' ? 'url' : 'text'} value={draft[name] ?? ''} onChange={e => setDraft({ ...draft, [name]: e.target.value })} />}</label>)}

@@ -131,6 +131,18 @@ describe('automatic investigation controls', () => {
     expect(investigationAccess('other', true)).toBe('available'); expect(investigationAccess(null, true)).toBe('sign_in_required');
     vi.stubEnv('OPENAI_API_KEY', ''); expect(investigationAccess('pilot')).toBe('disabled');
   });
+  it('returns native verification to a Free account without reserving or calling paid providers', async () => {
+    enabled(); vi.stubEnv('GHOSTJOB_V3_ROLLOUT', 'public');
+    const fetcher = vi.fn(), reserve = vi.fn(), get = vi.fn(), resolver = vi.fn(async () => resolution);
+    const result = await investigateJob(input, 'free-account', Date.now() + 30_000, { proEligible: false, resolver, get, reserve, fetcher });
+    expect(result.resolution.score).toEqual(resolution.score);
+    expect(result.investigation.status).toBe('not_eligible');
+    expect(result.investigation.finding).toBe('insufficient_evidence');
+    expect(result.investigation.sourceUrl).toBeUndefined();
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(reserve).not.toHaveBeenCalled();
+    expect(get).not.toHaveBeenCalled();
+  });
   it('budget exhaustion and storage failure preserve native results without paid calls', async () => {
     enabled(); const fetcher = vi.fn(), resolver = vi.fn(async () => resolution), get = vi.fn(async () => null);
     const reserve = vi.fn(async () => ({ status: -1, attemptKey: 'a', monthKey: 'm', resultKey: 'r' }));

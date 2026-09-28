@@ -32,7 +32,7 @@ export const ScanCTA = ({
 }) => (
   <div className="rounded-lg border border-border p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
     <p className="text-sm text-muted-foreground">
-      Got a listing in mind? Paste the URL and get a Trust Score — 3 free scans, no card.
+      Got a listing in mind? Sign in for three new job checks per month. No card required.
     </p>
     <Link
       to="/#scan"

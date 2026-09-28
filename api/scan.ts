@@ -245,7 +245,7 @@ function isRepeatedWithoutVerification(firstObservedAt: string | null | undefine
   return Number.isFinite(first) && Date.now() - first >= 45 * 24 * 60 * 60 * 1000;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse<TrustScoreResult | { error: string } | { scoringVersion: 2 | 3; investigationEnabled: boolean }>) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -255,32 +255,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
     const { verifiedPro } = await import('../src/server/proEntitlement.js');
     const auth = req.headers?.authorization;
     const authorization = typeof auth === 'string' ? auth : undefined;
-    const user = await verifiedUser(authorization);
+    let authFailure: string | undefined;
+    const user = await verifiedUser(authorization, reason => { authFailure = reason; });
+    if (authorization && !user) return res.status(authFailure === 'provider_unavailable' || authFailure === 'not_configured' ? 503 : 401).json({ error: 'Your session could not be verified. Please sign in again.' });
     const isPro = await verifiedPro(user, authorization);
     res.setHeader('Cache-Control', 'no-store');
     const { investigationAccess } = await import('../src/server/investigateJob.js');
-    return res.status(200).json({ scoringVersion: v3Allowed(user, isPro) ? 3 : 2, investigationEnabled: v3Allowed(user, isPro) && investigationAccess(user, isPro) === 'available' });
+    const capability: { scoringVersion: 2 | 3; investigationEnabled: boolean; freeUsage?: unknown } = {
+      scoringVersion: v3Allowed(user, isPro) ? 3 : 2,
+      investigationEnabled: v3Allowed(user, isPro) && investigationAccess(user, isPro) === 'available',
+    };
+    if (user && !isPro) {
+      const { freeUsage } = await import('../src/server/freeScanQuota.js');
+      try { capability.freeUsage = await freeUsage(user); }
+      catch { capability.freeUsage = null; }
+    }
+    return res.status(200).json(capability);
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { scanSchema, scanV3 } = await import('../src/server/scanV3.js');
+  const { scanSchema, scanV3, verifiedUser } = await import('../src/server/scanV3.js');
   const validated = scanSchema.safeParse(req.body);
   if (!validated.success) return res.status(400).json({ error: 'Job title and company are required; scan fields must have valid types and lengths.' });
-  if (validated.data.scoringVersion === 3) {
+  const authorization = typeof req.headers?.authorization === 'string' ? req.headers.authorization : undefined;
+  let authFailure: string | undefined;
+  const user = await verifiedUser(authorization, reason => { authFailure = reason; });
+  if (authorization && !user) return res.status(authFailure === 'provider_unavailable' || authFailure === 'not_configured' ? 503 : 401).json({ error: 'Your session could not be verified. Please sign in again.' });
+  const { verifiedPro } = await import('../src/server/proEntitlement.js');
+  const isPro = await verifiedPro(user, authorization);
+  const { reserveFreeScan, finishFreeScan } = await import('../src/server/freeScanQuota.js');
+  let quota: Awaited<ReturnType<typeof reserveFreeScan>> | null = null;
+  if (user && !isPro) {
+    try { quota = await reserveFreeScan(user, { url: validated.data.url, title: validated.data.title!, company: validated.data.company!, location: validated.data.location }); }
+    catch { return res.status(503).json({ code: 'scan_allowance_unavailable', error: 'Free scans are temporarily unavailable. Please retry shortly.' }); }
+    if (quota.limited) return res.status(429).json({ code: 'free_scan_limit', error: 'Your three free job checks are used for this month. Upgrade to Pro for more scans.', freeUsage: quota.usage });
+  }
+  let result: TrustScoreResult;
+  try {
+    result = validated.data.scoringVersion === 3
+      ? await scanV3(validated.data, authorization)
+      : await scanLegacy(validated.data as ScanRequest);
+  } catch (error) {
+    if (quota?.reservation) await finishFreeScan(quota.reservation, false).catch(() => {});
+    const status = error && typeof error === 'object' && 'status' in error ? Number(error.status) : 503;
+    return res.status(status).json({ error: error instanceof Error ? error.message : 'Verification temporarily unavailable' });
+  }
+  if (quota?.reservation) {
     try {
-      const authorization = req.headers?.authorization;
-      const result = await scanV3(validated.data, typeof authorization === 'string' ? authorization : undefined);
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json(result);
-    } catch (error) {
-      const status = error && typeof error === 'object' && 'status' in error ? Number(error.status) : 503;
-      return res.status(status).json({ error: error instanceof Error ? error.message : 'Verification temporarily unavailable' });
+      result.freeUsage = await finishFreeScan(quota.reservation, true) ?? quota.usage;
+    } catch {
+      return res.status(503).json({ code: 'scan_allowance_unavailable', error: 'Free scans are temporarily unavailable. Please retry shortly.' });
     }
   }
+  res.setHeader('Cache-Control', 'no-store');
+  return res.status(200).json(result);
+}
 
-  const request = req.body as ScanRequest;
-  if (!request?.title?.trim() || !request?.company?.trim()) return res.status(400).json({ error: "Job title and company are required" });
-
+async function scanLegacy(request: ScanRequest): Promise<TrustScoreResult> {
   // Vercel compiles this function as CommonJS while the shared frontend module
   // is ESM. Native dynamic import keeps the scorer shared without require().
   const { calculateTrustScore, getQualityBadges, hasConcreteRoleDetails } = await import("../src/lib/trustScore.js");
@@ -333,8 +364,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse<Tr
     description: request.description,
     salary: request.salary,
   }, career.verification === "verified_match");
-  res.setHeader("Cache-Control", "no-store");
-  return res.status(200).json(result);
+  return result;
 }
 
 // Pure helpers exposed only for fixture coverage; production callers use the
