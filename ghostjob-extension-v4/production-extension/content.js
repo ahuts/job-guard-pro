@@ -13,9 +13,7 @@
   const MODAL_ID = 'ghostjob-modal-overlay';
   const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZXZlaG5laXptaW5zcG9saXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNTAyMzMsImV4cCI6MjA5MDkyNjIzM30.jWbkBJkQHbVl1ui-47YZrGXT1-C3dL-6WLQrEhB6gfY';
-  const FREE_SCAN_LIMIT = 3; // Free tier: 3 scans per month
-  const VERSION  = '1.3.11';
-  // This unpacked pilot must not write scan observations or saved jobs to the
+  const VERSION  = '1.3.12';
   // Production scans may be saved to the signed-in user's dashboard.
   const PREVIEW_BUILD = false;
 
@@ -212,113 +210,27 @@
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // SCAN - runs entirely in content script, no background needed
+  // SCAN - the background worker sends requests to the account API
   // ─────────────────────────────────────────────────────────────────────────
 
-  // ─── Scan limit tracking ─────────────────────────────────────────────────
-  function getMonthKey() {
-    var d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-  }
-
-  function checkScanLimit(callback) {
-    chrome.storage.local.get(['gj_scans', 'gj_auth_token', 'gj_is_pro'], function(stored) {
-      var scans = stored.gj_scans || {};
-      var month = getMonthKey();
-      var count = scans[month] || 0;
-
-      // If we already know they're Pro (cached), skip limit
-      if (stored.gj_is_pro) {
-        callback(true, count, null);
+  // The server owns the monthly allowance. This check only prompts for sign-in.
+  function checkSignedIn(callback) {
+    chrome.runtime.sendMessage({ action: 'authStatus' }, function(response) {
+      if (chrome.runtime.lastError || !response || !response.success) {
+        callback(false, response && response.error || 'GhostJob could not verify your session. Please retry.');
         return;
       }
-
-      // If logged in, check subscription status from Supabase
-      if (stored.gj_auth_token) {
-        checkProStatus(stored.gj_auth_token, function(isPro) {
-          if (isPro) {
-            // Pro user — unlimited scans
-            chrome.storage.local.set({ gj_is_pro: true });
-            callback(true, count, null);
-          } else {
-            // Free authenticated user — same 3/month limit
-            if (count >= FREE_SCAN_LIMIT) {
-              callback(false, count, FREE_SCAN_LIMIT);
-            } else {
-              callback(true, count, FREE_SCAN_LIMIT);
-            }
-          }
-        });
-      } else if (count >= FREE_SCAN_LIMIT) {
-        // Not logged in — enforce free limit
-        callback(false, count, FREE_SCAN_LIMIT);
-      } else {
-        callback(true, count, FREE_SCAN_LIMIT);
-      }
-    });
-  }
-
-  // ─── Check Pro/subscription status ────────────────────────────────────
-  function checkProStatus(token, callback) {
-    // Check if current user has Pro subscription via profiles table
-    // First get user ID from the token, then check their tier
-    fetch(SUPABASE_URL + '/auth/v1/user', {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + token
-      }
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(user) {
-      if (!user.id) { callback(false); return; }
-      return fetch(SUPABASE_URL + '/rest/v1/profiles?select=subscription_tier&id=eq.' + user.id + '&limit=1', {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + token
-        }
-      });
-    })
-    .then(function(res) {
-      if (!res) { callback(false); return; }
-      if (!res.ok) { callback(false); return; }
-      return res.json();
-    })
-    .then(function(data) {
-      if (Array.isArray(data) && data.length > 0 && data[0].subscription_tier === 'pro') {
-        callback(true);
-      } else {
-        callback(false);
-      }
-    })
-    .catch(function() {
-      // Network error — assume free
-      callback(false);
-    });
-  }
-
-  function recordScan() {
-    if (activeAttempt && activeAttempt.counted) return;
-    if (activeAttempt) activeAttempt.counted = true;
-    chrome.storage.local.get(['gj_scans'], function(stored) {
-      var scans = stored.gj_scans || {};
-      var month = getMonthKey();
-      scans[month] = (scans[month] || 0) + 1;
-      // Only keep last 3 months of data
-      var keys = Object.keys(scans).sort();
-      while (keys.length > 3) { delete scans[keys.shift()]; }
-      chrome.storage.local.set({ gj_scans: scans });
+      callback(Boolean(response.authenticated));
     });
   }
 
   function handleScanClick() {
     log('Scan clicked');
 
-    // Check scan limit before proceeding
-    checkScanLimit(function(allowed, count, limit) {
+    checkSignedIn(function(allowed, error) {
       if (!allowed) {
-        showLimitModal(count, limit);
+        if (error) showVerificationError(error);
+        else showSignInModal();
         return;
       }
 
@@ -339,7 +251,6 @@
         return fetchRemoteAnalysis(jobData);
       })
       .then(function(data) {
-        recordScan();
         setLoading(false);
         showGhostScore(data);
       })
@@ -348,27 +259,19 @@
         warn('Trust Meter API failed:', err.message);
         showVerificationError(err.message);
       });
-    }); // end checkScanLimit
+    });
   }
 
-  // ─── Scan limit modal ─────────────────────────────────────────────────────
-  function showLimitModal(count, limit) {
-    // Remove any existing overlay
-    var existing = document.getElementById('gj-limit-overlay');
+  // ─── Sign-in modal ────────────────────────────────────────────────────────
+  function showSignInModal() {
+    var existing = document.getElementById('gj-signin-overlay');
     if (existing) existing.remove();
 
-    // Check if user is logged in — different message for authed free users
-    chrome.storage.local.get(['gj_auth_token'], function(auth) {
-      var isLoggedIn = !!auth.gj_auth_token;
-      var heading = isLoggedIn ? 'Free Plan Limit Reached' : 'Free Scan Limit Reached';
-      var bodyText = isLoggedIn
-        ? 'You\'ve used <strong>' + count + '/' + limit + '</strong> free scans this month. Upgrade to Pro for unlimited scans.'
-        : 'You\'ve used <strong>' + count + '/' + limit + '</strong> free scans this month. Sign in to save jobs and get more scans.';
-      var ctaText = isLoggedIn ? '🚀 Upgrade to Pro' : 'Sign In';
-      var ctaLink = isLoggedIn ? 'https://www.jobghost.io/#pricing' : null;
-
-      var overlay = document.createElement('div');
-      overlay.id = 'gj-limit-overlay';
+    var heading = 'Sign in to scan';
+    var bodyText = 'Open the GhostJob extension popup and sign in. Free accounts can check three distinct jobs per month; Pro includes unlimited standard checks.';
+    var ctaText = 'Got it';
+    var overlay = document.createElement('div');
+    overlay.id = 'gj-signin-overlay';
       overlay.style.cssText = [
         'position:fixed','top:0','left:0','width:100vw','height:100vh',
         'background:rgba(0,0,0,0.6)','z-index:2147483646',
@@ -401,19 +304,12 @@
       document.getElementById('gj-limit-close').addEventListener('click', function() { overlay.remove(); });
       document.getElementById('gj-limit-cta').addEventListener('click', function() {
         overlay.remove();
-        if (isLoggedIn && ctaLink) {
-          // Logged in free user — open pricing page
-          window.open(ctaLink, '_blank');
-        } else {
-          // Not logged in — show toolbar hint
-          var hint = document.createElement('div');
-          hint.style.cssText = 'position:fixed;top:20px;right:20px;background:#667eea;color:#fff;padding:12px 20px;border-radius:8px;z-index:2147483647;font-size:14px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
-          hint.textContent = '👆 Click the GhostJob icon in your toolbar to sign in';
-          document.body.appendChild(hint);
-          setTimeout(function() { hint.remove(); }, 5000);
-        }
+        var hint = document.createElement('div');
+        hint.style.cssText = 'position:fixed;top:20px;right:20px;background:#667eea;color:#fff;padding:12px 20px;border-radius:8px;z-index:2147483647;font-size:14px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+        hint.textContent = '👆 Click the GhostJob icon in your toolbar to sign in';
+        document.body.appendChild(hint);
+        setTimeout(function() { hint.remove(); }, 5000);
       });
-    });
   }
 
   // ─── Remote API call ──────────────────────────────────────────────────────
@@ -764,7 +660,7 @@
   var activeAttempt = null;
   function prepareJobDataForScan() {
     var expectedKey = GhostJobContext.key();
-    if (!activeAttempt || activeAttempt.key !== expectedKey) activeAttempt = { key: expectedKey, id: crypto.randomUUID(), counted: false };
+    if (!activeAttempt || activeAttempt.key !== expectedKey) activeAttempt = { key: expectedKey, id: crypto.randomUUID() };
     return waitForJobIdentity(5000).then(async function(data) {
       var description = await GhostJobContext.readDescription(expectedKey);
       if (GhostJobContext.key() !== expectedKey) throw new Error('The selected job changed. Please scan again.');
@@ -1656,15 +1552,15 @@
     });
     var status = document.createElement('p'); status.setAttribute('role', 'alert'); editor.appendChild(status);
     var submit = document.createElement('button'); submit.textContent = 'Verify these details';
-    submit.onclick = function() { checkScanLimit(async function(allowed) {
-      if (!allowed && !(activeAttempt && activeAttempt.counted)) { status.textContent = 'Your scan allowance has been reached.'; return; }
+    submit.onclick = function() { checkSignedIn(async function(allowed, error) {
+      if (!allowed) { status.textContent = error || 'Sign in through the GhostJob extension popup before scanning.'; return; }
       if (!fields.title.value.trim() || !fields.company.value.trim()) { status.textContent = 'Job title and company are required.'; return; }
-      if (!activeAttempt) activeAttempt = { key: GhostJobContext.key(), id: crypto.randomUUID(), counted: false };
+      if (!activeAttempt) activeAttempt = { key: GhostJobContext.key(), id: crypto.randomUUID() };
       var job = Object.assign({}, lastScannedJob || { url: location.href, jobId: GhostJobContext.key() });
       Object.keys(fields).forEach(function(name) { job[name] = fields[name].value.trim(); });
       job.scanAttemptId = activeAttempt.id; job.descriptionCoverage = job.description ? 'partial' : 'unavailable'; job.coverageDetails = { status: job.descriptionCoverage, truncated: false, analyzedCharacters: job.description.length, reason: 'User-reviewed details; full LinkedIn coverage not established.' };
       submit.disabled = true;
-      try { var result = await fetchRemoteAnalysis(job); lastScannedJob = job; recordScan(); editor.close(); editor.remove(); showGhostScore(result); }
+      try { var result = await fetchRemoteAnalysis(job); lastScannedJob = job; editor.close(); editor.remove(); showGhostScore(result); }
       catch (error) { status.textContent = error.message; submit.disabled = false; }
     }); }; editor.appendChild(submit);
     var cancel = document.createElement('button'); cancel.textContent = 'Cancel'; cancel.onclick = function() { editor.close(); editor.remove(); }; editor.appendChild(cancel);
@@ -1892,15 +1788,13 @@
       return true;
     }
     if (request.action === 'scanFromPopup') {
-      checkScanLimit(function(allowed, count, limit) {
+      checkSignedIn(function(allowed, error) {
         if (!allowed) {
-          showLimitModal(count, limit);
+          if (error) showVerificationError(error);
+          else showSignInModal();
           sendResponse({
             success: false,
-            error: 'Free scan limit reached',
-            limitReached: true,
-            scansUsed: count,
-            scanLimit: limit
+            error: error || 'Sign in through the GhostJob extension popup before scanning.'
           });
           return;
         }
@@ -1908,7 +1802,6 @@
         prepareJobDataForScan()
           .then(function(jobData) { return fetchRemoteAnalysis(jobData); })
           .then(function(data) {
-            recordScan();
             showGhostScore(data);
             sendResponse({ success: true, data: data });
           })

@@ -1,5 +1,5 @@
 // GhostJob Background Service Worker. /api/scan is the only score authority.
-// The production API advertises v3 only to eligible signed-in pilots.
+// The production API advertises the scoring version and account allowance.
 const SCAN_API_URL = "https://www.jobghost.io/api/scan";
 const SCAN_TIMEOUT_MS = 45_000;
 const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
@@ -44,10 +44,11 @@ async function getAuthToken() {
   return refreshPromise;
 }
 
-async function scoringVersionForAccount(token) {
+async function scanCapabilities(token) {
+  if (!token) throw new Error('Sign in to GhostJob in the extension before scanning.');
   const response = await fetch(SCAN_API_URL, {
     method: 'GET',
-    headers: token ? { Authorization: 'Bearer ' + token } : {},
+    headers: { Authorization: 'Bearer ' + token },
     signal: AbortSignal.timeout(8000),
   });
   if (!response.ok) throw new Error('GhostJob service update is not ready. Please try again later.');
@@ -55,7 +56,7 @@ async function scoringVersionForAccount(token) {
   if (capabilities?.scoringVersion !== 2 && capabilities?.scoringVersion !== 3) {
     throw new Error('GhostJob service returned an unsupported scan version.');
   }
-  return capabilities.scoringVersion;
+  return capabilities;
 }
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -65,17 +66,29 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         sendResponse({ success: true, authenticated: Boolean(await getAuthToken()) });
         return;
       }
+      if (request.action === "scanCapabilities") {
+        const token = await getAuthToken();
+        if (!token) {
+          sendResponse({ success: true, authenticated: false });
+          return;
+        }
+        sendResponse({ success: true, authenticated: true, data: await scanCapabilities(token) });
+        return;
+      }
       if (request.action === "scanJob") {
         const token = await getAuthToken();
-        const scoringVersion = await scoringVersionForAccount(token);
+        const scoringVersion = (await scanCapabilities(token)).scoringVersion;
         const response = await fetch(SCAN_API_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+          headers: { "Content-Type": "application/json", Authorization: 'Bearer ' + token },
           body: JSON.stringify({ ...request.jobData, scoringVersion }),
           signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+        if (!response.ok) {
+          sendResponse({ success: false, error: data?.error || `HTTP ${response.status}`, code: data?.code, freeUsage: data?.freeUsage });
+          return;
+        }
         if (data.scoringVersion !== scoringVersion) throw new Error('GhostJob service changed scan versions. No scan was counted.');
         sendResponse({ success: true, data });
         return;
