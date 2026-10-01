@@ -1,5 +1,6 @@
 import { Ghost } from "lucide-react";
 import { Link } from "react-router-dom";
+import { track } from "@/lib/analytics";
 
 const Footer = () => {
   return (
@@ -39,6 +40,7 @@ const Footer = () => {
             <h3 className="text-sm font-semibold text-foreground mb-3">Company</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
+              <li><Link to="/featured" onClick={() => track("cta_click", { location: "footer", cta: "featured" })} className="hover:text-foreground transition-colors">Featured</Link></li>
               <li><Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
               <li><Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
             </ul>

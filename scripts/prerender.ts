@@ -12,6 +12,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
+import { FEATURED_TITLE, FEATURED_DESCRIPTION, FEATURED_IMAGE } from "../src/lib/featured";
 
 const SITE_ORIGIN = "https://www.jobghost.io";
 const SITE_NAME = "GhostJob";
@@ -23,9 +24,16 @@ interface Route {
   title: string;
   description: string;
   type?: "website" | "article";
+  image?: string;
 }
 
 const ROUTES: Route[] = [
+  {
+    path: "/featured",
+    title: FEATURED_TITLE,
+    description: FEATURED_DESCRIPTION,
+    image: `${SITE_ORIGIN}${FEATURED_IMAGE}`,
+  },
   {
     path: "/",
     title: "GhostJob — Free LinkedIn Ghost Job Checker | Scan a Listing",
@@ -84,6 +92,7 @@ function headFor(route: Route) {
   const url = `${SITE_ORIGIN}${route.path}`;
   const title = escapeAttr(route.title);
   const description = escapeAttr(route.description);
+  const image = escapeAttr(route.image ?? DEFAULT_OG_IMAGE);
 
   return [
     `<title>${title}</title>`,
@@ -93,12 +102,12 @@ function headFor(route: Route) {
     `<meta property="og:description" content="${description}" />`,
     `<meta property="og:type" content="${route.type ?? "website"}" />`,
     `<meta property="og:url" content="${url}" />`,
-    `<meta property="og:image" content="${DEFAULT_OG_IMAGE}" />`,
+    `<meta property="og:image" content="${image}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${description}" />`,
-    `<meta name="twitter:image" content="${DEFAULT_OG_IMAGE}" />`,
+    `<meta name="twitter:image" content="${image}" />`,
   ].join("\n    ");
 }
 

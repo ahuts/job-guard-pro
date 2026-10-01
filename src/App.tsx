@@ -15,6 +15,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Terms from "./pages/Terms.tsx";
 import Contact from "./pages/Contact.tsx";
+import Featured from "./pages/Featured.tsx";
 import WhatIsAGhostJob from "./pages/WhatIsAGhostJob.tsx";
 import GhostJobsOnLinkedIn from "./pages/GhostJobsOnLinkedIn.tsx";
 import HowTrustScoreWorks from "./pages/HowTrustScoreWorks.tsx";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/featured" element={<Featured />} />
               <Route path="/what-is-a-ghost-job" element={<WhatIsAGhostJob />} />
               <Route path="/ghost-jobs-on-linkedin" element={<GhostJobsOnLinkedIn />} />
               <Route path="/how-trust-score-works" element={<HowTrustScoreWorks />} />
