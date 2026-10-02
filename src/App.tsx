@@ -19,6 +19,7 @@ import Featured from "./pages/Featured.tsx";
 import WhatIsAGhostJob from "./pages/WhatIsAGhostJob.tsx";
 import GhostJobsOnLinkedIn from "./pages/GhostJobsOnLinkedIn.tsx";
 import HowTrustScoreWorks from "./pages/HowTrustScoreWorks.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/ghost-jobs-on-linkedin" element={<GhostJobsOnLinkedIn />} />
               <Route path="/how-trust-score-works" element={<HowTrustScoreWorks />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
