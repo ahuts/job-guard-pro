@@ -20,14 +20,17 @@ interface AuthDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   upgradeIntent?: boolean;
+  initialView?: "main" | "login" | "signup";
+  /** Same-origin path to return to after email verification (e.g. OAuth consent). */
+  redirectTo?: string;
 }
 
 type AuthView = "main" | "login" | "signup" | "forgot";
 
-const AuthDialog = ({ open, onOpenChange, upgradeIntent = false }: AuthDialogProps) => {
+const AuthDialog = ({ open, onOpenChange, upgradeIntent = false, initialView = "main", redirectTo }: AuthDialogProps) => {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const { toast } = useToast();
-  const [view, setView] = useState<AuthView>("main");
+  const [view, setView] = useState<AuthView>(initialView);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,7 +74,8 @@ const AuthDialog = ({ open, onOpenChange, upgradeIntent = false }: AuthDialogPro
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const redirect = upgradeIntent ? getPublicAppOrigin() + '/dashboard?upgrade=1' : undefined;
+    const safeNext = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : undefined;
+    const redirect = safeNext ? getPublicAppOrigin() + safeNext : upgradeIntent ? getPublicAppOrigin() + '/dashboard?upgrade=1' : undefined;
     const { error } = await signUpWithEmail(email, password, undefined, redirect);
     setLoading(false);
     if (error) {
@@ -91,7 +95,7 @@ const AuthDialog = ({ open, onOpenChange, upgradeIntent = false }: AuthDialogPro
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       resetForm();
-      setView("main");
+      setView(initialView);
     }
     onOpenChange(open);
   };
