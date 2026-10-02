@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.4",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://auevehneizminspolipf.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "ghostjob",
+      "version": "0.1.0",
+      "title": "GhostJob"
+    },
+    "tools": [
+      {
+        "name": "get_saved_jobs",
+        "title": "Get saved jobs",
+        "description": "List the signed-in user's saved GhostJob jobs, newest first, with pagination.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "description": "Page number, starting at 1."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "description": "Jobs per page (max 50)."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "saved",
+                "applied",
+                "interviewing",
+                "offer",
+                "rejected",
+                "ghosted"
+              ],
+              "description": "Optional application status filter."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_saved_job",
+        "title": "Get saved job",
+        "description": "Return one of the signed-in user's saved jobs with its description, posting evidence, notes, and follow-up date.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of a saved job from get_saved_jobs."
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_today",
+        "title": "Get today's plan",
+        "description": "Suggest up to three job-search actions that fit a time budget, based on the user's saved jobs and due follow-ups.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "minutes": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 480,
+              "default": 60,
+              "description": "Time available today, in minutes."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
