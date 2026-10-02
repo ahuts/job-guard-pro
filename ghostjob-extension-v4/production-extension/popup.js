@@ -1,4 +1,4 @@
-// GhostJob Popup Script v1.3.11
+// GhostJob Popup Script v1.3.12
 // Handles scanning from the extension popup + Supabase auth
 
 const SUPABASE_URL = 'https://auevehneizminspolipf.supabase.co';
@@ -27,6 +27,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dashboardLink = document.getElementById('dashboard-link');
   const scanCounterCard = document.getElementById('scan-counter-card');
   const scanCounter = document.getElementById('scan-counter');
+  let signedIn = false;
+  let jobTabReady = false;
+  let allowanceRequest = 0;
+  function updateScanAvailability() {
+    scanBtn.disabled = !signedIn || !jobTabReady;
+  }
 
   // ─── Auth ────────────────────────────────────────────────────────────
   function updateDashboardLink() {
@@ -63,6 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   chrome.runtime.sendMessage({ action: 'authStatus' }, (status) => {
     if (status?.success && status.authenticated) {
+      signedIn = true;
       chrome.storage.local.get(['gj_user_email'], (stored) => {
         if (stored.gj_user_email) showLoggedIn(stored.gj_user_email);
       });
@@ -70,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       authStatus.textContent = 'Session expired. Please sign in again.';
       authStatus.style.color = '#fca5a5';
     }
+    updateScanAvailability();
   });
 
   // Login handler
@@ -108,7 +116,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         gj_user_id: data.user.id,
         gj_user_email: email,
       }, () => {
+        signedIn = true;
         showLoggedIn(email);
+        updateScanAvailability();
+        updateScanCounter();
         authStatus.textContent = '✅ Signed in!';
         authStatus.style.color = '#86efac';
       });
@@ -125,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Logout handler
   authLogout.addEventListener('click', () => {
     chrome.storage.local.remove(['gj_auth_token', 'gj_refresh_token', 'gj_user_id', 'gj_user_email', 'gj_is_pro'], () => {
+      signedIn = false;
       authLoginForm.style.display = 'flex';
       authLoggedIn.style.display = 'none';
       authStatus.textContent = 'Signed out';
@@ -132,6 +144,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       authEmail.value = '';
       authPassword.value = '';
       dashboardLink.style.display = 'none';
+      updateScanAvailability();
+      updateScanCounter();
     });
   });
 
@@ -142,86 +156,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateDashboardLink();
   }
 
-  // ─── Pro Status Refresh ──────────────────────────────────────────────
-  // Re-check Pro status from Supabase when popup opens (not just on scan)
-  // Hide scan counter until Pro status is confirmed to avoid flash of wrong state
+  // The server verifies the account and reports the shared Free allowance.
   scanCounterCard.style.display = 'none';
-
-  chrome.storage.local.get(['gj_auth_token', 'gj_is_pro'], (stored) => {
-    if (stored.gj_auth_token) {
-      const token = stored.gj_auth_token;
-      fetch(SUPABASE_URL + '/auth/v1/user', {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + token
-        }
-      })
-      .then(res => res.json())
-      .then(user => {
-        if (!user.id) return;
-        return fetch(SUPABASE_URL + '/rest/v1/profiles?select=subscription_tier&id=eq.' + user.id + '&limit=1', {
-          method: 'GET',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + token
-          }
-        });
-      })
-      .then(res => {
-        if (!res || !res.ok) return;
-        return res.json();
-      })
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          const isPro = data[0].subscription_tier === 'pro';
-          chrome.storage.local.set({ gj_is_pro: isPro }, () => {
-            updateScanCounter(); // Re-render with fresh Pro status
-          });
-        } else {
-          updateScanCounter(); // No data — show whatever is cached
-        }
-      })
-      .catch(() => {
-        // Network error — show cached value
-        updateScanCounter();
-      });
-    } else {
-      // Not logged in — show free counter immediately
-      updateScanCounter();
-    }
-  });
-
-  // ─── Scan Counter ────────────────────────────────────────────────────
   function updateScanCounter() {
-    const now = new Date();
-    const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-
-    chrome.storage.local.get(['gj_scans', 'gj_auth_token', 'gj_is_pro'], (stored) => {
-      const scans = stored.gj_scans || {};
-      const count = scans[monthKey] || 0;
-
-      if (stored.gj_is_pro) {
-        // Pro users: hide the counter entirely, show a clean Pro badge
-        scanCounterCard.style.display = 'block';
-        scanCounter.innerHTML = '<span style="color:#22c55e;font-weight:600">✨ Pro Plan — Unlimited Scans</span>';
-      } else if (stored.gj_auth_token) {
-        // Logged in free users: show remaining scans
-        scanCounterCard.style.display = 'block';
-        const remaining = Math.max(0, 3 - count);
-        const bar = '█'.repeat(count) + '░'.repeat(remaining);
-        const color = remaining === 0 ? '#ef4444' : remaining === 1 ? '#f59e0b' : '#22c55e';
-        scanCounter.innerHTML = '<span style="color:' + color + ';font-weight:600">' + bar + '</span> ' + remaining + '/3 remaining';
+    const requestId = ++allowanceRequest;
+    chrome.runtime.sendMessage({ action: 'scanCapabilities' }, (response) => {
+      if (requestId !== allowanceRequest) return;
+      scanCounterCard.style.display = 'block';
+      if (!response?.success) {
+        scanCounter.textContent = response?.error || 'Account allowance temporarily unavailable';
+        return;
+      }
+      if (!response.authenticated) {
+        scanCounter.textContent = 'Sign in to check jobs';
+        return;
+      }
+      const usage = response.data?.freeUsage;
+      if (usage === undefined) {
+        scanCounter.textContent = '✨ Pro Plan — Unlimited standard scans';
+      } else if (usage && Number.isInteger(usage.remaining) && Number.isInteger(usage.limit)) {
+        scanCounter.textContent = `${usage.remaining} of ${usage.limit} new job checks left this month`;
       } else {
-        // Not logged in: show remaining scans
-        scanCounterCard.style.display = 'block';
-        const remaining = Math.max(0, 3 - count);
-        const bar = '█'.repeat(count) + '░'.repeat(remaining);
-        const color = remaining === 0 ? '#ef4444' : remaining === 1 ? '#f59e0b' : '#22c55e';
-        scanCounter.innerHTML = '<span style="color:' + color + ';font-weight:600">' + bar + '</span> ' + remaining + '/3 remaining';
+        scanCounter.textContent = 'Free scan allowance temporarily unavailable';
       }
     });
   }
+  updateScanCounter();
 
   // ─── LinkedIn detection ─────────────────────────────────────────────────
   try {
@@ -252,8 +212,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (contentScriptReady) {
-        scanBtn.disabled = false;
-        pageStatus.innerHTML = '<strong>LinkedIn job detected! </strong>Click "Check Trust Meter" on the page for full details, or scan here.';
+        jobTabReady = true;
+        updateScanAvailability();
+        pageStatus.innerHTML = '<strong>LinkedIn job detected! </strong>Sign in to check this job here or on the page.';
       } else {
         scanBtn.disabled = true;
         pageStatus.innerHTML = '<strong>Content script not loaded.</strong> Refresh the LinkedIn page and try again.';
@@ -293,8 +254,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       showError('Extension error. Try refreshing the page and try again.');
     } finally {
-      scanBtn.disabled = false;
+      updateScanAvailability();
       scanBtn.textContent = 'Scan Current Job';
+      updateScanCounter();
     }
   });
 
