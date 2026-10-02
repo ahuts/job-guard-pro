@@ -196,7 +196,7 @@ var get_today_default = defineTool3({
       used += c.estimated_minutes;
     }
     const excluded_closed = jobs.filter((j) => j.application_status === "saved" && isClosed(j)).length;
-    const result = { minutes_budget: minutes, minutes_planned: used, actions, excluded_closed_roles: excluded_closed, note: TRUST_SCORE_NOTE };
+    const result = { minutes_budget: minutes, minutes_planned: used, actions: actions.map((a) => ({ job_id: a.job_id, job_title: a.job_title, company_name: a.company_name, action: a.action, estimated_minutes: a.estimated_minutes, reason: a.reason })), excluded_closed_roles: excluded_closed, note: TRUST_SCORE_NOTE };
     return { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
   }
 });
